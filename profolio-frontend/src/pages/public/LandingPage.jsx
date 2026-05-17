@@ -9,7 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin, faFacebook, faInstagram } from '@fortawesome/free-brands-svg-icons'
 import { useState, useEffect, useRef } from 'react'
-import logo from '../assets/logo.jpg'
+import logo from "../../assets/logo.jpg";
 
 // Slide components rendered as SVG-based UI cards
 const slides = [
