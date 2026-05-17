@@ -9,6 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin, faFacebook, faInstagram } from '@fortawesome/free-brands-svg-icons'
 import { useState, useEffect, useRef } from 'react'
+import logo from '../assets/logo.jpg'
 
 // Slide components rendered as SVG-based UI cards
 const slides = [
@@ -280,7 +281,7 @@ const LandingPage = () => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/20' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/src/assets/logo.jpg" alt="ProFolio Logo" className="w-10 h-10 object-contain" />
+            <img src={logo} alt="ProFolio Logo" className="w-10 h-10 object-contain" />
             <span className="text-xl font-bold text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
           </div>
 
