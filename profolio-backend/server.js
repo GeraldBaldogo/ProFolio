@@ -34,6 +34,7 @@ app.use('/api/admin', require('./src/routes/admin.routes'));
 
 // Global error handler
 app.use((err, req, res, next) => {
+  console.error('❌ ERROR:', err.message);
   console.error(err.stack);
   res.status(err.status || 500).json({
     success: false,
