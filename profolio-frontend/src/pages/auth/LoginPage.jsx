@@ -31,7 +31,7 @@ const LoginPage = () => {
     }
     setLoading(true)
     try {
-      const res = await api.post('/auth/login', form)
+      const res = await api.post('/api/auth/login', form)
       const { user, token } = res.data.data
       login(user, token)
       if (user.role === 'student') navigate('/student/dashboard')
