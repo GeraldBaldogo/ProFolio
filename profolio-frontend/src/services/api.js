@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'https://profolio-plzj.onrender.com/api',
+  baseURL: 'https://profolio-plzj.onrender.com',
 })
 
 api.interceptors.request.use((config) => {
