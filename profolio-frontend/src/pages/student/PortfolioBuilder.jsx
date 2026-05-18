@@ -64,7 +64,7 @@ const PortfolioBuilder = () => {
 
   const fetchPortfolio = async () => {
     try {
-      const res = await api.get('/portfolios/my')
+      const res = await api.get('/api/portfolios/my')
       const portfolios = res.data.data
       if (portfolios.length > 0) {
         setPortfolio(portfolios[0])
@@ -80,11 +80,11 @@ const PortfolioBuilder = () => {
   const fetchSectionData = async (portfolioId) => {
     try {
       const [projRes, skillRes, certRes, expRes, achRes] = await Promise.all([
-        api.get(`/projects/${portfolioId}`),
-        api.get(`/portfolio-items/skills/${portfolioId}`),
-        api.get(`/portfolio-items/certifications/${portfolioId}`),
-        api.get(`/portfolio-items/experiences/${portfolioId}`),
-        api.get(`/portfolio-items/achievements/${portfolioId}`),
+        api.get(`/api/projects/${portfolioId}`),
+        api.get(`/api/portfolio-items/skills/${portfolioId}`),
+        api.get(`/api/portfolio-items/certifications/${portfolioId}`),
+        api.get(`/api/portfolio-items/experiences/${portfolioId}`),
+        api.get(`/api/portfolio-items/achievements/${portfolioId}`),
       ])
       setProjects(projRes.data.data)
       setSkills(skillRes.data.data)
@@ -98,7 +98,7 @@ const PortfolioBuilder = () => {
 
   const createPortfolio = async () => {
     try {
-      const res = await api.post('/portfolios')
+      const res = await api.post('/api/portfolios')
       setPortfolio(res.data.data)
       showToast('Portfolio created!')
     } catch (err) {
@@ -109,7 +109,7 @@ const PortfolioBuilder = () => {
   const submitPortfolio = async () => {
     setSubmitting(true)
     try {
-      await api.patch(`/portfolios/${portfolio.id}/submit`)
+      await api.patch(`/api/portfolios/${portfolio.id}/submit`)
       showToast('Portfolio submitted for evaluation!')
       fetchPortfolio()
     } catch (err) {
