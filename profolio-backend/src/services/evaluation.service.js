@@ -28,11 +28,7 @@ const submitHumanEvaluation = async (evaluator_id, portfolio_id, evaluationData)
 
 const getHumanEvaluation = async (portfolio_id) => {
   const evaluation = await evaluationRepo.findByPortfolioId(portfolio_id);
-
-  if (!evaluation) {
-    return null;
-  }
-
+  if (!evaluation) throw { status: 404, message: 'No human evaluation found for this portfolio.' };
   return evaluation;
 };
 
