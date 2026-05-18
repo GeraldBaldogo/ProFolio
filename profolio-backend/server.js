@@ -9,10 +9,22 @@ const supabase = require('./src/config/db');
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://pro-folio-lake.vercel.app'
+]
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true
-}));
+}))
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
