@@ -7,6 +7,8 @@ import PortfolioBuilder from './pages/student/PortfolioBuilder'
 import AIFeedbackPage from './pages/student/AIFeedbackPage'
 import EvaluationResultPage from './pages/student/EvaluationResultPage'
 import ProtectedRoutes from './routes/ProtectedRoutes'
+import EvaluatorDashboard from './pages/evaluator/EvaluatorDashboard'
+import AdminDashboard from './pages/admin/AdminDashboard'
 
 function App() {
   return (
@@ -25,6 +27,24 @@ function App() {
       } />
       <Route path="/student/evaluation" element={
         <ProtectedRoutes role="student"><EvaluationResultPage /></ProtectedRoutes>
+      } />
+      <Route path="/evaluator/dashboard" element={
+        <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes   >
+      } />
+      <Route path="/evaluator/assigned" element={
+        <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
+      } />
+      <Route path="/evaluator/history" element={
+        <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
+      } />
+      <Route path="/admin/dashboard" element={
+        <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>
+      } />
+      <Route path="/admin/users" element={
+        <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>
+      } />
+      <Route path="/admin/analytics" element={
+        <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>
       } />
     </Routes>
   )
