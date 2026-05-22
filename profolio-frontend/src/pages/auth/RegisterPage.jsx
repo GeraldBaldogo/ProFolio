@@ -105,7 +105,6 @@ const RegisterPage = () => {
 
         {/* Card */}
         <div className="border border-white/8 bg-white/[0.03] rounded-3xl p-8 backdrop-blur-sm shadow-2xl shadow-black/50">
-          <div className="h-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mb-8 -mt-8" style={{marginLeft: '-2rem', width: 'calc(100% + 4rem)'}} />
 
           {/* Error */}
           {error && (
