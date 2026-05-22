@@ -9,7 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
-import logo from '../../assets/logo.jpg'
+import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
