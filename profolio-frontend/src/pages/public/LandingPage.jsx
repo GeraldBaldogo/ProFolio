@@ -286,9 +286,18 @@ const LandingPage = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-1">
-            {['features', 'how-it-works', 'testimonials', 'FAQs'].map((section) => (
-              <a key={section} href={`#${section}`} className="text-gray-400 hover:text-white font-medium transition-all text-sm px-4 py-2 rounded-lg hover:bg-white/5 capitalize">
-                {section.replace('-', ' ')}
+            {[
+              { id: 'features', label: 'Features' },
+              { id: 'how-it-works', label: 'How It Works' },
+              { id: 'testimonials', label: 'Testimonials' },
+              { id: 'faq', label: 'FAQs' },
+            ].map((section) => (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                className="text-gray-400 hover:text-white font-medium transition-all text-sm px-4 py-2 rounded-lg hover:bg-white/5"
+              >
+                {section.label}
               </a>
             ))}
           </div>
