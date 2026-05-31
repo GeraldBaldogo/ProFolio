@@ -9,6 +9,7 @@ import EvaluationResultPage from './pages/student/EvaluationResultPage'
 import ProtectedRoutes from './routes/ProtectedRoutes'
 import EvaluatorDashboard from './pages/evaluator/EvaluatorDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import StudentProfile from './pages/student/StudentProfile'
 
 function App() {
   return (
@@ -27,6 +28,9 @@ function App() {
       } />
       <Route path="/student/evaluation" element={
         <ProtectedRoutes role="student"><EvaluationResultPage /></ProtectedRoutes>
+      } />
+      <Route path="/student/profile" element={
+        <ProtectedRoutes role="student"><StudentProfile /></ProtectedRoutes>
       } />
       <Route path="/evaluator/dashboard" element={
         <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes   >

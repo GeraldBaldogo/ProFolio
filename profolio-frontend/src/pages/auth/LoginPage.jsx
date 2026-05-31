@@ -5,9 +5,50 @@ import {
   faEnvelope, faLock, faEye, faEyeSlash,
   faArrowRight, faCircleNotch, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
+import { faGithub, faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+
+// ─── Social providers config ───────────────────────────────────────────────────
+// Each provider redirects to your Express OAuth route.
+// Backend should handle: GET /auth/google, /auth/facebook, /auth/github
+// and callback: GET /auth/google/callback, etc.
+const SOCIAL_PROVIDERS = [
+  {
+    key: 'google',
+    label: 'Continue with Google',
+    icon: faGoogle,
+    href: `${import.meta.env.VITE_API_URL}/auth/google`,
+    iconColor: '#EA4335',
+    borderColor: 'border-white/8',
+    hoverBorder: 'hover:border-white/20',
+    bg: 'bg-white/[0.03]',
+    hoverBg: 'hover:bg-white/[0.06]',
+  },
+  {
+    key: 'facebook',
+    label: 'Continue with Facebook',
+    icon: faFacebook,
+    href: `${import.meta.env.VITE_API_URL}/auth/facebook`,
+    iconColor: '#1877F2',
+    borderColor: 'border-white/8',
+    hoverBorder: 'hover:border-white/20',
+    bg: 'bg-white/[0.03]',
+    hoverBg: 'hover:bg-white/[0.06]',
+  },
+  {
+    key: 'github',
+    label: 'Continue with GitHub',
+    icon: faGithub,
+    href: `${import.meta.env.VITE_API_URL}/auth/github`,
+    iconColor: '#ffffff',
+    borderColor: 'border-white/8',
+    hoverBorder: 'hover:border-white/20',
+    bg: 'bg-white/[0.03]',
+    hoverBg: 'hover:bg-white/[0.06]',
+  },
+]
 
 const LoginPage = () => {
   const navigate = useNavigate()
@@ -150,8 +191,33 @@ const LoginPage = () => {
 
           </form>
 
-          {/* Divider */}
+          {/* Divider — or continue with */}
           <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-white/5" />
+            <span className="text-gray-600 text-xs">or continue with</span>
+            <div className="flex-1 h-px bg-white/5" />
+          </div>
+
+          {/* ── Social Login Buttons ── */}
+          <div className="flex gap-3 mb-6">
+            {SOCIAL_PROVIDERS.map((provider) => (
+              <a
+                key={provider.key}
+                href={provider.href}
+                title={provider.label}
+                className="flex-1 flex items-center justify-center gap-2 border border-white/8 hover:border-white/20 bg-white/[0.03] hover:bg-white/[0.06] text-gray-300 hover:text-white py-3 rounded-xl text-sm font-semibold transition-all"
+              >
+                <FontAwesomeIcon
+                  icon={provider.icon}
+                  className="text-base"
+                  style={{ color: provider.iconColor }}
+                />
+              </a>
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-6">
             <div className="flex-1 h-px bg-white/5" />
             <span className="text-gray-600 text-xs">Don't have an account?</span>
             <div className="flex-1 h-px bg-white/5" />
