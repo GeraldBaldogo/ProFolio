@@ -52,22 +52,16 @@ const StudentProfile = () => {
 
   const fetchProfile = async () => {
     try {
-      const res = await api.get('/portfolios/my')
-      const profiles = res.data.data
-      if (profiles.length > 0) {
-        const p = profiles[0]
-        setProfile(p)
-      }
-      const profileRes = await api.get('/auth/me')
-      const userData = profileRes.data.data
+      const res = await api.get('/student/profile')
+      const p = res.data.data
       setForm({
-        course: userData.course || '',
-        school: userData.school || '',
-        year_level: userData.year_level || '',
-        bio: userData.bio || '',
-        linkedin_url: userData.linkedin_url || '',
-        github_url: userData.github_url || '',
-        career_goal: userData.career_goal || '',
+        course: p?.course || '',
+        school: p?.school || '',
+        year_level: p?.year_level || '',
+        bio: p?.bio || '',
+        linkedin_url: p?.linkedin_url || '',
+        github_url: p?.github_url || '',
+        career_goal: p?.career_goal || '',
       })
     } catch (err) {
       console.error(err)
@@ -91,7 +85,6 @@ const StudentProfile = () => {
       await api.patch('/student/profile', form)
       showToast('Profile updated successfully!')
       setEditing(false)
-      fetchProfile()
     } catch (err) {
       showToast('Failed to update profile.', 'error')
     } finally {

@@ -6,7 +6,6 @@ const { authenticate } = require('../middleware/auth.middleware');
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
-// Protected route — test ng middleware
 router.get('/me', authenticate, (req, res) => {
   res.json({ 
     success: true, 

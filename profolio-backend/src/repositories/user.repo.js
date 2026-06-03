@@ -30,4 +30,15 @@ const create = async ({ full_name, email, password_hash, role }) => {
   return data;
 };
 
-module.exports = { findByEmail, findById, create };
+const updateStudentProfile = async (user_id, updates) => {
+  const { data, error } = await supabase
+    .from('student_profiles')
+    .update(updates)
+    .eq('user_id', user_id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+module.exports = { findByEmail, findById, create, updateStudentProfile };

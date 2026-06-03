@@ -43,6 +43,7 @@ app.use('/api/projects', require('./src/routes/project.routes'));
 app.use('/api/portfolio-items', require('./src/routes/portfolio.items.routes'));
 app.use('/api/evaluations', require('./src/routes/evaluation.routes'));
 app.use('/api/admin', require('./src/routes/admin.routes'));
+app.use('/api/student', require('./src/routes/student.routes'));
 
 // Global error handler
 app.use((err, req, res, next) => {
