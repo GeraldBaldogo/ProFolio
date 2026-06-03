@@ -40,6 +40,15 @@ const assignEvaluator = async (req, res, next) => {
   }
 };
 
+const getPortfolios = async (req, res, next) => {
+  try {
+    const portfolios = await adminService.getPortfolios();
+    res.json({ success: true, data: portfolios });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getAnalytics = async (req, res, next) => {
   try {
     const analytics = await adminService.getAnalytics();
@@ -49,4 +58,4 @@ const getAnalytics = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getAnalytics };
+module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics };

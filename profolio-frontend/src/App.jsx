@@ -10,6 +10,8 @@ import ProtectedRoutes from './routes/ProtectedRoutes'
 import EvaluatorDashboard from './pages/evaluator/EvaluatorDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import StudentProfile from './pages/student/StudentProfile'
+import EvaluatorHistory from './pages/evaluator/EvaluatorHistory'
+import EvaluatorAssigned from './pages/evaluator/EvaluatorAssigned'
 
 function App() {
   return (
@@ -36,10 +38,10 @@ function App() {
         <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes   >
       } />
       <Route path="/evaluator/assigned" element={
-        <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
+        <ProtectedRoutes role="evaluator"><EvaluatorAssigned /></ProtectedRoutes>
       } />
       <Route path="/evaluator/history" element={
-        <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
+        <ProtectedRoutes role="evaluator"><EvaluatorHistory /></ProtectedRoutes>
       } />
       <Route path="/admin/dashboard" element={
         <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>

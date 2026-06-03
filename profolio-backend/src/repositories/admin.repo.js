@@ -32,12 +32,54 @@ const toggleUserStatus = async (id, is_active) => {
 };
 
 const assignEvaluator = async (portfolio_id, evaluator_id, assigned_by) => {
+  // Check if already assigned
+  const { data: existing } = await supabase
+    .from('evaluator_assignments')
+    .select('id')
+    .eq('portfolio_id', portfolio_id)
+    .single();
+  if (existing) throw { status: 400, message: 'This portfolio already has an assigned evaluator.' };
+
   const { data, error } = await supabase
     .from('evaluator_assignments')
     .insert([{ portfolio_id, evaluator_id, assigned_by }])
     .select()
     .single();
   if (error) throw error;
+
+  // Update portfolio status to under_review
+  await supabase
+    .from('portfolios')
+    .update({ status: 'under_review' })
+    .eq('id', portfolio_id);
+
+  return data;
+};
+
+const getPortfolios = async () => {
+  const { data, error } = await supabase
+    .from('portfolios')
+    .select(`
+      id,
+      status,
+      created_at,
+      student_profiles!portfolios_student_id_fkey (
+        course,
+        school,
+        year_level,
+        users!student_profiles_user_id_fkey (full_name, email)
+      )
+    `)
+    .order('created_at', { ascending: false });
+  if (error) {
+    // Fallback: try without explicit FK hints
+    const { data: data2, error: error2 } = await supabase
+      .from('portfolios')
+      .select('id, status, created_at, student_id')
+      .order('created_at', { ascending: false });
+    if (error2) throw error2;
+    return data2;
+  }
   return data;
 };
 
@@ -59,7 +101,7 @@ const getAnalytics = async () => {
   const totalEvaluations = evaluations.data?.length || 0;
   const passedEvaluations = evaluations.data?.filter(e => e.verdict === 'passed').length || 0;
   const avgScore = evaluations.data?.length
-    ? (evaluations.data.reduce((sum, e) => sum + e.final_score, 0) / evaluations.data.length).toFixed(2)
+    ? (evaluations.data.reduce((sum, e) => sum + parseFloat(e.final_score), 0) / evaluations.data.length).toFixed(2)
     : 0;
 
   return {
@@ -69,4 +111,4 @@ const getAnalytics = async () => {
   };
 };
 
-module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getAnalytics };
+module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics };

@@ -18,8 +18,12 @@ const assignEvaluator = async (portfolio_id, evaluator_id, assigned_by) => {
   return await adminRepo.assignEvaluator(portfolio_id, evaluator_id, assigned_by);
 };
 
+const getPortfolios = async () => {
+  return await adminRepo.getPortfolios();
+};
+
 const getAnalytics = async () => {
   return await adminRepo.getAnalytics();
 };
 
-module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getAnalytics };
+module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics };

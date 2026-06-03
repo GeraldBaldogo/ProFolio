@@ -24,6 +24,15 @@ const roleConfig = {
   admin: { label: 'Admin', color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', icon: faShieldHalved },
 }
 
+const statusConfig = {
+  draft: { label: 'Draft', color: 'text-gray-400' },
+  submitted: { label: 'Submitted', color: 'text-blue-400' },
+  ai_reviewed: { label: 'AI Reviewed', color: 'text-violet-400' },
+  under_review: { label: 'Under Review', color: 'text-amber-400' },
+  revision_requested: { label: 'Needs Revision', color: 'text-rose-400' },
+  completed: { label: 'Completed', color: 'text-green-400' },
+}
+
 const inputClass = "w-full bg-white/5 border border-white/8 hover:border-white/15 focus:border-blue-500/50 focus:bg-blue-500/5 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 outline-none transition-all"
 const labelClass = "text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1.5 block"
 
@@ -41,6 +50,7 @@ const AdminDashboard = () => {
   const [portfolios, setPortfolios] = useState([])
   const [evaluators, setEvaluators] = useState([])
   const [saving, setSaving] = useState(false)
+  const [loadingPortfolios, setLoadingPortfolios] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -65,6 +75,29 @@ const AdminDashboard = () => {
     }
   }
 
+  const fetchPortfolios = async () => {
+    setLoadingPortfolios(true)
+    try {
+      const res = await api.get('/admin/portfolios')
+      // Only show portfolios that are submitted or ai_reviewed (ready for assignment)
+      const assignable = (res.data.data || []).filter(
+        p => ['submitted', 'ai_reviewed', 'under_review'].includes(p.status)
+      )
+      setPortfolios(assignable)
+    } catch (err) {
+      console.error(err)
+      showToast('Failed to load portfolios.', 'error')
+    } finally {
+      setLoadingPortfolios(false)
+    }
+  }
+
+  const openAssignForm = () => {
+    setAssignForm({ portfolio_id: '', evaluator_id: '' })
+    setShowAssignForm(true)
+    fetchPortfolios()
+  }
+
   const updateRole = async (userId, role) => {
     try {
       await api.patch(`/admin/users/${userId}/role`, { role })
@@ -87,7 +120,7 @@ const AdminDashboard = () => {
 
   const assignEvaluator = async () => {
     if (!assignForm.portfolio_id || !assignForm.evaluator_id) {
-      showToast('Please fill in all fields.', 'error')
+      showToast('Please select both a portfolio and an evaluator.', 'error')
       return
     }
     setSaving(true)
@@ -96,6 +129,7 @@ const AdminDashboard = () => {
       showToast('Evaluator assigned successfully!')
       setShowAssignForm(false)
       setAssignForm({ portfolio_id: '', evaluator_id: '' })
+      fetchData()
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to assign evaluator.', 'error')
     } finally {
@@ -111,6 +145,10 @@ const AdminDashboard = () => {
     { label: 'Evaluations', value: analytics.evaluations.total, icon: faClipboardCheck, gradient: 'from-amber-500 to-orange-500', sub: `${analytics.evaluations.passed} passed` },
     { label: 'Avg Score', value: analytics.evaluations.average_score || '—', icon: faStar, gradient: 'from-emerald-500 to-teal-600', sub: 'Average final score' },
   ] : []
+
+  // Get selected portfolio details for preview
+  const selectedPortfolio = portfolios.find(p => p.id === assignForm.portfolio_id)
+  const selectedEvaluator = evaluators.find(e => e.id === assignForm.evaluator_id)
 
   return (
     <div className="min-h-screen bg-[#060612] flex font-sans">
@@ -175,8 +213,8 @@ const AdminDashboard = () => {
           </div>
           <div className="ml-auto flex items-center gap-3">
             <button
-              onClick={() => setShowAssignForm(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all"
+              onClick={openAssignForm}
+              className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all hover:opacity-90"
             >
               <FontAwesomeIcon icon={faPlus} /> Assign Evaluator
             </button>
@@ -209,41 +247,125 @@ const AdminDashboard = () => {
                 ))}
               </div>
 
-              {/* Assign Evaluator Form */}
+              {/* Assign Evaluator Modal Form */}
               {showAssignForm && (
-                <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-white font-bold text-sm">Assign Evaluator to Portfolio</p>
-                    <button onClick={() => setShowAssignForm(false)} className="text-gray-500 hover:text-white transition-colors">
-                      <FontAwesomeIcon icon={faXmark} />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className={labelClass}>Portfolio ID</label>
-                      <input className={inputClass} placeholder="Enter portfolio ID"
-                        value={assignForm.portfolio_id} onChange={e => setAssignForm({ ...assignForm, portfolio_id: e.target.value })} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                  <div className="w-full max-w-md bg-[#0e0e20] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+
+                    {/* Modal Header */}
+                    <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-rose-500/20 rounded-lg flex items-center justify-center">
+                          <FontAwesomeIcon icon={faUserTie} className="text-rose-400 text-sm" />
+                        </div>
+                        <p className="text-white font-bold">Assign Evaluator</p>
+                      </div>
+                      <button onClick={() => setShowAssignForm(false)} className="text-gray-500 hover:text-white transition-colors">
+                        <FontAwesomeIcon icon={faXmark} />
+                      </button>
                     </div>
-                    <div>
-                      <label className={labelClass}>Evaluator</label>
-                      <select className={inputClass} value={assignForm.evaluator_id} onChange={e => setAssignForm({ ...assignForm, evaluator_id: e.target.value })}>
-                        <option value="">Select evaluator</option>
-                        {evaluators.map(ev => (
-                          <option key={ev.id} value={ev.id}>{ev.full_name}</option>
-                        ))}
-                      </select>
+
+                    {/* Modal Body */}
+                    <div className="px-6 py-5 flex flex-col gap-4">
+
+                      {/* Portfolio Dropdown */}
+                      <div>
+                        <label className={labelClass}>Portfolio *</label>
+                        {loadingPortfolios ? (
+                          <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                            Loading portfolios...
+                          </div>
+                        ) : portfolios.length === 0 ? (
+                          <div className="bg-white/5 border border-white/8 rounded-xl px-4 py-3 text-gray-500 text-sm">
+                            No portfolios available for assignment
+                          </div>
+                        ) : (
+                          <select
+                            className={inputClass}
+                            value={assignForm.portfolio_id}
+                            onChange={e => setAssignForm({ ...assignForm, portfolio_id: e.target.value })}
+                          >
+                            <option value="">Select portfolio</option>
+                            {portfolios.map(p => {
+                              const studentName = p.student_profiles?.users?.full_name || 'Unknown Student'
+                              const status = statusConfig[p.status]
+                              return (
+                                <option key={p.id} value={p.id}>
+                                  {studentName} — {status?.label || p.status}
+                                </option>
+                              )
+                            })}
+                          </select>
+                        )}
+
+                        {/* Portfolio preview */}
+                        {selectedPortfolio && (
+                          <div className="mt-2 bg-white/5 border border-white/8 rounded-xl px-4 py-3 flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-violet-500 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                              {selectedPortfolio.student_profiles?.users?.full_name?.charAt(0) || 'S'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-white text-xs font-semibold truncate">
+                                {selectedPortfolio.student_profiles?.users?.full_name}
+                              </p>
+                              <p className="text-gray-500 text-xs">
+                                {selectedPortfolio.student_profiles?.course} · {selectedPortfolio.student_profiles?.school}
+                              </p>
+                            </div>
+                            <span className={`text-xs font-semibold ml-auto flex-shrink-0 ${statusConfig[selectedPortfolio.status]?.color}`}>
+                              {statusConfig[selectedPortfolio.status]?.label}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Evaluator Dropdown */}
+                      <div>
+                        <label className={labelClass}>Evaluator *</label>
+                        <select
+                          className={inputClass}
+                          value={assignForm.evaluator_id}
+                          onChange={e => setAssignForm({ ...assignForm, evaluator_id: e.target.value })}
+                        >
+                          <option value="">Select evaluator</option>
+                          {evaluators.map(ev => (
+                            <option key={ev.id} value={ev.id}>{ev.full_name}</option>
+                          ))}
+                        </select>
+
+                        {/* Evaluator preview */}
+                        {selectedEvaluator && (
+                          <div className="mt-2 bg-white/5 border border-white/8 rounded-xl px-4 py-3 flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                              {selectedEvaluator.full_name?.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-white text-xs font-semibold">{selectedEvaluator.full_name}</p>
+                              <p className="text-gray-500 text-xs">{selectedEvaluator.email}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-3 pt-1">
+                        <button
+                          onClick={assignEvaluator}
+                          disabled={saving || !assignForm.portfolio_id || !assignForm.evaluator_id}
+                          className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl disabled:opacity-50 transition-all"
+                        >
+                          {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
+                          {saving ? 'Assigning...' : 'Assign Evaluator'}
+                        </button>
+                        <button
+                          onClick={() => setShowAssignForm(false)}
+                          className="border border-white/8 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <button onClick={assignEvaluator} disabled={saving}
-                      className="flex items-center gap-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl disabled:opacity-60">
-                      {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
-                      {saving ? 'Assigning...' : 'Assign'}
-                    </button>
-                    <button onClick={() => setShowAssignForm(false)}
-                      className="border border-white/8 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
-                      Cancel
-                    </button>
                   </div>
                 </div>
               )}
@@ -266,8 +388,6 @@ const AdminDashboard = () => {
                           <p className="text-white text-sm font-semibold truncate">{u.full_name}</p>
                           <p className="text-gray-500 text-xs truncate">{u.email}</p>
                         </div>
-
-                        {/* Role selector */}
                         <select
                           value={u.role}
                           onChange={e => updateRole(u.id, e.target.value)}
@@ -277,8 +397,6 @@ const AdminDashboard = () => {
                           <option value="evaluator">Evaluator</option>
                           <option value="admin">Admin</option>
                         </select>
-
-                        {/* Active toggle */}
                         <button
                           onClick={() => toggleStatus(u.id, !u.is_active)}
                           className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${u.is_active ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400' : 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-400'}`}
