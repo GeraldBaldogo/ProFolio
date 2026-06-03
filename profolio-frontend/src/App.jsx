@@ -12,6 +12,8 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import StudentProfile from './pages/student/StudentProfile'
 import EvaluatorHistory from './pages/evaluator/EvaluatorHistory'
 import EvaluatorAssigned from './pages/evaluator/EvaluatorAssigned'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AdminUsers from './pages/admin/AdminUsers'
 
 function App() {
   return (
@@ -47,10 +49,10 @@ function App() {
         <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>
       } />
       <Route path="/admin/users" element={
-        <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>
+        <ProtectedRoutes role="admin"><AdminUsers /></ProtectedRoutes>
       } />
       <Route path="/admin/analytics" element={
-        <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>
+        <ProtectedRoutes role="admin"><AdminAnalytics /></ProtectedRoutes>
       } />
     </Routes>
   )
