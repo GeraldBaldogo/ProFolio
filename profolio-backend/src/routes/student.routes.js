@@ -11,6 +11,11 @@ router.get('/profile', authenticate, async (req, res, next) => {
       .select('*')
       .eq('user_id', req.user.id)
       .single();
+
+    // If no profile yet, return empty object instead of throwing
+    if (error && error.code === 'PGRST116') {
+      return res.json({ success: true, data: null });
+    }
     if (error) throw error;
     res.json({ success: true, data });
   } catch (err) {
@@ -18,13 +23,15 @@ router.get('/profile', authenticate, async (req, res, next) => {
   }
 });
 
-// Update student profile
+// Upsert student profile (create if not exists, update if exists)
 router.patch('/profile', authenticate, async (req, res, next) => {
   try {
     const { data, error } = await supabase
       .from('student_profiles')
-      .update(req.body)
-      .eq('user_id', req.user.id)
+      .upsert(
+        { user_id: req.user.id, ...req.body },
+        { onConflict: 'user_id' }
+      )
       .select()
       .single();
     if (error) throw error;
