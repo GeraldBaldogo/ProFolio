@@ -70,15 +70,6 @@ const StudentProfile = () => {
     }
   }
 
-  const fetchStudentProfile = async () => {
-    try {
-      const res = await api.get('/auth/me')
-      return res.data.data
-    } catch {
-      return null
-    }
-  }
-
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -149,88 +140,96 @@ const StudentProfile = () => {
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
 
         {/* Topbar */}
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-4 flex items-center gap-3">
           <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">My Profile</h1>
-            <p className="text-gray-500 text-xs">Manage your personal information</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg">My Profile</h1>
+            <p className="text-gray-500 text-xs hidden sm:block">Manage your personal information</p>
           </div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {!editing ? (
               <button onClick={() => setEditing(true)}
-                className="flex items-center gap-2 border border-white/8 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all">
-                <FontAwesomeIcon icon={faPen} className="text-xs" /> Edit Profile
+                className="flex items-center gap-1.5 border border-white/8 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all">
+                <FontAwesomeIcon icon={faPen} className="text-xs" />
+                <span>Edit</span>
+                <span className="hidden sm:inline"> Profile</span>
               </button>
             ) : (
               <div className="flex items-center gap-2">
                 <button onClick={() => setEditing(false)}
-                  className="border border-white/8 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all">
+                  className="border border-white/8 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all">
                   Cancel
                 </button>
                 <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all disabled:opacity-60">
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all disabled:opacity-60">
                   {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
+                  <span className="sm:hidden">{saving ? '...' : 'Save'}</span>
                 </button>
               </div>
             )}
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user?.full_name?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <FontAwesomeIcon icon={faSpinner} className="text-blue-400 text-3xl animate-spin" />
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto flex flex-col gap-6">
+            <div className="max-w-3xl mx-auto flex flex-col gap-5 sm:gap-6">
 
               {/* Profile Header Card */}
-              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-6">
-                <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-violet-500 rounded-2xl flex items-center justify-center text-white font-black text-3xl flex-shrink-0">
+              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-6">
+                {/* Avatar + name row */}
+                <div className="flex items-start gap-3 sm:gap-5">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-black text-2xl sm:text-3xl flex-shrink-0">
                     {user?.full_name?.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-white font-black text-xl">{user?.full_name}</h2>
-                    <div className="flex items-center gap-2 mt-1">
-                      <FontAwesomeIcon icon={faEnvelope} className="text-gray-500 text-xs" />
-                      <p className="text-gray-400 text-sm">{user?.email}</p>
+                    <h2 className="text-white font-black text-base sm:text-xl truncate">{user?.full_name}</h2>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <FontAwesomeIcon icon={faEnvelope} className="text-gray-500 text-xs flex-shrink-0" />
+                      <p className="text-gray-400 text-xs sm:text-sm truncate">{user?.email}</p>
                     </div>
                     {form.course && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <FontAwesomeIcon icon={faGraduationCap} className="text-gray-500 text-xs" />
-                        <p className="text-gray-400 text-sm">{form.course} — {form.year_level}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <FontAwesomeIcon icon={faGraduationCap} className="text-gray-500 text-xs flex-shrink-0" />
+                        <p className="text-gray-400 text-xs sm:text-sm truncate">{form.course} — {form.year_level}</p>
                       </div>
                     )}
                     {form.school && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <FontAwesomeIcon icon={faBuilding} className="text-gray-500 text-xs" />
-                        <p className="text-gray-400 text-sm">{form.school}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <FontAwesomeIcon icon={faBuilding} className="text-gray-500 text-xs flex-shrink-0" />
+                        <p className="text-gray-400 text-xs sm:text-sm truncate">{form.school}</p>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                </div>
+
+                {/* Social links — below on mobile */}
+                {(form.github_url || form.linkedin_url) && !editing && (
+                  <div className="flex items-center gap-2 mt-3 sm:mt-0 sm:absolute sm:top-6 sm:right-6">
                     {form.github_url && (
                       <a href={form.github_url} target="_blank" rel="noreferrer"
-                        className="w-9 h-9 border border-white/8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
-                        <FontAwesomeIcon icon={faGithub} />
+                        className="w-8 h-8 sm:w-9 sm:h-9 border border-white/8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                        <FontAwesomeIcon icon={faGithub} className="text-sm" />
                       </a>
                     )}
                     {form.linkedin_url && (
                       <a href={form.linkedin_url} target="_blank" rel="noreferrer"
-                        className="w-9 h-9 border border-white/8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
-                        <FontAwesomeIcon icon={faLinkedin} />
+                        className="w-8 h-8 sm:w-9 sm:h-9 border border-white/8 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                        <FontAwesomeIcon icon={faLinkedin} className="text-sm" />
                       </a>
                     )}
                   </div>
-                </div>
+                )}
 
                 {form.bio && !editing && (
                   <div className="mt-4 pt-4 border-t border-white/5">
@@ -244,10 +243,11 @@ const StudentProfile = () => {
 
               {/* Edit Form / Info Cards */}
               {editing ? (
-                <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-6 flex flex-col gap-5">
+                <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-5">
                   <h3 className="text-white font-bold text-sm">Edit Profile Information</h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Single col on mobile, 2 cols on md+ */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>Course / Program</label>
                       <input className={inputClass} placeholder="e.g. Bachelor of Science in IT"
@@ -280,7 +280,7 @@ const StudentProfile = () => {
                       value={form.career_goal} onChange={e => setForm({ ...form, career_goal: e.target.value })} />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>GitHub URL</label>
                       <input className={inputClass} placeholder="https://github.com/..."
@@ -294,12 +294,12 @@ const StudentProfile = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                   {/* Academic Info */}
-                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5">
+                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <FontAwesomeIcon icon={faGraduationCap} className="text-blue-400 text-sm" />
                       </div>
                       <p className="text-white font-bold text-sm">Academic Information</p>
@@ -321,9 +321,9 @@ const StudentProfile = () => {
                   </div>
 
                   {/* Career Info */}
-                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5">
+                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 bg-violet-500/10 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 bg-violet-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <FontAwesomeIcon icon={faBriefcase} className="text-violet-400 text-sm" />
                       </div>
                       <p className="text-white font-bold text-sm">Career Information</p>
@@ -356,21 +356,22 @@ const StudentProfile = () => {
               )}
 
               {/* Account Info */}
-              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5">
+              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FontAwesomeIcon icon={faUser} className="text-emerald-400 text-sm" />
                   </div>
                   <p className="text-white font-bold text-sm">Account Information</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Stack on mobile, 3 cols on md+ */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <p className="text-gray-500 text-xs mb-0.5">Full Name</p>
-                    <p className="text-white text-sm">{user?.full_name}</p>
+                    <p className="text-white text-sm truncate">{user?.full_name}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-0.5">Email</p>
-                    <p className="text-white text-sm">{user?.email}</p>
+                    <p className="text-white text-sm truncate">{user?.email}</p>
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-0.5">Role</p>
@@ -386,9 +387,9 @@ const StudentProfile = () => {
         </main>
       </div>
 
-      {/* Toast */}
+      {/* Toast — full width on mobile */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-semibold ${toast.type === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-green-500/30 bg-green-500/10 text-green-400'}`}>
+        <div className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-semibold ${toast.type === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-green-500/30 bg-green-500/10 text-green-400'}`}>
           <FontAwesomeIcon icon={toast.type === 'error' ? faTriangleExclamation : faCircleCheck} />
           {toast.message}
         </div>
