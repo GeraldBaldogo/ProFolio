@@ -42,14 +42,12 @@ const PortfolioBuilder = () => {
   const [toast, setToast] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Data states
   const [projects, setProjects] = useState([])
   const [skills, setSkills] = useState([])
   const [certifications, setCertifications] = useState([])
   const [experiences, setExperiences] = useState([])
   const [achievements, setAchievements] = useState([])
 
-  // Form states
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState(null)
   const [formData, setFormData] = useState({})
@@ -134,6 +132,10 @@ const PortfolioBuilder = () => {
     setEditItem(item)
     setFormData(item ? { ...item } : getDefaultForm(activeSection))
     setShowForm(true)
+    // Scroll to form on mobile
+    setTimeout(() => {
+      document.getElementById('portfolio-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
   }
 
   const closeForm = () => {
@@ -261,7 +263,8 @@ const PortfolioBuilder = () => {
             <div><label className={labelClass}>Project Title *</label><input className={inputClass} placeholder="e.g. ProFolio System" value={formData.title || ''} onChange={e => setFormData({ ...formData, title: e.target.value })} /></div>
             <div><label className={labelClass}>Description</label><textarea className={inputClass + ' resize-none h-24'} placeholder="Describe your project..." value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
             <div><label className={labelClass}>Tech Stack</label><input className={inputClass} placeholder="e.g. React, Node.js, Supabase" value={formData.tech_stack || ''} onChange={e => setFormData({ ...formData, tech_stack: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
+            {/* Single column on mobile, 2 cols on sm+ */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={labelClass}>GitHub URL</label><input className={inputClass} placeholder="https://github.com/..." value={formData.github_url || ''} onChange={e => setFormData({ ...formData, github_url: e.target.value })} /></div>
               <div><label className={labelClass}>Live URL</label><input className={inputClass} placeholder="https://..." value={formData.live_url || ''} onChange={e => setFormData({ ...formData, live_url: e.target.value })} /></div>
             </div>
@@ -285,7 +288,7 @@ const PortfolioBuilder = () => {
             <div><label className={labelClass}>Certificate Title *</label><input className={inputClass} placeholder="e.g. AWS Cloud Practitioner" value={formData.title || ''} onChange={e => setFormData({ ...formData, title: e.target.value })} /></div>
             <div><label className={labelClass}>Issuer</label><input className={inputClass} placeholder="e.g. Amazon Web Services" value={formData.issuer || ''} onChange={e => setFormData({ ...formData, issuer: e.target.value })} /></div>
             <div><label className={labelClass}>Credential URL</label><input className={inputClass} placeholder="https://..." value={formData.credential_url || ''} onChange={e => setFormData({ ...formData, credential_url: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={labelClass}>Date Issued</label><input type="date" className={inputClass} value={formData.issued_date || ''} onChange={e => setFormData({ ...formData, issued_date: e.target.value })} /></div>
               <div><label className={labelClass}>Expiry Date</label><input type="date" className={inputClass} value={formData.expiry_date || ''} onChange={e => setFormData({ ...formData, expiry_date: e.target.value })} /></div>
             </div>
@@ -297,7 +300,7 @@ const PortfolioBuilder = () => {
             <div><label className={labelClass}>Company / Organization *</label><input className={inputClass} placeholder="e.g. Tomas Claudio Colleges" value={formData.company || ''} onChange={e => setFormData({ ...formData, company: e.target.value })} /></div>
             <div><label className={labelClass}>Role / Position *</label><input className={inputClass} placeholder="e.g. Web Development Intern" value={formData.role || ''} onChange={e => setFormData({ ...formData, role: e.target.value })} /></div>
             <div><label className={labelClass}>Description</label><textarea className={inputClass + ' resize-none h-24'} placeholder="Describe your responsibilities..." value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={labelClass}>Start Date</label><input type="date" className={inputClass} value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} /></div>
               <div><label className={labelClass}>End Date</label><input type="date" className={inputClass} value={formData.end_date || ''} onChange={e => setFormData({ ...formData, end_date: e.target.value })} disabled={formData.is_current} /></div>
             </div>
@@ -312,7 +315,7 @@ const PortfolioBuilder = () => {
           <div className="flex flex-col gap-4">
             <div><label className={labelClass}>Achievement Title *</label><input className={inputClass} placeholder="e.g. 1st Place — Hackathon 2025" value={formData.title || ''} onChange={e => setFormData({ ...formData, title: e.target.value })} /></div>
             <div><label className={labelClass}>Description</label><textarea className={inputClass + ' resize-none h-24'} placeholder="Describe your achievement..." value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={labelClass}>Category</label><input className={inputClass} placeholder="e.g. Competition, Academic" value={formData.category || ''} onChange={e => setFormData({ ...formData, category: e.target.value })} /></div>
               <div><label className={labelClass}>Date</label><input type="date" className={inputClass} value={formData.achieved_date || ''} onChange={e => setFormData({ ...formData, achieved_date: e.target.value })} /></div>
             </div>
@@ -378,39 +381,42 @@ const PortfolioBuilder = () => {
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
 
         {/* Topbar */}
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-4 flex items-center gap-3">
           <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">My Portfolio</h1>
-            <p className="text-gray-500 text-xs">Build and manage your portfolio</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg">My Portfolio</h1>
+            <p className="text-gray-500 text-xs hidden sm:block">Build and manage your portfolio</p>
           </div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {portfolio && portfolio.status === 'draft' && (
               <button
                 onClick={submitPortfolio}
                 disabled={submitting}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-cyan-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all disabled:opacity-60"
+                className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-cyan-500 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all disabled:opacity-60"
               >
-                {submitting ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faArrowRight} />}
-                Submit Portfolio
+                {submitting
+                  ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                  : <FontAwesomeIcon icon={faArrowRight} />}
+                <span className="hidden xs:inline">Submit</span>
+                <span className="hidden sm:inline"> Portfolio</span>
               </button>
             )}
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user?.full_name?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <FontAwesomeIcon icon={faSpinner} className="text-blue-400 text-3xl animate-spin" />
             </div>
           ) : !portfolio ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
+            <div className="flex flex-col items-center justify-center h-64 text-center px-4">
               <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4">
                 <FontAwesomeIcon icon={faFolder} className="text-blue-400 text-2xl" />
               </div>
@@ -421,46 +427,62 @@ const PortfolioBuilder = () => {
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:gap-6">
 
-              {/* Portfolio status */}
-              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 flex items-center gap-4">
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">Portfolio Status</p>
-                  <p className="text-white font-bold capitalize">{portfolio.status.replace('_', ' ')}</p>
-                </div>
-                <div className="ml-auto flex items-center gap-3 text-sm text-gray-500">
-                  <span>{projects.length} projects</span>
-                  <span>·</span>
-                  <span>{skills.length} skills</span>
-                  <span>·</span>
-                  <span>{certifications.length} certs</span>
+              {/* Portfolio status bar */}
+              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div>
+                    <p className="text-gray-500 text-xs mb-0.5">Portfolio Status</p>
+                    <p className="text-white font-bold capitalize">{portfolio.status.replace('_', ' ')}</p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3 sm:ml-auto flex-wrap text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <FontAwesomeIcon icon={faCode} className="text-blue-400 text-[10px]" />
+                      {projects.length} projects
+                    </span>
+                    <span className="text-gray-700">·</span>
+                    <span className="flex items-center gap-1">
+                      <FontAwesomeIcon icon={faChartLine} className="text-violet-400 text-[10px]" />
+                      {skills.length} skills
+                    </span>
+                    <span className="text-gray-700">·</span>
+                    <span className="flex items-center gap-1">
+                      <FontAwesomeIcon icon={faCertificate} className="text-amber-400 text-[10px]" />
+                      {certifications.length} certs
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Section tabs */}
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {SECTIONS.map((section) => (
-                  <button
-                    key={section.key}
-                    onClick={() => { setActiveSection(section.key); setShowForm(false) }}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${activeSection === section.key ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'border border-white/8 bg-white/[0.03] text-gray-400 hover:text-white hover:bg-white/[0.06]'}`}
-                  >
-                    <FontAwesomeIcon icon={section.icon} className={`text-xs ${activeSection === section.key ? 'text-blue-400' : ''}`} />
-                    {section.label}
-                    <span className={`text-xs px-1.5 py-0.5 rounded-md ${activeSection === section.key ? 'bg-blue-500/20 text-blue-300' : 'bg-white/5 text-gray-600'}`}>
-                      {getCurrentData().length}
-                    </span>
-                  </button>
-                ))}
+              {/* Section tabs — scrollable on mobile */}
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+                {SECTIONS.map((section) => {
+                  const count = { projects, skills, certifications, experiences, achievements }[section.key]?.length || 0
+                  return (
+                    <button
+                      key={section.key}
+                      onClick={() => { setActiveSection(section.key); setShowForm(false) }}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${activeSection === section.key ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'border border-white/8 bg-white/[0.03] text-gray-400 hover:text-white hover:bg-white/[0.06]'}`}
+                    >
+                      <FontAwesomeIcon icon={section.icon} className={`text-xs ${activeSection === section.key ? 'text-blue-400' : ''}`} />
+                      {/* Hide label on very small screens, show icon only */}
+                      <span className="hidden xs:inline sm:inline">{section.label}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-md ${activeSection === section.key ? 'bg-blue-500/20 text-blue-300' : 'bg-white/5 text-gray-600'}`}>
+                        {count}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Section content */}
               <div className="border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden">
+
                 {/* Section header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 bg-gradient-to-br ${activeSection_.color} rounded-lg flex items-center justify-center`}>
+                <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/5">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className={`w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br ${activeSection_.color} rounded-lg flex items-center justify-center`}>
                       <FontAwesomeIcon icon={activeSection_.icon} className="text-white text-xs" />
                     </div>
                     <h2 className="text-white font-bold text-sm">{activeSection_.label}</h2>
@@ -468,19 +490,21 @@ const PortfolioBuilder = () => {
                   {!showForm && portfolio.status === 'draft' && (
                     <button
                       onClick={() => openForm()}
-                      className="flex items-center gap-2 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/20 text-blue-400 text-xs font-semibold px-3 py-2 rounded-xl transition-all"
+                      className="flex items-center gap-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/20 text-blue-400 text-xs font-semibold px-2.5 sm:px-3 py-2 rounded-xl transition-all"
                     >
-                      <FontAwesomeIcon icon={faPlus} /> Add {activeSection_.label.slice(0, -1)}
+                      <FontAwesomeIcon icon={faPlus} />
+                      <span className="hidden sm:inline">Add {activeSection_.label.slice(0, -1)}</span>
+                      <span className="sm:hidden">Add</span>
                     </button>
                   )}
                 </div>
 
                 {/* Form */}
                 {showForm && (
-                  <div className="px-5 py-5 border-b border-white/5 bg-blue-500/[0.03]">
+                  <div id="portfolio-form" className="px-4 sm:px-5 py-5 border-b border-white/5 bg-blue-500/[0.03]">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-white font-semibold text-sm">{editItem ? 'Edit' : 'Add'} {activeSection_.label.slice(0, -1)}</h3>
-                      <button onClick={closeForm} className="text-gray-500 hover:text-white transition-colors">
+                      <button onClick={closeForm} className="text-gray-500 hover:text-white transition-colors p-1">
                         <FontAwesomeIcon icon={faXmark} />
                       </button>
                     </div>
@@ -489,12 +513,12 @@ const PortfolioBuilder = () => {
                       <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all disabled:opacity-60"
+                        className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold px-4 sm:px-5 py-2.5 rounded-xl transition-all disabled:opacity-60"
                       >
                         {saving ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> : <FontAwesomeIcon icon={faSave} />}
                         {saving ? 'Saving...' : 'Save'}
                       </button>
-                      <button onClick={closeForm} className="border border-white/8 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
+                      <button onClick={closeForm} className="border border-white/8 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm font-semibold px-4 sm:px-5 py-2.5 rounded-xl transition-all">
                         Cancel
                       </button>
                     </div>
@@ -504,7 +528,7 @@ const PortfolioBuilder = () => {
                 {/* Items list */}
                 <div className="divide-y divide-white/5">
                   {getCurrentData().length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="flex flex-col items-center justify-center py-10 sm:py-12 text-center px-4">
                       <div className={`w-12 h-12 bg-gradient-to-br ${activeSection_.color} opacity-20 rounded-xl flex items-center justify-center mb-3`}>
                         <FontAwesomeIcon icon={activeSection_.icon} className="text-white text-lg" />
                       </div>
@@ -513,19 +537,25 @@ const PortfolioBuilder = () => {
                     </div>
                   ) : (
                     getCurrentData().map((item) => (
-                      <div key={item.id} className="flex items-start gap-4 px-5 py-4 hover:bg-white/[0.02] transition-all">
-                        <div className={`w-9 h-9 bg-gradient-to-br ${activeSection_.color} rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                      <div key={item.id} className="flex items-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-white/[0.02] transition-all">
+                        <div className={`w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br ${activeSection_.color} rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5`}>
                           <FontAwesomeIcon icon={activeSection_.icon} className="text-white text-xs" />
                         </div>
                         <div className="flex-1 min-w-0">
                           {renderItem(item)}
                         </div>
                         {portfolio.status === 'draft' && (
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <button onClick={() => openForm(item)} className="w-8 h-8 border border-white/8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => openForm(item)}
+                              className="w-7 h-7 sm:w-8 sm:h-8 border border-white/8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all"
+                            >
                               <FontAwesomeIcon icon={faPen} className="text-xs" />
                             </button>
-                            <button onClick={() => handleDelete(item.id)} className="w-8 h-8 border border-white/8 bg-white/5 hover:bg-rose-500/20 hover:border-rose-500/30 rounded-lg flex items-center justify-center text-gray-400 hover:text-rose-400 transition-all">
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="w-7 h-7 sm:w-8 sm:h-8 border border-white/8 bg-white/5 hover:bg-rose-500/20 hover:border-rose-500/30 rounded-lg flex items-center justify-center text-gray-400 hover:text-rose-400 transition-all"
+                            >
                               <FontAwesomeIcon icon={faTrash} className="text-xs" />
                             </button>
                           </div>
@@ -540,9 +570,9 @@ const PortfolioBuilder = () => {
         </main>
       </div>
 
-      {/* Toast */}
+      {/* Toast — full width on mobile, auto on desktop */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-semibold transition-all ${toast.type === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-green-500/30 bg-green-500/10 text-green-400'}`}>
+        <div className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-semibold transition-all ${toast.type === 'error' ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-green-500/30 bg-green-500/10 text-green-400'}`}>
           <FontAwesomeIcon icon={toast.type === 'error' ? faTriangleExclamation : faCircleCheck} />
           {toast.message}
         </div>
