@@ -24,6 +24,7 @@ import AssessmentDashboard from './pages/student/assessment/AssessmentDashboard'
 import TypingAssessment from './pages/student/assessment/TypingAssessment'
 import CodingAssessment from './pages/student/assessment/CodingAssessment'
 import FlowchartAssessment from './pages/student/assessment/FlowchartAssessment'
+import CommunicationAssessment from './pages/student/assessment/CommunicationAssessment'
 
 function App() {
   return (
@@ -62,6 +63,9 @@ function App() {
       {/* Assessment routes */}
       <Route path="/student/assessment" element={
         <ProtectedRoutes role="student"><AssessmentDashboard /></ProtectedRoutes>
+      } />
+      <Route path="/student/assessment/communication" element={
+        <ProtectedRoutes role="student"><CommunicationAssessment /></ProtectedRoutes>
       } />
       <Route path="/student/assessment/typing" element={
         <ProtectedRoutes role="student"><TypingAssessment /></ProtectedRoutes>
