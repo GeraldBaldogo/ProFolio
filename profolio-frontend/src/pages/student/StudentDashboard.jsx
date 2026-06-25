@@ -17,6 +17,7 @@ const navItems = [
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
+  { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]
 

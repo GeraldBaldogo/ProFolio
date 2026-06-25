@@ -5,8 +5,11 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const supabase = require('./src/config/db');
-
 const app = express();
+
+const originalityRoutes = require('./src/routes/originality.routes');
+const recommendationRoutes = require('./src/routes/recommendation.routes');
+const cvRoutes = require('./src/routes/cv.routes');
 
 // Middleware
 const allowedOrigins = [
@@ -44,6 +47,12 @@ app.use('/api/portfolio-items', require('./src/routes/portfolio.items.routes'));
 app.use('/api/evaluations', require('./src/routes/evaluation.routes'));
 app.use('/api/admin', require('./src/routes/admin.routes'));
 app.use('/api/student', require('./src/routes/student.routes'));
+app.use('/api/assessments', require('./src/routes/assessment.routes'));
+
+app.use('/api/originality', originalityRoutes);
+app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/cv', cvRoutes);
+ 
 
 // Global error handler
 app.use((err, req, res, next) => {

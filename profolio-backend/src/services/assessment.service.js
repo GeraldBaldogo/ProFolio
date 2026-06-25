@@ -1,0 +1,444 @@
+const Anthropic = require('@anthropic-ai/sdk');
+const assessmentRepo = require('../repositories/assessment.repo');
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// ─── TYPING ───────────────────────────────────────────────────────────────────
+
+const TYPING_TEXTS = {
+  easy: [
+    "The quick brown fox jumps over the lazy dog. Learning to type fast is an important skill for every student.",
+    "Practice makes perfect. The more you type, the faster and more accurate you will become over time.",
+    "A computer is a useful tool for students. It helps you write, research, and learn new things every day.",
+  ],
+  medium: [
+    "Programming requires logical thinking and attention to detail. Debugging code often takes longer than writing it in the first place.",
+    "Software development is a collaborative process. Teams use version control systems like Git to manage changes to their codebase efficiently.",
+    "Database management systems store and retrieve data efficiently. SQL is the standard language used to query relational databases.",
+  ],
+  hard: [
+    "Polymorphism in object-oriented programming allows methods to perform different functions based on the object they are acting upon. This is achieved through method overriding and interfaces.",
+    "Asymptotic analysis describes the limiting behavior of algorithms. Big-O notation expresses the worst-case complexity of an algorithm in terms of input size n.",
+    "RESTful APIs use HTTP methods such as GET, POST, PUT, PATCH, and DELETE to perform CRUD operations on resources identified by uniform resource identifiers.",
+  ]
+};
+
+const submitTypingResult = async (user_id, { wpm, accuracy, time_seconds, difficulty = 'easy' }) => {
+  if (wpm === undefined || wpm === null || accuracy === undefined || accuracy === null)
+    throw { status: 400, message: 'wpm and accuracy are required.' };
+
+  const wpmScore = Math.min((wpm / 100) * 100, 100);
+  const accScore = accuracy;
+  const score = Math.round(wpmScore * 0.6 + accScore * 0.4);
+
+  const result = await assessmentRepo.saveResult({
+    user_id,
+    type: 'typing',
+    score,
+    metadata: { wpm, accuracy, time_seconds, difficulty }
+  });
+
+  return result;
+};
+
+const getTypingText = ({ difficulty = 'easy' }) => {
+  const texts = TYPING_TEXTS[difficulty] || TYPING_TEXTS.easy;
+  return texts[Math.floor(Math.random() * texts.length)];
+};
+
+// ─── PROGRAMMING ──────────────────────────────────────────────────────────────
+
+const generateChallenge = async ({ language, difficulty }) => {
+  if (!language || !difficulty) throw { status: 400, message: 'language and difficulty are required.' };
+
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 500,
+    messages: [{
+      role: 'user',
+      content: `Generate a coding challenge for a student portfolio assessment.
+
+Language: ${language}
+Difficulty: ${difficulty}
+
+Difficulty guidelines:
+- easy: basic syntax, loops, conditionals, simple functions (1st-2nd year level)
+- medium: data structures, recursion, string manipulation, OOP basics (2nd-3rd year level)
+- hard: algorithms, complexity optimization, design patterns, advanced OOP (3rd-4th year level)
+
+Respond with JSON only, no markdown:
+{
+  "title": "short challenge title",
+  "description": "clear problem statement, 2-4 sentences",
+  "example_input": "example input if applicable, or null",
+  "example_output": "expected output if applicable, or null",
+  "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
+}`
+    }]
+  });
+
+  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
+  return JSON.parse(raw);
+};
+
+const submitCodingResult = async (user_id, { language, difficulty, challenge_title, code, violation_count, time_taken_seconds }) => {
+  if (!code) throw { status: 400, message: 'code is required.' };
+
+  const feedbackMsg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: `You are evaluating a coding assessment submission for a student portfolio platform.
+
+Language: ${language}
+Difficulty: ${difficulty}
+Challenge: ${challenge_title}
+Violations (paste/tab switch): ${violation_count}
+
+Student code:
+\`\`\`
+${code}
+\`\`\`
+
+Respond with JSON only, no markdown:
+{
+  "skill_score": number from 0-100,
+  "correctness": "correct" | "partial" | "incorrect",
+  "feedback": "2-3 sentence evaluation: correctness, code quality, one improvement tip",
+  "penalty_applied": boolean
+}`
+    }]
+  });
+
+  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
+  const aiResult = JSON.parse(raw);
+
+  const penalty = Math.min(violation_count * 5, 25);
+  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+
+  const result = await assessmentRepo.saveResult({
+    user_id,
+    type: 'programming',
+    score: finalScore,
+    metadata: {
+      language, difficulty, challenge_title, code,
+      violation_count, time_taken_seconds,
+      ai_score: aiResult.skill_score,
+      penalty_applied: penalty,
+      correctness: aiResult.correctness,
+      feedback: aiResult.feedback
+    }
+  });
+
+  return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness };
+};
+
+// ─── FLOWCHART ────────────────────────────────────────────────────────────────
+
+const generateFlowchartProblem = async ({ difficulty = 'easy' } = {}) => {
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 400,
+    messages: [{
+      role: 'user',
+      content: `Generate a flowchart problem for a student assessment.
+
+Difficulty: ${difficulty}
+
+Difficulty guidelines:
+- easy: simple linear process, 3-5 steps, no nested decisions (e.g. making coffee, login process)
+- medium: 1-2 decision points, loops allowed, 5-8 steps (e.g. grading system, ATM withdrawal)
+- hard: multiple decisions, nested conditions, 8+ steps, complex logic (e.g. sorting algorithm flow, order processing system)
+
+Respond with JSON only, no markdown:
+{
+  "title": "short title",
+  "description": "describe what process the student should create a flowchart for, 2-3 sentences",
+  "hints": ["hint 1", "hint 2", "hint 3"]
+}`
+    }]
+  });
+
+  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
+  return JSON.parse(raw);
+};
+
+const submitFlowchartResult = async (user_id, { problem_title, difficulty = 'easy', image_base64, image_type }) => {
+  if (!image_base64) throw { status: 400, message: 'image_base64 is required.' };
+
+  const feedbackMsg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'image',
+          source: { type: 'base64', media_type: image_type || 'image/jpeg', data: image_base64 }
+        },
+        {
+          type: 'text',
+          text: `This is a student-drawn flowchart for the problem: "${problem_title}" (Difficulty: ${difficulty}).
+
+Evaluate the flowchart and respond with JSON only, no markdown:
+{
+  "skill_score": number from 0-100,
+  "has_start_end": boolean,
+  "has_decision_diamond": boolean,
+  "logical_flow": "correct" | "partial" | "incorrect",
+  "feedback": "2-3 sentences: what is good, what needs improvement"
+}`
+        }
+      ]
+    }]
+  });
+
+  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
+  const aiResult = JSON.parse(raw);
+
+  const result = await assessmentRepo.saveResult({
+    user_id,
+    type: 'flowchart',
+    score: aiResult.skill_score,
+    metadata: {
+      problem_title, difficulty,
+      feedback: aiResult.feedback,
+      has_start_end: aiResult.has_start_end,
+      has_decision_diamond: aiResult.has_decision_diamond,
+      logical_flow: aiResult.logical_flow
+    }
+  });
+
+  return { ...result, feedback: aiResult.feedback, logical_flow: aiResult.logical_flow };
+};
+
+// ─── SQL ──────────────────────────────────────────────────────────────────────
+
+const generateSQLChallenge = async ({ difficulty = 'easy' }) => {
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: `Generate a SQL assessment challenge for a student.
+
+Difficulty: ${difficulty}
+
+Difficulty guidelines:
+- easy: basic SELECT, WHERE, ORDER BY, simple single-table queries
+- medium: JOINs (INNER, LEFT), GROUP BY, HAVING, aggregate functions (COUNT, SUM, AVG)
+- hard: subqueries, nested SELECTs, multiple JOINs, UNION, window functions, complex aggregations
+
+Respond with JSON only, no markdown:
+{
+  "title": "short challenge title",
+  "scenario": "brief description of the database context (e.g. 'A university database with students and courses')",
+  "tables": [
+    {
+      "name": "table_name",
+      "columns": ["col1 (type)", "col2 (type)"],
+      "sample_data": "brief description of what data is in this table"
+    }
+  ],
+  "question": "the specific SQL query they need to write, 1-2 sentences",
+  "expected_output": "describe what the result should look like",
+  "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
+}`
+    }]
+  });
+
+  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
+  return JSON.parse(raw);
+};
+
+const submitSQLResult = async (user_id, { difficulty, challenge_title, scenario, question, sql_code, violation_count, time_taken_seconds }) => {
+  if (!sql_code) throw { status: 400, message: 'sql_code is required.' };
+
+  const feedbackMsg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: `You are evaluating a SQL assessment submission for a student portfolio platform.
+
+Difficulty: ${difficulty}
+Challenge: ${challenge_title}
+Scenario: ${scenario}
+Question: ${question}
+Violations: ${violation_count}
+
+Student SQL:
+\`\`\`sql
+${sql_code}
+\`\`\`
+
+Respond with JSON only, no markdown:
+{
+  "skill_score": number from 0-100,
+  "correctness": "correct" | "partial" | "incorrect",
+  "syntax_valid": boolean,
+  "feedback": "2-3 sentence evaluation: correctness, query quality, one improvement tip"
+}`
+    }]
+  });
+
+  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
+  const aiResult = JSON.parse(raw);
+
+  const penalty = Math.min(violation_count * 5, 25);
+  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+
+  const result = await assessmentRepo.saveResult({
+    user_id,
+    type: 'sql',
+    score: finalScore,
+    metadata: {
+      difficulty, challenge_title, scenario, question, sql_code,
+      violation_count, time_taken_seconds,
+      ai_score: aiResult.skill_score,
+      penalty_applied: penalty,
+      correctness: aiResult.correctness,
+      syntax_valid: aiResult.syntax_valid,
+      feedback: aiResult.feedback
+    }
+  });
+
+  return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness };
+};
+
+// ─── BUG FIXING ───────────────────────────────────────────────────────────────
+
+const generateBugFixChallenge = async ({ language, difficulty = 'easy' }) => {
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 700,
+    messages: [{
+      role: 'user',
+      content: `Generate a bug fixing challenge for a student assessment.
+
+Language: ${language}
+Difficulty: ${difficulty}
+
+Difficulty guidelines:
+- easy: 1-2 obvious bugs, syntax errors, off-by-one errors, simple logic mistakes
+- medium: 2-3 bugs, logical errors, wrong conditions, missing edge case handling
+- hard: 3-5 subtle bugs, algorithmic errors, race conditions concepts, complex logic flaws
+
+Respond with JSON only, no markdown:
+{
+  "title": "short challenge title",
+  "description": "what the code is supposed to do, 1-2 sentences",
+  "buggy_code": "the code with bugs inserted (10-25 lines)",
+  "bug_count": number,
+  "hints": ["hint about bug 1", "hint about bug 2"],
+  "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
+}`
+    }]
+  });
+
+  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
+  return JSON.parse(raw);
+};
+
+const submitBugFixResult = async (user_id, { language, difficulty, challenge_title, description, original_buggy_code, fixed_code, violation_count, time_taken_seconds }) => {
+  if (!fixed_code) throw { status: 400, message: 'fixed_code is required.' };
+
+  const feedbackMsg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    messages: [{
+      role: 'user',
+      content: `You are evaluating a bug fixing assessment for a student portfolio platform.
+
+Language: ${language}
+Difficulty: ${difficulty}
+Challenge: ${challenge_title}
+Description: ${description}
+Violations: ${violation_count}
+
+Original buggy code:
+\`\`\`
+${original_buggy_code}
+\`\`\`
+
+Student's fixed code:
+\`\`\`
+${fixed_code}
+\`\`\`
+
+Respond with JSON only, no markdown:
+{
+  "skill_score": number from 0-100,
+  "bugs_fixed": "all" | "most" | "some" | "none",
+  "correctness": "correct" | "partial" | "incorrect",
+  "feedback": "2-3 sentences: which bugs were fixed, what was missed, one improvement tip"
+}`
+    }]
+  });
+
+  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
+  const aiResult = JSON.parse(raw);
+
+  const penalty = Math.min(violation_count * 5, 25);
+  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+
+  const result = await assessmentRepo.saveResult({
+    user_id,
+    type: 'bugfix',
+    score: finalScore,
+    metadata: {
+      language, difficulty, challenge_title, description,
+      original_buggy_code, fixed_code,
+      violation_count, time_taken_seconds,
+      ai_score: aiResult.skill_score,
+      penalty_applied: penalty,
+      bugs_fixed: aiResult.bugs_fixed,
+      correctness: aiResult.correctness,
+      feedback: aiResult.feedback
+    }
+  });
+
+  return { ...result, feedback: aiResult.feedback, bugs_fixed: aiResult.bugs_fixed };
+};
+
+// ─── SUMMARY ──────────────────────────────────────────────────────────────────
+
+const getAssessmentSummary = async (user_id) => {
+  const results = await assessmentRepo.getResultsByUser(user_id);
+
+  const summary = {
+    typing: null, programming: null, flowchart: null,
+    sql: null, bugfix: null, overall_score: null
+  };
+
+  for (const r of results) {
+    if (summary.hasOwnProperty(r.type) && !summary[r.type]) {
+      summary[r.type] = r;
+    }
+  }
+
+  const scores = Object.entries(summary)
+    .filter(([key, r]) => key !== 'overall_score' && r && r.score !== null)
+    .map(([, r]) => r.score);
+
+  if (scores.length > 0) {
+    summary.overall_score = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  }
+
+  return summary;
+};
+
+module.exports = {
+  submitTypingResult,
+  getTypingText,
+  generateChallenge,
+  submitCodingResult,
+  generateFlowchartProblem,
+  submitFlowchartResult,
+  generateSQLChallenge,
+  submitSQLResult,
+  generateBugFixChallenge,
+  submitBugFixResult,
+  getAssessmentSummary
+};

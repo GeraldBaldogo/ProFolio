@@ -15,6 +15,12 @@ import EvaluatorAssigned from './pages/evaluator/EvaluatorAssigned'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminUsers from './pages/admin/AdminUsers'
 
+// Assessment pages
+import AssessmentDashboard from './pages/student/assessment/AssessmentDashboard'
+import TypingAssessment from './pages/student/assessment/TypingAssessment'
+import CodingAssessment from './pages/student/assessment/CodingAssessment'
+import FlowchartAssessment from './pages/student/assessment/FlowchartAssessment'
+
 function App() {
   return (
     <Routes>
@@ -36,8 +42,23 @@ function App() {
       <Route path="/student/profile" element={
         <ProtectedRoutes role="student"><StudentProfile /></ProtectedRoutes>
       } />
+
+      {/* Assessment routes */}
+      <Route path="/student/assessment" element={
+        <ProtectedRoutes role="student"><AssessmentDashboard /></ProtectedRoutes>
+      } />
+      <Route path="/student/assessment/typing" element={
+        <ProtectedRoutes role="student"><TypingAssessment /></ProtectedRoutes>
+      } />
+      <Route path="/student/assessment/coding" element={
+        <ProtectedRoutes role="student"><CodingAssessment /></ProtectedRoutes>
+      } />
+      <Route path="/student/assessment/flowchart" element={
+        <ProtectedRoutes role="student"><FlowchartAssessment /></ProtectedRoutes>
+      } />
+
       <Route path="/evaluator/dashboard" element={
-        <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes   >
+        <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
       } />
       <Route path="/evaluator/assigned" element={
         <ProtectedRoutes role="evaluator"><EvaluatorAssigned /></ProtectedRoutes>

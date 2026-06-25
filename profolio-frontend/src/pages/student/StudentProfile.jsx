@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faRightFromBracket, faSpinner, faCircleCheck, faTriangleExclamation,
-  faPen, faSave, faGraduationCap, faBuilding, faLink,
+  faPen, faSave, faGraduationCap, faBuilding, faLink, faTrophy,
   faEnvelope, faBriefcase, faQuoteLeft,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
@@ -17,6 +17,7 @@ const navItems = [
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
+  { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]
 
