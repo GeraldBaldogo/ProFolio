@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
+import { faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faTrophy, faRightFromBracket, faSpinner, faFileLines, faBolt,
   faRotateRight, faPrint, faDownload, faTriangleExclamation,
   faCircleCheck, faEnvelope, faPhone, faLocationDot, faLink,
-  faGithub, faLinkedin, faBriefcase, faGraduationCap, faCode,
-  faCertificate, faMedal, faChartBar, faCheck,
+  faBriefcase, faGraduationCap, faCode, faCertificate, faMedal,
+  faChartBar, faCheck,
 } from '@fortawesome/free-solid-svg-icons'
 import { faLinkedin as faLinkedinBrand, faGithub as faGithubBrand } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
