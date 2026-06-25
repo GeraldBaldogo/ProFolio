@@ -14,6 +14,10 @@ import EvaluatorHistory from './pages/evaluator/EvaluatorHistory'
 import EvaluatorAssigned from './pages/evaluator/EvaluatorAssigned'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminUsers from './pages/admin/AdminUsers'
+import RecommendationsPage from './pages/student/RecommendationsPage'
+import SQLAssessment from './pages/student/assessment/SQLAssessment'
+import BugFixAssessment from './pages/student/assessment/BugFixAssessment'
+import CVPage from './pages/student/CVPage'
 
 // Assessment pages
 import AssessmentDashboard from './pages/student/assessment/AssessmentDashboard'
@@ -41,6 +45,18 @@ function App() {
       } />
       <Route path="/student/profile" element={
         <ProtectedRoutes role="student"><StudentProfile /></ProtectedRoutes>
+      } />
+      <Route path="/student/recommendations" element={
+        <ProtectedRoutes role="student"><RecommendationsPage /></ProtectedRoutes>
+      } />
+      <Route path="/student/assessment/sql" element={
+        <ProtectedRoutes role="student"><SQLAssessment /></ProtectedRoutes>
+      } />
+      <Route path="/student/assessment/bugfix" element={
+        <ProtectedRoutes role="student"><BugFixAssessment /></ProtectedRoutes>
+      } />
+      <Route path="/student/cv" element={
+        <ProtectedRoutes role="student"><CVPage /></ProtectedRoutes>
       } />
 
       {/* Assessment routes */}
