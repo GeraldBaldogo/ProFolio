@@ -150,21 +150,16 @@ const CodingAssessment = () => {
       {/* Language */}
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
         <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Choose Language</p>
-        <div className="flex flex-wrap gap-2">
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 hover:border-white/20 focus:border-violet-500/50 focus:bg-violet-500/5 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-all cursor-pointer appearance-none"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '16px' }}
+        >
           {LANGUAGES.map(l => (
-            <button
-              key={l}
-              onClick={() => setLanguage(l)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
-                language === l
-                  ? 'bg-violet-500/15 border-violet-500/30 text-violet-300'
-                  : 'border-white/8 text-gray-400 hover:text-white hover:border-white/20'
-              }`}
-            >
-              {l}
-            </button>
+            <option key={l} value={l} className="bg-[#0a0a18] text-white">{l}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* Difficulty */}
@@ -175,9 +170,8 @@ const CodingAssessment = () => {
             <button
               key={d}
               onClick={() => setDifficulty(d)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${
-                difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
-              }`}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
+                }`}
             >
               {d}
             </button>
@@ -279,11 +273,10 @@ const CodingAssessment = () => {
         </div>
 
         {/* Violations */}
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold ${
-          violations === 0 ? 'border-green-500/20 bg-green-500/10 text-green-400'
-          : violations < 3 ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
-          : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
-        }`}>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold ${violations === 0 ? 'border-green-500/20 bg-green-500/10 text-green-400'
+            : violations < 3 ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
+              : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
+          }`}>
           <FontAwesomeIcon icon={faShield} />
           {violations} flag{violations !== 1 ? 's' : ''}
         </div>
