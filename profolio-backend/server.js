@@ -52,7 +52,7 @@ app.use('/api/assessments', require('./src/routes/assessment.routes'));
 app.use('/api/originality', originalityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/cv', cvRoutes);
- 
+app.use('/api/communication', require('./src/routes/communication.routes'));
 
 // Global error handler
 app.use((err, req, res, next) => {
