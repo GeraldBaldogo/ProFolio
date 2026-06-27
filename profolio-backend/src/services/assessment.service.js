@@ -409,7 +409,7 @@ const getAssessmentSummary = async (user_id) => {
 
   const summary = {
     typing: null, programming: null, flowchart: null,
-    sql: null, bugfix: null, overall_score: null
+    sql: null, bugfix: null, communication: null, overall_score: null
   };
 
   for (const r of results) {
