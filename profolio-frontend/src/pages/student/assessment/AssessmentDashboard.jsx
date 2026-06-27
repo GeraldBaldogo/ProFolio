@@ -74,7 +74,6 @@ const ASSESSMENTS = [
     gradient: 'from-cyan-500 to-blue-600',
     path: '/student/assessment/communication',
     type: 'communication',
-    isNew: true,
   },
 ]
 
