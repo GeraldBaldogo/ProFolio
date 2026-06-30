@@ -18,6 +18,7 @@ import RecommendationsPage from './pages/student/RecommendationsPage'
 import SQLAssessment from './pages/student/assessment/SQLAssessment'
 import BugFixAssessment from './pages/student/assessment/BugFixAssessment'
 import CVPage from './pages/student/CVPage'
+import OriginalityCheck from './pages/student/OriginalityCheck'
 
 // Assessment pages
 import AssessmentDashboard from './pages/student/assessment/AssessmentDashboard'
@@ -58,6 +59,9 @@ function App() {
       } />
       <Route path="/student/cv" element={
         <ProtectedRoutes role="student"><CVPage /></ProtectedRoutes>
+      } />
+      <Route path="/student/originality" element={
+        <ProtectedRoutes role="student"><OriginalityCheck /></ProtectedRoutes>
       } />
 
       {/* Assessment routes */}
