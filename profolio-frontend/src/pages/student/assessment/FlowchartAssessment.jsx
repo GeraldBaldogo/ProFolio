@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft, faDiagramProject, faCloudArrowUp, faCircleCheck,
-  faSpinner, faImage, faRotateRight,
+  faSpinner, faImage, faRotateRight, faShield,
 } from '@fortawesome/free-solid-svg-icons'
 import { generateFlowchartProblem, submitFlowchartResult } from '../../../services/assessment.service'
+import ProctoringCamera from '../../../components/ProctoringCamera'
 
 const FlowchartAssessment = () => {
   const navigate = useNavigate()
-  const [phase, setPhase] = useState('loading') // loading | problem | submitting | result
+  const [phase, setPhase] = useState('loading') // loading | problem | result
   const [problem, setProblem] = useState(null)
   const [imageFile, setImageFile] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -17,9 +18,19 @@ const FlowchartAssessment = () => {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
+  // Camera proctoring
+  const [cameraReady, setCameraReady] = useState(false)
+  const [cameraViolations, setCameraViolations] = useState(0)
+  const cameraViolationsRef = useRef(0)
+
   useEffect(() => {
     fetchProblem()
   }, [])
+
+  const handleCameraViolation = () => {
+    cameraViolationsRef.current += 1
+    setCameraViolations(cameraViolationsRef.current)
+  }
 
   const fetchProblem = async () => {
     setPhase('loading')
@@ -57,6 +68,7 @@ const FlowchartAssessment = () => {
       const data = await submitFlowchartResult({
         problem_title: problem?.title || 'Flowchart Assessment',
         imageFile,
+        camera_violation_count: cameraViolationsRef.current,
       })
       setResult(data)
       setPhase('result')
@@ -72,12 +84,19 @@ const FlowchartAssessment = () => {
     setPreview(null)
     setResult(null)
     setError(null)
+    setCameraViolations(0)
+    cameraViolationsRef.current = 0
     setPhase('problem')
   }
 
   // ── LOADING ───────────────────────────────────────────────────────────────
   if (phase === 'loading') return (
     <div className="min-h-screen bg-[#060612] flex items-center justify-center">
+      <ProctoringCamera
+        active={false}
+        onReady={() => setCameraReady(true)}
+        onDenied={() => navigate('/student/assessment')}
+      />
       <div className="flex flex-col items-center gap-3">
         <FontAwesomeIcon icon={faSpinner} className="text-blue-400 text-3xl animate-spin" />
         <p className="text-gray-500 text-sm">Generating your problem...</p>
@@ -88,19 +107,26 @@ const FlowchartAssessment = () => {
   // ── RESULT ────────────────────────────────────────────────────────────────
   if (phase === 'result') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
+      <ProctoringCamera
+        active={false}
+        onReady={() => setCameraReady(true)}
+        onDenied={() => navigate('/student/assessment')}
+      />
       <div className="flex items-center gap-4 mb-8">
         <button onClick={() => navigate('/student/assessment')} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back to Assessments
         </button>
       </div>
 
-      {/* Score card */}
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-6 text-center mb-5">
         <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <FontAwesomeIcon icon={faCircleCheck} className="text-green-400 text-2xl" />
         </div>
         <p className="text-white font-bold text-xl mb-1">Flowchart Submitted!</p>
         <p className="text-gray-500 text-sm">Score: <span className="text-white font-black text-2xl">{result?.score}</span>/100</p>
+        {cameraViolations > 0 && (
+          <p className="text-rose-400 text-xs mt-2">{cameraViolations} camera violation{cameraViolations > 1 ? 's' : ''} recorded</p>
+        )}
       </div>
 
       {/* AI checklist */}
@@ -124,7 +150,6 @@ const FlowchartAssessment = () => {
         ))}
       </div>
 
-      {/* AI Feedback */}
       {result?.feedback && (
         <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-5 mb-5">
           <p className="text-emerald-400 text-xs font-semibold mb-2">AI Feedback</p>
@@ -132,7 +157,6 @@ const FlowchartAssessment = () => {
         </div>
       )}
 
-      {/* Submitted image */}
       {preview && (
         <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 mb-5">
           <p className="text-gray-500 text-xs mb-2">Your submission</p>
@@ -155,6 +179,14 @@ const FlowchartAssessment = () => {
   return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
 
+      {/* Proctoring camera — active while on problem phase */}
+      <ProctoringCamera
+        active={phase === 'problem'}
+        onViolation={handleCameraViolation}
+        onReady={() => setCameraReady(true)}
+        onDenied={() => navigate('/student/assessment')}
+      />
+
       <div className="flex items-center gap-4 mb-8">
         <button onClick={() => navigate('/student/assessment')} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
@@ -165,9 +197,23 @@ const FlowchartAssessment = () => {
           </h1>
           <p className="text-gray-500 text-xs">Draw the flowchart on paper, take a photo, and upload it</p>
         </div>
+        {/* Camera violations badge */}
+        {cameraViolations > 0 && (
+          <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 text-xs font-semibold">
+            <FontAwesomeIcon icon={faShield} />
+            {cameraViolations} cam flag{cameraViolations !== 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
-      {/* Problem */}
+      {/* Camera not ready notice */}
+      {!cameraReady && (
+        <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
+          <FontAwesomeIcon icon={faSpinner} className="text-amber-400 animate-spin" />
+          <p className="text-amber-400 text-sm">Waiting for proctoring camera...</p>
+        </div>
+      )}
+
       {error && (
         <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 text-rose-400 text-sm">{error}</div>
       )}
@@ -193,7 +239,11 @@ const FlowchartAssessment = () => {
       {/* Instructions */}
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-5">
         <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">How to submit</p>
-        {['Draw the flowchart on paper using proper symbols (oval for start/end, diamond for decisions, rectangle for processes).', 'Take a clear photo of your drawing.', 'Upload the photo below.'].map((step, i) => (
+        {[
+          'Draw the flowchart on paper using proper symbols (oval for start/end, diamond for decisions, rectangle for processes).',
+          'Take a clear photo of your drawing.',
+          'Upload the photo below.',
+        ].map((step, i) => (
           <div key={i} className="flex items-start gap-3 mb-2.5 last:mb-0">
             <div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center flex-shrink-0 mt-0.5 font-bold">{i + 1}</div>
             <p className="text-gray-400 text-sm">{step}</p>
@@ -202,11 +252,7 @@ const FlowchartAssessment = () => {
       </div>
 
       {/* Upload */}
-      <div
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        className="mb-5"
-      >
+      <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} className="mb-5">
         <label htmlFor="flowchart-upload" className="cursor-pointer block">
           {preview ? (
             <div className="border border-emerald-500/30 bg-emerald-500/5 rounded-2xl p-3 text-center">
@@ -223,22 +269,18 @@ const FlowchartAssessment = () => {
             </div>
           )}
         </label>
-        <input
-          id="flowchart-upload"
-          type="file"
-          accept="image/*"
-          onChange={handleImagePick}
-          className="hidden"
-        />
+        <input id="flowchart-upload" type="file" accept="image/*" onChange={handleImagePick} className="hidden" />
       </div>
 
       <button
         onClick={handleSubmit}
-        disabled={!imageFile || submitting}
+        disabled={!imageFile || submitting || !cameraReady}
         className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white font-bold py-3 rounded-2xl transition-all"
       >
         {submitting ? (
           <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> AI is checking your flowchart...</>
+        ) : !cameraReady ? (
+          <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Waiting for camera...</>
         ) : (
           <><FontAwesomeIcon icon={faCircleCheck} /> Submit for AI Review</>
         )}

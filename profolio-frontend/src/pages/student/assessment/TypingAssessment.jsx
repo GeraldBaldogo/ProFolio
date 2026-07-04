@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft, faKeyboard, faRotateRight, faCircleCheck, faSpinner,
+  faShield,
 } from '@fortawesome/free-solid-svg-icons'
 import { submitTypingResult } from '../../../services/assessment.service'
+import ProctoringCamera from '../../../components/ProctoringCamera'
 
 const SAMPLE_TEXTS = [
   "The best way to predict the future is to create it. Programming is not just about writing code, it is about solving problems and thinking logically.",
@@ -24,9 +26,14 @@ const TypingAssessment = () => {
   const [accuracy, setAccuracy] = useState(100)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
+
+  // Camera proctoring state
+  const [cameraReady, setCameraReady] = useState(false)
+  const [cameraViolations, setCameraViolations] = useState(0)
+  const cameraViolationsRef = useRef(0)
+
   const timerRef = useRef(null)
   const textareaRef = useRef(null)
-  // Use refs to always have latest values inside async handleSubmit
   const wpmRef = useRef(0)
   const accRef = useRef(100)
   const elapsedRef = useRef(0)
@@ -34,6 +41,11 @@ const TypingAssessment = () => {
   useEffect(() => {
     return () => clearInterval(timerRef.current)
   }, [])
+
+  const handleCameraViolation = () => {
+    cameraViolationsRef.current += 1
+    setCameraViolations(cameraViolationsRef.current)
+  }
 
   const handleType = (e) => {
     const value = e.target.value
@@ -83,6 +95,7 @@ const TypingAssessment = () => {
         wpm: finalWpm,
         accuracy: finalAcc,
         time_seconds: finalTime,
+        camera_violation_count: cameraViolationsRef.current,
       })
       setResult(data)
     } catch (err) {
@@ -101,6 +114,8 @@ const TypingAssessment = () => {
     setWpm(0)
     setAccuracy(100)
     setResult(null)
+    setCameraViolations(0)
+    cameraViolationsRef.current = 0
     clearInterval(timerRef.current)
     textareaRef.current?.focus()
   }
@@ -123,6 +138,14 @@ const TypingAssessment = () => {
   return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-3xl mx-auto">
 
+      {/* Proctoring camera — active once started */}
+      <ProctoringCamera
+        active={started && !finished}
+        onViolation={handleCameraViolation}
+        onReady={() => setCameraReady(true)}
+        onDenied={() => navigate('/student/assessment')}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
@@ -141,18 +164,37 @@ const TypingAssessment = () => {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: 'WPM', value: wpm || '—' },
           { label: 'Accuracy', value: started ? `${accuracy}%` : '—' },
           { label: 'Time', value: started ? `${elapsed}s` : '—' },
+          { label: 'Cam Flags', value: cameraViolations > 0 ? cameraViolations : '—', warn: cameraViolations > 0 },
         ].map((s) => (
-          <div key={s.label} className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 text-center">
+          <div key={s.label} className={`border rounded-2xl p-4 text-center ${s.warn ? 'border-rose-500/20 bg-rose-500/5' : 'border-white/8 bg-white/[0.03]'}`}>
             <p className="text-gray-500 text-xs mb-1">{s.label}</p>
-            <p className="text-white font-black text-2xl">{s.value}</p>
+            <p className={`font-black text-2xl ${s.warn ? 'text-rose-400' : 'text-white'}`}>{s.value}</p>
           </div>
         ))}
       </div>
+
+      {/* Camera not ready notice — shown before starting */}
+      {!cameraReady && !started && (
+        <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
+          <FontAwesomeIcon icon={faSpinner} className="text-amber-400 animate-spin" />
+          <p className="text-amber-400 text-sm">Waiting for proctoring camera to initialize...</p>
+        </div>
+      )}
+
+      {/* Camera violation warning banner */}
+      {cameraViolations > 0 && (
+        <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
+          <FontAwesomeIcon icon={faShield} className="text-rose-400" />
+          <p className="text-rose-400 text-sm font-semibold">
+            {cameraViolations} camera violation{cameraViolations > 1 ? 's' : ''} recorded — keep your face visible and centered.
+          </p>
+        </div>
+      )}
 
       {/* Sample text */}
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4 font-mono text-sm leading-8 tracking-wide">
@@ -166,14 +208,15 @@ const TypingAssessment = () => {
             ref={textareaRef}
             value={typed}
             onChange={handleType}
-            placeholder="Start typing here..."
+            disabled={!cameraReady}
+            placeholder={cameraReady ? 'Start typing here...' : 'Waiting for camera...'}
             rows={3}
-            className="w-full bg-[#0a0a18] border border-white/8 rounded-2xl p-4 text-white font-mono text-sm resize-none outline-none focus:border-blue-500/40 transition-colors placeholder:text-gray-700 mb-3"
+            className="w-full bg-[#0a0a18] border border-white/8 rounded-2xl p-4 text-white font-mono text-sm resize-none outline-none focus:border-blue-500/40 transition-colors placeholder:text-gray-700 mb-3 disabled:opacity-40"
             autoFocus
           />
           <button
             onClick={handleFinish}
-            disabled={!started}
+            disabled={!started || !cameraReady}
             className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-30 text-white font-bold py-3 rounded-2xl transition-all"
           >
             <FontAwesomeIcon icon={faCircleCheck} /> Submit Result
@@ -197,6 +240,9 @@ const TypingAssessment = () => {
               <div>
                 <p className="text-white font-bold text-lg mb-1">Assessment Complete!</p>
                 <p className="text-gray-500 text-sm">Skill score: <span className="text-white font-bold">{result.score}/100</span></p>
+                {cameraViolations > 0 && (
+                  <p className="text-rose-400 text-xs mt-1">{cameraViolations} camera violation{cameraViolations > 1 ? 's' : ''} recorded</p>
+                )}
               </div>
               <div className="flex gap-3 mt-2">
                 <button

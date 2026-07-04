@@ -16,10 +16,10 @@ export const getTypingText = async (difficulty = 'easy') => {
   return data.data.text;
 };
 
-export const submitTypingResult = async ({ wpm, accuracy, time_seconds, difficulty }) => {
+export const submitTypingResult = async ({ wpm, accuracy, time_seconds, difficulty, camera_violation_count = 0 }) => {
   const res = await fetch(`${API}/api/assessments/typing/submit`, {
     method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ wpm, accuracy, time_seconds, difficulty })
+    body: JSON.stringify({ wpm, accuracy, time_seconds, difficulty, camera_violation_count })
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.message);
@@ -59,7 +59,7 @@ export const generateFlowchartProblem = async (difficulty = 'easy') => {
   return data.data;
 };
 
-export const submitFlowchartResult = async ({ problem_title, difficulty, imageFile }) => {
+export const submitFlowchartResult = async ({ problem_title, difficulty, imageFile, camera_violation_count = 0 }) => {
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result.split(',')[1]);
@@ -68,7 +68,7 @@ export const submitFlowchartResult = async ({ problem_title, difficulty, imageFi
   });
   const res = await fetch(`${API}/api/assessments/flowchart/submit`, {
     method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ problem_title, difficulty, image_base64: base64, image_type: imageFile.type })
+    body: JSON.stringify({ problem_title, difficulty, image_base64: base64, image_type: imageFile.type, camera_violation_count })
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.message);

@@ -6,6 +6,7 @@ import {
   faCircleCheck, faSpinner, faPlay,
 } from '@fortawesome/free-solid-svg-icons'
 import { generateChallenge, submitCodingResult } from '../../../services/assessment.service'
+import ProctoringCamera from '../../../components/ProctoringCamera'
 
 const LANGUAGES = [
   'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'C#',
@@ -39,11 +40,16 @@ const CodingAssessment = () => {
   const [challenge, setChallenge] = useState(null)
   const [code, setCode] = useState('')
   const [secsLeft, setSecsLeft] = useState(600)
-  const [startSecs, setStartSecs] = useState(0)
   const [violations, setViolations] = useState(0)
   const [showWarning, setShowWarning] = useState(false)
+  const [warningType, setWarningType] = useState('tab') // 'tab' | 'camera'
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
+
+  // Camera proctoring state
+  const [cameraReady, setCameraReady] = useState(false)
+  const [cameraViolations, setCameraViolations] = useState(0)
+  const cameraViolationsRef = useRef(0)
 
   const timerRef = useRef(null)
   const violationsRef = useRef(0)
@@ -56,6 +62,7 @@ const CodingAssessment = () => {
       if (document.hidden) {
         violationsRef.current += 1
         setViolations(violationsRef.current)
+        setWarningType('tab')
         setShowWarning(true)
       }
     }
@@ -67,6 +74,14 @@ const CodingAssessment = () => {
   useEffect(() => {
     return () => clearInterval(timerRef.current)
   }, [])
+
+  // Camera violation handler
+  const handleCameraViolation = (type) => {
+    cameraViolationsRef.current += 1
+    setCameraViolations(cameraViolationsRef.current)
+    setWarningType('camera')
+    setShowWarning(true)
+  }
 
   const startChallenge = async () => {
     setGenerating(true)
@@ -112,6 +127,7 @@ const CodingAssessment = () => {
         challenge_title: challenge?.title || '',
         code: timedOut && !code ? '(no submission — time ran out)' : code,
         violation_count: violationsRef.current,
+        camera_violation_count: cameraViolationsRef.current,
         time_taken_seconds: timeTaken,
       })
       setResult(data)
@@ -130,11 +146,25 @@ const CodingAssessment = () => {
     return `${m}:${sec}`
   }
 
-  const diffColor = { easy: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10', medium: 'text-amber-400 border-amber-500/30 bg-amber-500/10', hard: 'text-rose-400 border-rose-500/30 bg-rose-500/10' }
+  const diffColor = {
+    easy: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+    medium: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
+    hard: 'text-rose-400 border-rose-500/30 bg-rose-500/10',
+  }
+
+  const totalViolations = violations + cameraViolations
 
   // ── SETUP ─────────────────────────────────────────────────────────────────
   if (phase === 'setup') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
+
+      {/* ProctoringCamera runs in setup phase too — so it can initialize before challenge starts */}
+      <ProctoringCamera
+        active={false}
+        onReady={() => setCameraReady(true)}
+        onDenied={() => navigate('/student/assessment')}
+      />
+
       <div className="flex items-center gap-4 mb-8">
         <button onClick={() => navigate('/student/assessment')} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
@@ -170,8 +200,9 @@ const CodingAssessment = () => {
             <button
               key={d}
               onClick={() => setDifficulty(d)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
-                }`}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${
+                difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
+              }`}
             >
               {d}
             </button>
@@ -188,18 +219,20 @@ const CodingAssessment = () => {
         <div>
           <p className="text-amber-400 text-sm font-semibold mb-1">Anti-cheat is active</p>
           <p className="text-gray-500 text-xs leading-relaxed">
-            Copy-paste is disabled. Switching tabs is recorded as a violation and deducts 5 points per flag (max 25 pts). Your code is submitted to AI for review.
+            Copy-paste and tab switching are disabled. A proctoring camera will monitor your face throughout the assessment. Violations deduct 5 points each (max 25 pts).
           </p>
         </div>
       </div>
 
       <button
         onClick={startChallenge}
-        disabled={generating}
+        disabled={generating || !cameraReady}
         className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-bold py-3 rounded-2xl transition-all"
       >
         {generating ? (
           <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Generating challenge...</>
+        ) : !cameraReady ? (
+          <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Waiting for camera...</>
         ) : (
           <><FontAwesomeIcon icon={faPlay} /> Start Challenge</>
         )}
@@ -223,11 +256,16 @@ const CodingAssessment = () => {
         <p className="text-white font-bold text-xl mb-1">Challenge Submitted!</p>
         <p className="text-gray-500 text-sm">Final Score: <span className="text-white font-black text-2xl">{result?.score}</span>/100</p>
         {violations > 0 && (
-          <p className="text-rose-400 text-xs mt-2">{violations} violation{violations > 1 ? 's' : ''} recorded — {Math.min(violations * 5, 25)} pts deducted</p>
+          <p className="text-rose-400 text-xs mt-2">{violations} tab violation{violations > 1 ? 's' : ''} recorded</p>
+        )}
+        {cameraViolations > 0 && (
+          <p className="text-rose-400 text-xs mt-1">{cameraViolations} camera violation{cameraViolations > 1 ? 's' : ''} recorded</p>
+        )}
+        {totalViolations > 0 && (
+          <p className="text-rose-400 text-xs mt-1 font-semibold">{Math.min(totalViolations * 5, 25)} pts total deducted</p>
         )}
       </div>
 
-      {/* AI Feedback */}
       {result?.feedback && (
         <div className="border border-violet-500/20 bg-violet-500/5 rounded-2xl p-5 mb-4">
           <p className="text-violet-400 text-xs font-semibold mb-2">AI Feedback</p>
@@ -250,12 +288,27 @@ const CodingAssessment = () => {
   return (
     <div className="min-h-screen bg-[#060612] font-sans flex flex-col">
 
-      {/* Tab switch warning overlay */}
+      {/* Camera proctoring */}
+      <ProctoringCamera
+        active={phase === 'challenge'}
+        onViolation={handleCameraViolation}
+        onReady={() => setCameraReady(true)}
+        onDenied={() => navigate('/student/assessment')}
+      />
+
+      {/* Warning overlay */}
       {showWarning && (
         <div className="fixed inset-0 z-50 bg-rose-950/95 flex items-center justify-center flex-col gap-4 text-center px-6">
           <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 text-5xl" />
-          <h2 className="text-white font-black text-2xl">Tab Switch Detected!</h2>
-          <p className="text-rose-300 text-sm max-w-sm">Leaving the page is a violation. This has been recorded. {violations} flag{violations > 1 ? 's' : ''} so far.</p>
+          <h2 className="text-white font-black text-2xl">
+            {warningType === 'camera' ? 'Proctoring Violation!' : 'Tab Switch Detected!'}
+          </h2>
+          <p className="text-rose-300 text-sm max-w-sm">
+            {warningType === 'camera'
+              ? 'A proctoring violation was detected — ensure your face is visible and centered in the camera at all times.'
+              : 'Leaving the page is a violation. This has been recorded.'}
+            {' '}{totalViolations} flag{totalViolations > 1 ? 's' : ''} total so far.
+          </p>
           <button
             onClick={() => setShowWarning(false)}
             className="bg-white text-rose-800 font-bold px-6 py-2.5 rounded-xl mt-2"
@@ -273,12 +326,13 @@ const CodingAssessment = () => {
         </div>
 
         {/* Violations */}
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold ${violations === 0 ? 'border-green-500/20 bg-green-500/10 text-green-400'
-            : violations < 3 ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
-              : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
-          }`}>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold ${
+          totalViolations === 0 ? 'border-green-500/20 bg-green-500/10 text-green-400'
+          : totalViolations < 3 ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
+          : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
+        }`}>
           <FontAwesomeIcon icon={faShield} />
-          {violations} flag{violations !== 1 ? 's' : ''}
+          {totalViolations} flag{totalViolations !== 1 ? 's' : ''}
         </div>
 
         {/* Timer */}
@@ -310,7 +364,6 @@ const CodingAssessment = () => {
 
         {/* Editor panel */}
         <div className="flex-1 flex flex-col border border-white/8 bg-[#0a0a18] rounded-2xl overflow-hidden">
-          {/* Editor topbar */}
           <div className="flex items-center gap-2 px-4 py-2.5 bg-[#060610] border-b border-white/5">
             <div className="flex gap-1.5">
               <div className="w-3 h-3 rounded-full bg-rose-500/60" />
@@ -321,7 +374,6 @@ const CodingAssessment = () => {
             <span className="ml-auto text-xs text-rose-400/70 border border-rose-500/20 px-2 py-0.5 rounded-full">paste disabled</span>
           </div>
 
-          {/* Code textarea */}
           <textarea
             value={code}
             onChange={(e) => setCode(e.target.value)}
@@ -342,7 +394,6 @@ const CodingAssessment = () => {
             autoCorrect="off"
           />
 
-          {/* Submit bar */}
           <div className="flex items-center justify-between px-4 py-3 bg-[#060610] border-t border-white/5">
             <p className="text-gray-600 text-xs">Write your own code — no AI tools allowed</p>
             <button

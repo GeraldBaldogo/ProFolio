@@ -23,7 +23,7 @@ const TYPING_TEXTS = {
   ]
 };
 
-const submitTypingResult = async (user_id, { wpm, accuracy, time_seconds, difficulty = 'easy' }) => {
+const submitTypingResult = async (user_id, { wpm, accuracy, time_seconds, difficulty = 'easy', camera_violation_count = 0 }) => {
   if (wpm === undefined || wpm === null || accuracy === undefined || accuracy === null)
     throw { status: 400, message: 'wpm and accuracy are required.' };
 
@@ -35,7 +35,7 @@ const submitTypingResult = async (user_id, { wpm, accuracy, time_seconds, diffic
     user_id,
     type: 'typing',
     score,
-    metadata: { wpm, accuracy, time_seconds, difficulty }
+    metadata: { wpm, accuracy, time_seconds, difficulty, camera_violation_count }
   });
 
   return result;
@@ -81,7 +81,7 @@ Respond with JSON only, no markdown:
   return JSON.parse(raw);
 };
 
-const submitCodingResult = async (user_id, { language, difficulty, challenge_title, code, violation_count, time_taken_seconds }) => {
+const submitCodingResult = async (user_id, { language, difficulty, challenge_title, code, violation_count, camera_violation_count = 0, time_taken_seconds }) => {
   if (!code) throw { status: 400, message: 'code is required.' };
 
   const feedbackMsg = await client.messages.create({
@@ -94,7 +94,8 @@ const submitCodingResult = async (user_id, { language, difficulty, challenge_tit
 Language: ${language}
 Difficulty: ${difficulty}
 Challenge: ${challenge_title}
-Violations (paste/tab switch): ${violation_count}
+Tab/Paste Violations: ${violation_count}
+Camera Violations: ${camera_violation_count}
 
 Student code:
 \`\`\`
@@ -114,7 +115,8 @@ Respond with JSON only, no markdown:
   const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
   const aiResult = JSON.parse(raw);
 
-  const penalty = Math.min(violation_count * 5, 25);
+  const totalViolations = violation_count + camera_violation_count;
+  const penalty = Math.min(totalViolations * 5, 25);
   const finalScore = Math.max(0, aiResult.skill_score - penalty);
 
   const result = await assessmentRepo.saveResult({
@@ -123,7 +125,7 @@ Respond with JSON only, no markdown:
     score: finalScore,
     metadata: {
       language, difficulty, challenge_title, code,
-      violation_count, time_taken_seconds,
+      violation_count, camera_violation_count, time_taken_seconds,
       ai_score: aiResult.skill_score,
       penalty_applied: penalty,
       correctness: aiResult.correctness,
@@ -164,7 +166,7 @@ Respond with JSON only, no markdown:
   return JSON.parse(raw);
 };
 
-const submitFlowchartResult = async (user_id, { problem_title, difficulty = 'easy', image_base64, image_type }) => {
+const submitFlowchartResult = async (user_id, { problem_title, difficulty = 'easy', image_base64, image_type, camera_violation_count = 0 }) => {
   if (!image_base64) throw { status: 400, message: 'image_base64 is required.' };
 
   const feedbackMsg = await client.messages.create({
@@ -197,12 +199,17 @@ Evaluate the flowchart and respond with JSON only, no markdown:
   const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
   const aiResult = JSON.parse(raw);
 
+  const penalty = Math.min(camera_violation_count * 5, 25);
+  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+
   const result = await assessmentRepo.saveResult({
     user_id,
     type: 'flowchart',
-    score: aiResult.skill_score,
+    score: finalScore,
     metadata: {
       problem_title, difficulty,
+      camera_violation_count,
+      penalty_applied: penalty,
       feedback: aiResult.feedback,
       has_start_end: aiResult.has_start_end,
       has_decision_diamond: aiResult.has_decision_diamond,
@@ -252,7 +259,7 @@ Respond with JSON only, no markdown:
   return JSON.parse(raw);
 };
 
-const submitSQLResult = async (user_id, { difficulty, challenge_title, scenario, question, sql_code, violation_count, time_taken_seconds }) => {
+const submitSQLResult = async (user_id, { difficulty, challenge_title, scenario, question, sql_code, violation_count, camera_violation_count = 0, time_taken_seconds }) => {
   if (!sql_code) throw { status: 400, message: 'sql_code is required.' };
 
   const feedbackMsg = await client.messages.create({
@@ -266,7 +273,8 @@ Difficulty: ${difficulty}
 Challenge: ${challenge_title}
 Scenario: ${scenario}
 Question: ${question}
-Violations: ${violation_count}
+Tab/Paste Violations: ${violation_count}
+Camera Violations: ${camera_violation_count}
 
 Student SQL:
 \`\`\`sql
@@ -286,7 +294,8 @@ Respond with JSON only, no markdown:
   const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
   const aiResult = JSON.parse(raw);
 
-  const penalty = Math.min(violation_count * 5, 25);
+  const totalViolations = violation_count + camera_violation_count;
+  const penalty = Math.min(totalViolations * 5, 25);
   const finalScore = Math.max(0, aiResult.skill_score - penalty);
 
   const result = await assessmentRepo.saveResult({
@@ -295,7 +304,7 @@ Respond with JSON only, no markdown:
     score: finalScore,
     metadata: {
       difficulty, challenge_title, scenario, question, sql_code,
-      violation_count, time_taken_seconds,
+      violation_count, camera_violation_count, time_taken_seconds,
       ai_score: aiResult.skill_score,
       penalty_applied: penalty,
       correctness: aiResult.correctness,
@@ -341,7 +350,7 @@ Respond with JSON only, no markdown:
   return JSON.parse(raw);
 };
 
-const submitBugFixResult = async (user_id, { language, difficulty, challenge_title, description, original_buggy_code, fixed_code, violation_count, time_taken_seconds }) => {
+const submitBugFixResult = async (user_id, { language, difficulty, challenge_title, description, original_buggy_code, fixed_code, violation_count, camera_violation_count = 0, time_taken_seconds }) => {
   if (!fixed_code) throw { status: 400, message: 'fixed_code is required.' };
 
   const feedbackMsg = await client.messages.create({
@@ -355,7 +364,8 @@ Language: ${language}
 Difficulty: ${difficulty}
 Challenge: ${challenge_title}
 Description: ${description}
-Violations: ${violation_count}
+Tab/Paste Violations: ${violation_count}
+Camera Violations: ${camera_violation_count}
 
 Original buggy code:
 \`\`\`
@@ -380,7 +390,8 @@ Respond with JSON only, no markdown:
   const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
   const aiResult = JSON.parse(raw);
 
-  const penalty = Math.min(violation_count * 5, 25);
+  const totalViolations = violation_count + camera_violation_count;
+  const penalty = Math.min(totalViolations * 5, 25);
   const finalScore = Math.max(0, aiResult.skill_score - penalty);
 
   const result = await assessmentRepo.saveResult({
@@ -390,7 +401,7 @@ Respond with JSON only, no markdown:
     metadata: {
       language, difficulty, challenge_title, description,
       original_buggy_code, fixed_code,
-      violation_count, time_taken_seconds,
+      violation_count, camera_violation_count, time_taken_seconds,
       ai_score: aiResult.skill_score,
       penalty_applied: penalty,
       bugs_fixed: aiResult.bugs_fixed,

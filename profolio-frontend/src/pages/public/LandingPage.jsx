@@ -4,27 +4,22 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowRight, faChevronRight, faChevronDown,
   faBars, faTimes, faRobot, faCode, faKeyboard,
-  faDiagramProject, faTrophy, faStar, faUsers,
-  faBolt, faShieldHalved, faGraduationCap, faChartLine,
-  faCircleCheck, faCheck, faPlay, faQuoteLeft,
-  faUserTie, faMedal, faFire, faLock, faUnlock,
+  faDiagramProject, faTrophy, faUserTie, faMedal,
+  faGraduationCap, faChartLine, faCircleCheck, faPlay,
+  faQuoteLeft, faFire, faListCheck,
+  faFingerprint, faFolderOpen, faFileLines, faLightbulb,
+  faComments, faCircle, faTerminal, faBug, faDatabase,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin, faFacebook, faInstagram } from '@fortawesome/free-brands-svg-icons'
-import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import ProFolioLogo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
-// ─── Unsplash Photos ───────────────────────────────────────────────────────────
-const PHOTOS = {
-  hero: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=900&q=80',
-  coding: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=800&q=80',
-  typing: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=800&q=80',
-  flowchart: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80',
-  students: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80',
-  career: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80',
-  team: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&q=80',
-}
+// Only one real photo left in the whole page — genuine campus/student life for
+// institutional context. Everything assessment-related is a built UI mockup below,
+// so it actually represents what ProFolio does instead of generic stock photography.
+const STUDENTS_PHOTO = 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80'
 
-// ─── Animated Counter ─────────────────────────────────────────────────────────
-const Counter = ({ end, suffix = '', duration = 2000 }) => {
+// ─── Animated Counter (integers only) ────────────────────────────────────────
+const Counter = ({ end, suffix = '', duration = 1400 }) => {
   const [count, setCount] = useState(0)
   const ref = useRef(null)
   useEffect(() => {
@@ -46,7 +41,125 @@ const Counter = ({ end, suffix = '', duration = 2000 }) => {
   return <span ref={ref}>{count}{suffix}</span>
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── Mock UI: typing test ─────────────────────────────────────────────────────
+const TypingMock = () => (
+  <div className="w-full h-full bg-[#0d1218] p-5 flex flex-col justify-center gap-3">
+    <div className="flex items-center gap-2 mb-1">
+      <FontAwesomeIcon icon={faKeyboard} className="text-blue-400 text-xs" />
+      <span className="text-gray-500 text-[10px] font-mono uppercase tracking-wide">typing-test.run</span>
+    </div>
+    <p className="font-mono text-sm leading-relaxed">
+      <span className="text-gray-600">the quick brown fox </span>
+      <span className="text-blue-400">jumps over</span>
+      <span className="inline-block w-[2px] h-4 bg-blue-400 ml-0.5 align-middle animate-pulse" />
+      <span className="text-gray-700"> the lazy dog</span>
+    </p>
+    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden mt-1">
+      <div className="h-full w-[46%] bg-blue-400 rounded-full" />
+    </div>
+  </div>
+)
+
+// ─── Mock UI: code editor ─────────────────────────────────────────────────────
+const CodeMock = () => (
+  <div className="w-full h-full bg-[#0d1218] p-5 flex flex-col gap-2 justify-center">
+    <div className="flex items-center gap-1.5 mb-2">
+      <span className="w-2 h-2 rounded-full bg-white/15" />
+      <span className="w-2 h-2 rounded-full bg-white/15" />
+      <span className="w-2 h-2 rounded-full bg-white/15" />
+      <span className="text-gray-600 text-[10px] font-mono ml-2">solution.py</span>
+    </div>
+    {[
+      { w: 'w-2/5', c: 'bg-violet-400/70' },
+      { w: 'w-4/5', c: 'bg-gray-600' },
+      { w: 'w-3/5', c: 'bg-violet-400/40' },
+      { w: 'w-1/2', c: 'bg-gray-700' },
+      { w: 'w-2/3', c: 'bg-violet-400/70' },
+    ].map((l,i) => (
+      <div key={i} className="flex items-center gap-2">
+        <span className="text-gray-700 text-[10px] font-mono w-3">{i+1}</span>
+        <div className={`h-2 rounded ${l.w} ${l.c}`} />
+      </div>
+    ))}
+    <div className="text-[10px] font-mono text-gray-600 mt-2">$ monitoring: tab-switch · copy-paste</div>
+  </div>
+)
+
+// ─── Mock UI: bug fix diff ─────────────────────────────────────────────────────
+const BugFixMock = () => (
+  <div className="w-full h-full bg-[#0d1218] p-5 flex flex-col justify-center gap-3">
+    <div className="flex items-center gap-2 mb-1">
+      <FontAwesomeIcon icon={faBug} className="text-rose-400 text-xs" />
+      <span className="text-gray-500 text-[10px] font-mono uppercase tracking-wide">bugfix.diff</span>
+    </div>
+    <div className="font-mono text-[11px] flex flex-col gap-1.5">
+      <div className="flex items-center gap-2 text-rose-400/80 bg-rose-500/5 px-2 py-1 rounded">
+        <span>-</span><span className="line-through decoration-rose-500/60">return total / count</span>
+      </div>
+      <div className="flex items-center gap-2 text-emerald-400/90 bg-emerald-500/5 px-2 py-1 rounded">
+        <span>+</span><span>return total / max(count, 1)</span>
+      </div>
+    </div>
+    <div className="text-[10px] font-mono text-gray-600 mt-1">$ 1 defect found · awaiting fix</div>
+  </div>
+)
+
+// ─── Mock UI: SQL query ────────────────────────────────────────────────────────
+const SqlMock = () => (
+  <div className="w-full h-full bg-[#0d1218] p-5 flex flex-col justify-center gap-3">
+    <div className="flex items-center gap-2 mb-1">
+      <FontAwesomeIcon icon={faDatabase} className="text-sky-400 text-xs" />
+      <span className="text-gray-500 text-[10px] font-mono uppercase tracking-wide">query.sql</span>
+    </div>
+    <p className="font-mono text-xs leading-relaxed">
+      <span className="text-sky-400">SELECT</span><span className="text-gray-500"> name, score </span>
+      <span className="text-sky-400">FROM</span><span className="text-gray-500"> students</span>
+    </p>
+    <div className="grid grid-cols-2 gap-1.5 mt-1">
+      {[0,1,2].map(i => (
+        <div key={i} className="contents">
+          <div className="h-2 rounded bg-gray-700" />
+          <div className="h-2 rounded bg-sky-400/30" />
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
+// ─── Mock UI: flowchart ────────────────────────────────────────────────────────
+const FlowchartMock = () => (
+  <div className="w-full h-full bg-[#0d1218] p-5 flex flex-col items-center justify-center gap-2">
+    <div className="px-4 py-1.5 rounded-full border border-emerald-400/40 text-emerald-300 text-[11px] font-mono">Start</div>
+    <div className="w-px h-3 bg-white/15" />
+    <div className="w-16 h-16 border border-emerald-400/40 rotate-45 flex items-center justify-center">
+      <span className="-rotate-45 text-emerald-300 text-[9px] font-mono text-center leading-tight">valid?</span>
+    </div>
+    <div className="w-px h-3 bg-white/15" />
+    <div className="flex items-center gap-6">
+      <div className="px-3 py-1.5 rounded-lg border border-white/15 text-gray-400 text-[10px] font-mono">retry</div>
+      <div className="px-3 py-1.5 rounded-lg border border-emerald-400/40 text-emerald-300 text-[10px] font-mono">End</div>
+    </div>
+  </div>
+)
+
+// ─── Mock UI: communication ─────────────────────────────────────────────────────
+const CommunicationMock = () => (
+  <div className="w-full h-full bg-[#0d1218] p-5 flex flex-col justify-center gap-2">
+    <div className="flex items-center gap-2 mb-1">
+      <FontAwesomeIcon icon={faComments} className="text-fuchsia-400 text-xs" />
+      <span className="text-gray-500 text-[10px] font-mono uppercase tracking-wide">response.log</span>
+    </div>
+    <div className="self-start max-w-[85%] bg-white/5 border border-white/10 rounded-xl rounded-bl-sm px-3 py-2 text-[11px] text-gray-400">
+      Explain your approach to this problem.
+    </div>
+    <div className="self-end max-w-[85%] bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-xl rounded-br-sm px-3 py-2 text-[11px] text-fuchsia-200">
+      I'd start by breaking the task into...
+      <span className="inline-block w-[2px] h-3 bg-fuchsia-300 ml-0.5 align-middle animate-pulse" />
+    </div>
+  </div>
+)
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const LandingPage = () => {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -68,66 +181,105 @@ const LandingPage = () => {
     return () => observer.disconnect()
   }, [])
 
+  // ── Real, verifiable facts only — no scores/grades ──
+  const factStats = [
+    { end: 6, suffix: '', label: 'Core Assessments', icon: faFire, color: 'text-blue-400' },
+    { end: 4, suffix: '', label: 'Faculty Panelists', icon: faUserTie, color: 'text-sky-400' },
+    { end: 9, suffix: '', label: 'Panel Recommendations Guiding the Build', icon: faLightbulb, color: 'text-violet-400' },
+    { end: 3, suffix: '', label: 'Degree Programs Supported', icon: faGraduationCap, color: 'text-emerald-400' },
+  ]
+
   const assessments = [
     {
       icon: faKeyboard,
       title: 'Speed Typing',
-      desc: 'Measure your words-per-minute and accuracy. A foundational skill for every tech professional.',
-      gradient: 'from-cyan-500 to-blue-500',
-      bg: 'bg-cyan-500/10',
-      border: 'border-cyan-500/30',
+      desc: 'Measure words-per-minute and accuracy — a baseline skill every tech professional is expected to have.',
+      accent: 'blue',
       tag: 'Foundational',
-      img: PHOTOS.typing,
+      Mock: TypingMock,
     },
     {
       icon: faCode,
       title: 'Programming Challenge',
-      desc: 'AI generates a real coding problem in your chosen language. Anti-cheat monitored, time-limited.',
-      gradient: 'from-violet-500 to-purple-600',
-      bg: 'bg-violet-500/10',
-      border: 'border-violet-500/30',
+      desc: 'A real coding problem generated for your chosen language, taken under copy-paste and tab-switch monitoring.',
+      accent: 'violet',
       tag: 'Core Skill',
-      img: PHOTOS.coding,
+      Mock: CodeMock,
+    },
+    {
+      icon: faBug,
+      title: 'Bug Fix Assessment',
+      desc: 'Given a broken snippet, find and correct the defect under time pressure — tests debugging instinct, not just writing new code.',
+      accent: 'rose',
+      tag: 'Debugging',
+      Mock: BugFixMock,
+    },
+    {
+      icon: faDatabase,
+      title: 'SQL Assessment',
+      desc: 'Write queries against a sample schema — tests whether you can retrieve and shape data correctly, not just recall syntax.',
+      accent: 'sky',
+      tag: 'Data Skill',
+      Mock: SqlMock,
     },
     {
       icon: faDiagramProject,
       title: 'Flowchart Design',
-      desc: 'Draw a process flowchart, snap a photo, and let AI evaluate your logical thinking.',
-      gradient: 'from-emerald-500 to-teal-600',
-      bg: 'bg-emerald-500/10',
-      border: 'border-emerald-500/30',
+      desc: 'Draw a process flowchart, submit a photo, and get it evaluated for logical structure and clarity.',
+      accent: 'emerald',
       tag: 'Logic & Design',
-      img: PHOTOS.flowchart,
+      Mock: FlowchartMock,
+    },
+    {
+      icon: faComments,
+      title: 'Communication Assessment',
+      desc: 'Respond to a prompt and get evaluated on clarity, structure, and how well you explain a technical idea in plain language.',
+      accent: 'fuchsia',
+      tag: 'Soft Skill',
+      Mock: CommunicationMock,
     },
   ]
 
+  const accentMap = {
+    blue:     { border: 'border-blue-500/30',     bg: 'bg-blue-500/10',     grad: 'from-blue-400 to-blue-600',       text: 'text-black' },
+    violet:   { border: 'border-violet-500/30',   bg: 'bg-violet-500/10',   grad: 'from-violet-500 to-purple-600',    text: 'text-white' },
+    rose:     { border: 'border-rose-500/30',     bg: 'bg-rose-500/10',     grad: 'from-rose-500 to-red-600',         text: 'text-white' },
+    sky:      { border: 'border-sky-500/30',      bg: 'bg-sky-500/10',      grad: 'from-sky-500 to-blue-600',         text: 'text-white' },
+    emerald:  { border: 'border-emerald-500/30',  bg: 'bg-emerald-500/10',  grad: 'from-emerald-500 to-teal-600',     text: 'text-white' },
+    fuchsia:  { border: 'border-fuchsia-500/30',  bg: 'bg-fuchsia-500/10',  grad: 'from-fuchsia-500 to-pink-600',     text: 'text-white' },
+  }
+
   const steps = [
-    { n:'01', title:'Create Account', desc:'Sign up with your Tomas Claudio Colleges email.', icon: faGraduationCap, color:'from-blue-500 to-cyan-500' },
-    { n:'02', title:'Take Assessments', desc:'Complete typing, coding, and flowchart challenges.', icon: faFire, color:'from-violet-500 to-purple-600' },
-    { n:'03', title:'Get AI Scored', desc:'Claude AI evaluates each submission instantly.', icon: faRobot, color:'from-rose-500 to-pink-500' },
-    { n:'04', title:'Human Review', desc:'Expert evaluators give the final career verdict.', icon: faUserTie, color:'from-amber-500 to-orange-500' },
-    { n:'05', title:'Earn Your Report', desc:'Get a shareable career readiness certificate.', icon: faMedal, color:'from-emerald-500 to-teal-600' },
+    { n:'01', title:'Create Account', desc:'Sign up with your Tomas Claudio Colleges email.', icon: faGraduationCap, color:'from-blue-400 to-blue-600' },
+    { n:'02', title:'Take Assessments', desc:'Complete the six assessments at your own pace.', icon: faFire, color:'from-violet-500 to-purple-600' },
+    { n:'03', title:'Get AI Scored', desc:'Each submission is evaluated against a fixed rubric.', icon: faRobot, color:'from-rose-500 to-pink-500' },
+    { n:'04', title:'Human Review', desc:'Faculty and industry evaluators confirm the final verdict.', icon: faUserTie, color:'from-amber-500 to-orange-500' },
+    { n:'05', title:'Build Your Profile', desc:'Results feed into a portfolio and CV you can share.', icon: faMedal, color:'from-emerald-500 to-teal-600' },
   ]
 
-  const stats = [
-    { end: 500, suffix: '+', label: 'Students Evaluated', icon: faUsers, color: 'text-blue-400' },
-    { end: 95, suffix: '%', label: 'Satisfaction Rate', icon: faStar, color: 'text-amber-400' },
-    { end: 3, suffix: ' min', label: 'Avg AI Response', icon: faBolt, color: 'text-violet-400' },
-    { end: 100, suffix: '%', label: 'Free to Use', icon: faShieldHalved, color: 'text-emerald-400' },
+  // ── Roadmap grid, mapped directly to the panel's written recommendations ──
+  const panelFeatures = [
+    { icon: faListCheck, title: 'Standardized Scoring Rubric', desc: 'Every submission is graded against the same fixed, documented criteria — so a score means the same thing no matter who takes the assessment or when.', status: 'Live' },
+    { icon: faFingerprint, title: 'Originality & Anti-Cheat Checks', desc: 'Copy-paste blocking and tab-switch monitoring during the coding challenge, so a result reflects the student\u2019s own work.', status: 'Live' },
+    { icon: faFolderOpen, title: 'Built-In Portfolio Storage', desc: 'Projects, certificates, and past assessment results stay organized in one place a student can point an employer to.', status: 'Live' },
+    { icon: faFileLines, title: 'Auto-Generated CV', desc: 'A shareable profile that compiles typing speed, programming proficiency, and other verified results into one document.', status: 'Live' },
+    { icon: faLightbulb, title: 'Personalized Growth Recommendations', desc: 'Suggested courses, training modules, and certifications targeted at the specific skill gaps an assessment uncovers.', status: 'Roadmap' },
+    { icon: faComments, title: 'Conversational AI Assistant', desc: 'A chat- or voice-based guide to make taking assessments and reading feedback more interactive.', status: 'Roadmap' },
   ]
 
-  const testimonials = [
-    { name:'Maria Santos', course:'BSCS — 4th Year', quote:'The coding challenge was tough but fair. My AI score actually matched what I expected. Great platform!', avatar:'MS', color:'from-blue-500 to-cyan-500', rating: 5 },
-    { name:'Juan dela Cruz', course:'BSIT — 3rd Year', quote:'I loved the anti-cheat system — makes the results feel real. My employer was impressed with my verified score.', avatar:'JD', color:'from-violet-500 to-purple-600', rating: 5 },
-    { name:'Andrea Reyes', course:'BSCS — Graduating', quote:'The flowchart assessment was unique — I had never seen that in any platform before. Really tests your thinking.', avatar:'AR', color:'from-rose-500 to-pink-600', rating: 5 },
+  // ── Paraphrased, non-verbatim excerpts of the panel's written comments ──
+  const panelHighlights = [
+    'Keep the evaluation criteria consistent and standardized across every assessment, tied to clear learning outcomes.',
+    'Verify that submitted work reflects the student\u2019s own effort rather than being entirely AI-generated.',
+    'Expand testing beyond typing and coding to cover communication, problem-solving, creativity, and documentation.',
   ]
 
   const faqs = [
-    { q: 'Is ProFolio free for Tomas Claudio students?', a: 'Yes! ProFolio is completely free for all students of Tomas Claudio Colleges. Just sign up and start.' },
-    { q: 'How does the AI assessment work?', a: 'Each assessment is submitted to Claude AI which evaluates correctness, quality, and skill level. You get instant feedback with a score out of 100.' },
-    { q: 'What is the anti-cheat system?', a: 'During programming challenges, copy-paste is disabled and tab switching is monitored. Each violation deducts points from your final score.' },
-    { q: 'Can I retake assessments?', a: 'Yes! You can retake any assessment. Your latest score will be used for your career readiness report.' },
-    { q: 'Who reviews my portfolio after the assessments?', a: 'Faculty members and industry professionals from Tomas Claudio Colleges serve as human evaluators who give the final career readiness verdict.' },
+    { q: 'Is ProFolio free?', a: 'Yes. ProFolio is free for all students — sign up with your personal email to start.' },
+    { q: 'How does the AI assessment work?', a: 'Each submission is scored against a fixed rubric by an AI model, giving instant feedback and a score out of 100.' },
+    { q: 'What is the anti-cheat system?', a: 'During the programming challenge, copy-paste is disabled and tab switching is monitored. Violations deduct points from the final score.' },
+    { q: 'Can I retake assessments?', a: 'Yes. You can retake any assessment, and your latest score is the one used in your career readiness report.' },
+    { q: 'Who reviews my results after the assessments?', a: 'Faculty and industry evaluators from Tomas Claudio Colleges serve as human reviewers who confirm the final readiness verdict.' },
   ]
 
   const socialLinks = [
@@ -138,7 +290,7 @@ const LandingPage = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-[#04040f] font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0d10] font-sans overflow-x-hidden">
 
       <style>{`
         .reveal { opacity:0; transform:translateY(28px); transition:opacity 0.6s ease, transform 0.6s ease; }
@@ -147,50 +299,43 @@ const LandingPage = () => {
         .reveal-left.in { opacity:1; transform:translateX(0); }
         .reveal-right { opacity:0; transform:translateX(28px); transition:opacity 0.6s ease, transform 0.6s ease; }
         .reveal-right.in { opacity:1; transform:translateX(0); }
-        .gradient-text { background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .gradient-text-green { background: linear-gradient(135deg, #34d399, #60a5fa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .accent-text { color: #60a5fa; }
+        .accent-text-warm { color: #fbbf24; }
         .glow-blue { box-shadow: 0 0 40px rgba(96,165,250,0.15); }
-        .glow-violet { box-shadow: 0 0 40px rgba(167,139,250,0.15); }
+        .glow-amber { box-shadow: 0 0 40px rgba(251,191,36,0.12); }
         .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .card-hover:hover { transform: translateY(-4px); }
-        .noise { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); }
-      `}</style>
-
-      {/* ── Animated background ── */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-[700px] h-[700px] rounded-full -top-64 -left-32 opacity-[0.07]"
-          style={{ background:'radial-gradient(circle, #3b82f6, transparent 70%)', animation:'pulse 8s ease-in-out infinite' }} />
-        <div className="absolute w-[500px] h-[500px] rounded-full top-1/3 -right-20 opacity-[0.07]"
-          style={{ background:'radial-gradient(circle, #8b5cf6, transparent 70%)', animation:'pulse 10s ease-in-out infinite 2s' }} />
-        <div className="absolute w-[400px] h-[400px] rounded-full bottom-1/4 left-1/4 opacity-[0.05]"
-          style={{ background:'radial-gradient(circle, #06b6d4, transparent 70%)', animation:'pulse 7s ease-in-out infinite 4s' }} />
-        <div className="absolute inset-0 opacity-[0.025]"
-          style={{ backgroundImage:'linear-gradient(rgba(99,102,241,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.8) 1px,transparent 1px)', backgroundSize:'48px 48px' }} />
-      </div>
-
-      <style>{`
-        @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.07} 50%{transform:scale(1.1);opacity:0.12} }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.06} 50%{transform:scale(1.1);opacity:0.11} }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
       `}</style>
 
+      {/* ── Ambient background ── */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute w-[700px] h-[700px] rounded-full -top-64 -left-32 opacity-[0.06]"
+          style={{ background:'radial-gradient(circle, #60a5fa, transparent 70%)', animation:'pulse 8s ease-in-out infinite' }} />
+        <div className="absolute w-[500px] h-[500px] rounded-full top-1/3 -right-20 opacity-[0.05]"
+          style={{ background:'radial-gradient(circle, #a78bfa, transparent 70%)', animation:'pulse 10s ease-in-out infinite 2s' }} />
+        <div className="absolute inset-0 opacity-[0.02]"
+          style={{ backgroundImage:'linear-gradient(rgba(148,163,184,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.8) 1px,transparent 1px)', backgroundSize:'48px 48px' }} />
+      </div>
+
       {/* ── Navbar ── */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#04040f]/90 backdrop-blur-xl border-b border-white/5' : ''}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0a0d10]/90 backdrop-blur-xl border-b border-white/5' : ''}`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="ProFolio" className="w-9 h-9 object-contain" />
-            <span className="text-xl font-black text-white tracking-tight">Pro<span className="gradient-text">Folio</span></span>
+          <div className="flex items-center gap-2.5">
+            <img src={ProFolioLogo} alt="ProFolio Logo" className="h-8 w-auto" />
+            <span className="text-xl font-black text-white tracking-tight">Pro<span className="accent-text">Folio</span></span>
           </div>
           <div className="hidden md:flex items-center gap-1">
-            {[['#assessments','Assessments'],['#how-it-works','How It Works'],['#testimonials','Testimonials'],['#faq','FAQ']].map(([href,label]) => (
+            {[['#assessments','Assessments'],['#roadmap','Features'],['#faq','FAQ']].map(([href,label]) => (
               <a key={href} href={href} className="text-gray-400 hover:text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/5 transition-all">{label}</a>
             ))}
           </div>
           <div className="hidden md:flex items-center gap-3">
             <button onClick={() => navigate('/login')} className="text-gray-400 hover:text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/5 transition-all">Sign In</button>
             <button onClick={() => navigate('/register')}
-              className="relative text-white text-sm font-bold px-5 py-2.5 rounded-xl overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500 group-hover:opacity-90 transition-opacity" />
-              <span className="relative flex items-center gap-2">Get Started Free <FontAwesomeIcon icon={faArrowRight} /></span>
+              className="bg-blue-400 hover:bg-blue-300 text-black text-sm font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2">
+              Get Started Free <FontAwesomeIcon icon={faArrowRight} />
             </button>
           </div>
           <button className="md:hidden w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
@@ -198,16 +343,15 @@ const LandingPage = () => {
           </button>
         </div>
         {menuOpen && (
-          <div className="md:hidden bg-[#04040f]/98 backdrop-blur-xl border-t border-white/5 px-6 py-4 flex flex-col gap-2">
-            {[['#assessments','Assessments'],['#how-it-works','How It Works'],['#testimonials','Testimonials'],['#faq','FAQ']].map(([href,label]) => (
+          <div className="md:hidden bg-[#0a0d10]/98 backdrop-blur-xl border-t border-white/5 px-6 py-4 flex flex-col gap-2">
+            {[['#assessments','Assessments'],['#roadmap','Features'],['#faq','FAQ']].map(([href,label]) => (
               <a key={href} href={href} className="text-gray-400 text-sm py-2.5 px-3 rounded-xl hover:bg-white/5 hover:text-white" onClick={() => setMenuOpen(false)}>{label}</a>
             ))}
             <div className="flex flex-col gap-2 pt-3 border-t border-white/5">
               <button onClick={() => navigate('/login')} className="text-gray-400 text-sm py-2.5 px-3 rounded-xl hover:bg-white/5 text-left">Sign In</button>
               <button onClick={() => navigate('/register')}
-                className="relative text-white text-sm font-bold py-3 rounded-xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500" />
-                <span className="relative">Get Started Free</span>
+                className="bg-blue-400 text-black text-sm font-bold py-3 rounded-xl">
+                Get Started Free
               </button>
             </div>
           </div>
@@ -222,27 +366,24 @@ const LandingPage = () => {
             {/* Left */}
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2.5 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-8">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                Tomas Claudio Colleges — Official Platform
+                <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                Tomas Claudio Colleges — Capstone Project, Group 6
               </div>
 
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.02] mb-6 tracking-tight">
                 Prove Your<br />
-                <span className="gradient-text">Skills.</span><br />
+                <span className="accent-text">Skills.</span><br />
                 Launch Your<br />Career.
               </h1>
 
               <p className="text-xl text-gray-400 max-w-lg mb-10 leading-relaxed">
-                ProFolio is the all-in-one skills assessment and career readiness platform for BSIT, BSCS, and BSIS students. Take real challenges. Get AI-scored. Get certified.
+                ProFolio is a skills assessment and career readiness platform built for BSIT, BSCS, and BSIS students. Take six real challenges, get scored against a fixed rubric, and walk away with a portfolio you can actually show.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
                 <button onClick={() => navigate('/register')}
-                  className="group relative text-white font-bold px-8 py-4 rounded-2xl overflow-hidden text-base">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500 transition-all group-hover:opacity-90" />
-                  <span className="relative flex items-center justify-center gap-2">
-                    Start Free Assessment <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
-                  </span>
+                  className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-8 py-4 rounded-2xl text-base transition-colors flex items-center justify-center gap-2">
+                  Start Free Assessment <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
                 </button>
                 <button onClick={() => navigate('/login')}
                   className="flex items-center justify-center gap-2 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white font-semibold px-8 py-4 rounded-2xl transition-all text-base">
@@ -251,7 +392,7 @@ const LandingPage = () => {
               </div>
 
               <div className="flex flex-wrap gap-6">
-                {['AI-Powered Scoring','Anti-Cheat Monitored','Expert Evaluation','Free for Students'].map((b,i) => (
+                {['Rubric-Based Scoring','Anti-Cheat Monitored','Human-Reviewed',].map((b,i) => (
                   <span key={i} className="flex items-center gap-2 text-sm text-gray-500">
                     <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-400" />{b}
                   </span>
@@ -259,65 +400,74 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* Right — photo collage */}
+            {/* Right — product mockup + real fact cards */}
             <div className="relative hidden lg:block" style={{ animation:'float 6s ease-in-out infinite' }}>
               <div className="relative w-full aspect-square max-w-lg mx-auto">
-                {/* Main photo */}
-                <div className="absolute inset-4 rounded-3xl overflow-hidden glow-blue">
-                  <img src={PHOTOS.hero} alt="Students collaborating" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#04040f]/80 via-transparent to-transparent" />
-                </div>
-
-                {/* Floating card 1 */}
-                <div className="absolute -top-4 -right-4 bg-[#0d0d1f] border border-violet-500/30 rounded-2xl p-4 w-48 glow-violet">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon icon={faRobot} className="text-white text-xs" />
-                    </div>
-                    <span className="text-white text-xs font-bold">AI Score</span>
+                <div className="absolute inset-4 rounded-3xl overflow-hidden glow-blue border border-white/10 bg-[#0d1218]">
+                  <div className="flex items-center gap-1.5 px-5 pt-5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                    <span className="text-gray-600 text-[11px] font-mono ml-2">profolio — assessment.session</span>
                   </div>
-                  <div className="text-3xl font-black text-violet-400 mb-1">87<span className="text-sm text-gray-500">/100</span></div>
-                  <div className="text-xs text-gray-500">Programming Challenge</div>
-                </div>
-
-                {/* Floating card 2 */}
-                <div className="absolute -bottom-4 -left-4 bg-[#0d0d1f] border border-emerald-500/30 rounded-2xl p-4 w-52 glow-blue">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
-                      <FontAwesomeIcon icon={faTrophy} className="text-white text-xs" />
+                  <div className="p-5 pt-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-xs font-mono text-gray-500">
+                      <FontAwesomeIcon icon={faTerminal} className="text-blue-400" /> initializing rubric...
                     </div>
-                    <span className="text-white text-xs font-bold">Career Readiness</span>
+                    {[
+                      { w:'w-3/5', c:'bg-blue-400/60' },
+                      { w:'w-4/5', c:'bg-gray-700' },
+                      { w:'w-2/5', c:'bg-violet-400/50' },
+                      { w:'w-3/4', c:'bg-gray-700' },
+                      { w:'w-1/2', c:'bg-emerald-400/50' },
+                    ].map((l,i)=>(
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-gray-700 text-[10px] font-mono w-3">{i+1}</span>
+                        <div className={`h-2.5 rounded ${l.w} ${l.c}`} />
+                      </div>
+                    ))}
+                    <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-gray-600 text-[11px] font-mono">status</span>
+                      <span className="text-emerald-400 text-[11px] font-mono flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faCircle} className="text-[6px]" /> monitoring active
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-sm font-black text-emerald-400 mb-1">Developing ✓</div>
-                  <div className="text-xs text-gray-500">Official Verdict · May 2026</div>
                 </div>
 
-                {/* Floating card 3 */}
-                <div className="absolute bottom-16 -right-6 bg-[#0d0d1f] border border-blue-500/30 rounded-2xl p-3 w-40">
-                  <div className="text-gray-500 text-[10px] mb-1">Typing Speed</div>
-                  <div className="text-2xl font-black text-blue-400">74 <span className="text-xs text-gray-500">WPM</span></div>
-                  <div className="text-[10px] text-emerald-400">96% accuracy ✓</div>
+                {/* Fact card 1 — real */}
+                <div className="absolute -top-4 -right-4 bg-[#0d1218] border border-blue-500/30 rounded-2xl p-4 w-48 glow-blue">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 bg-blue-400 rounded-lg flex items-center justify-center">
+                      <FontAwesomeIcon icon={faFire} className="text-black text-xs" />
+                    </div>
+                    <span className="text-white text-xs font-bold">Core Assessments</span>
+                  </div>
+                  <div className="text-3xl font-black text-blue-400 mb-1 font-mono">6</div>
+                  <div className="text-xs text-gray-500">Typing · Coding · Bug Fix · SQL · Flowchart · Communication</div>
+                </div>
+
+                {/* Fact card 2 — real, no grade */}
+                <div className="absolute -bottom-4 -left-4 bg-[#0d1218] border border-sky-500/30 rounded-2xl p-4 w-56">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      <FontAwesomeIcon icon={faGraduationCap} className="text-white text-xs" />
+                    </div>
+                    <span className="text-white text-xs font-bold">Programs Supported</span>
+                  </div>
+                  <div className="text-lg font-black text-sky-400 mb-1 font-mono">BSIT · BSCS · BSIS</div>
+                  <div className="text-xs text-gray-500">Tomas Claudio Colleges</div>
+                </div>
+
+                {/* Fact card 3 — real */}
+                <div className="absolute bottom-16 -right-6 bg-[#0d1218] border border-emerald-500/30 rounded-2xl p-3 w-44">
+                  <div className="text-gray-500 text-[10px] mb-1">Anti-Cheat Monitoring</div>
+                  <div className="text-sm font-black text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Active
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Stats ── */}
-      <section className="py-16 relative z-10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((s,i) => (
-              <div key={i} className="reveal card-hover border border-white/8 bg-white/[0.03] rounded-2xl p-6 text-center"
-                style={{ transitionDelay:`${i*80}ms` }}>
-                <FontAwesomeIcon icon={s.icon} className={`${s.color} text-2xl mb-3`} />
-                <div className={`text-4xl font-black mb-1 ${s.color}`}>
-                  <Counter end={s.end} suffix={s.suffix} />
-                </div>
-                <div className="text-gray-500 text-xs">{s.label}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -327,89 +477,80 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 reveal">
             <div className="inline-flex items-center gap-2 border border-violet-500/30 bg-violet-500/10 text-violet-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
-              <FontAwesomeIcon icon={faFire} /> 3 Core Assessments
+              <FontAwesomeIcon icon={faFire} /> 6 Core Assessments
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-              Real challenges.<br /><span className="gradient-text">Real scores.</span>
+              Real challenges.<br /><span className="accent-text">Rubric-graded.</span>
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Each assessment is designed to measure a specific skill set. Complete all three to unlock your overall career readiness score.
+              Each assessment measures one specific skill. Complete all six to build your career readiness profile.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {assessments.map((a,i) => (
-              <div key={i} className={`reveal card-hover border ${a.border} ${a.bg} rounded-3xl overflow-hidden`}
-                style={{ transitionDelay:`${i*120}ms` }}>
-                {/* Photo */}
-                <div className="relative h-48 overflow-hidden">
-                  <img src={a.img} alt={a.title} className="w-full h-full object-cover" />
-                  <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent`} />
-                  <div className={`absolute top-4 left-4 w-10 h-10 bg-gradient-to-br ${a.gradient} rounded-xl flex items-center justify-center shadow-lg`}>
-                    <FontAwesomeIcon icon={a.icon} className="text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {assessments.map((a,i) => {
+              const ac = accentMap[a.accent]
+              const Mock = a.Mock
+              return (
+                <div key={i} className={`reveal card-hover border ${ac.border} ${ac.bg} rounded-3xl overflow-hidden`}
+                  style={{ transitionDelay:`${(i%3)*120}ms` }}>
+                  <div className="relative h-44 overflow-hidden">
+                    <Mock />
+                    <div className={`absolute top-4 left-4 w-10 h-10 bg-gradient-to-br ${ac.grad} rounded-xl flex items-center justify-center shadow-lg`}>
+                      <FontAwesomeIcon icon={a.icon} className={ac.text} />
+                    </div>
+                    <span className={`absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full border ${ac.border} ${ac.bg} text-white`}>
+                      {a.tag}
+                    </span>
                   </div>
-                  <span className={`absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full border ${a.border} ${a.bg} text-white`}>
-                    {a.tag}
-                  </span>
+                  <div className="p-6">
+                    <h3 className="text-white font-black text-xl mb-2">{a.title}</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed mb-5">{a.desc}</p>
+                    <button onClick={() => navigate('/register')}
+                      className={`w-full py-2.5 rounded-xl text-sm font-bold ${ac.text} bg-gradient-to-r ${ac.grad} flex items-center justify-center gap-2 hover:opacity-90 transition-opacity`}>
+                      <FontAwesomeIcon icon={faPlay} /> Try this assessment
+                    </button>
+                  </div>
                 </div>
-                {/* Content */}
-                <div className="p-6">
-                  <h3 className="text-white font-black text-xl mb-2">{a.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed mb-5">{a.desc}</p>
-                  <button onClick={() => navigate('/register')}
-                    className={`w-full py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r ${a.gradient} flex items-center justify-center gap-2 hover:opacity-90 transition-opacity`}>
-                    <FontAwesomeIcon icon={faPlay} /> Try this assessment
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
-          {/* Unlock indicator */}
-          <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
-            {[
-              { label:'Typing', icon:faUnlock, color:'text-cyan-400' },
-              { label:'→', icon:null, color:'text-gray-600' },
-              { label:'Programming', icon:faLock, color:'text-violet-400' },
-              { label:'→', icon:null, color:'text-gray-600' },
-              { label:'Flowchart', icon:faLock, color:'text-emerald-400' },
-              { label:'→', icon:null, color:'text-gray-600' },
-              { label:'Career Score', icon:faTrophy, color:'text-amber-400' },
-            ].map((item,i) => (
-              <div key={i} className={`flex items-center gap-1.5 text-sm font-semibold ${item.color}`}>
-                {item.icon && <FontAwesomeIcon icon={item.icon} />}
-                {item.label}
-              </div>
+          <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
+            {['Typing','Coding','Bug Fix','SQL','Flowchart','Communication','Career Profile'].map((label,i,arr) => (
+              <span key={i} className={`text-sm font-semibold px-3 py-1 rounded-full border ${
+                i === arr.length - 1 ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-gray-400 border-white/10 bg-white/[0.03]'
+              }`}>{label}</span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Photo break section ── */}
+      {/* ── TCC section (keeps one real, authentic photo) ── */}
       <section className="py-16 px-6 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div className="reveal-left">
               <div className="relative rounded-3xl overflow-hidden h-80">
-                <img src={PHOTOS.students} alt="Students working" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#04040f]/60 to-transparent" />
+                <img src={STUDENTS_PHOTO} alt="Students working" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0a0d10]/60 to-transparent" />
                 <div className="absolute bottom-6 left-6">
                   <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-sm border border-white/10 text-white text-sm font-semibold px-4 py-2 rounded-full">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
                     Tomas Claudio Colleges
                   </div>
                 </div>
               </div>
             </div>
             <div className="reveal-right">
-              <div className="inline-flex items-center gap-2 border border-pink-500/30 bg-pink-500/10 text-pink-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
+              <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
                 <FontAwesomeIcon icon={faGraduationCap} /> For TCC Students
               </div>
               <h2 className="text-4xl font-black text-white mb-5 tracking-tight leading-tight">
-                Built specifically for <span className="gradient-text-green">TCC students</span>
+                Built specifically for <span className="accent-text">TCC students</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-6">
-                ProFolio is the official skills assessment platform of Tomas Claudio Colleges for BSIT, BSCS, and BSIS programs. Your scores are tied to your student profile and evaluated by your own faculty.
+                ProFolio is a capstone system built for Tomas Claudio Colleges' BSIT, BSCS, and BSIS programs. Scores are tied to a student's profile and reviewed by TCC faculty.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -437,15 +578,13 @@ const LandingPage = () => {
               <FontAwesomeIcon icon={faChartLine} /> How It Works
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-              From sign-up to <span className="gradient-text">certified</span>
+              From sign-up to <span className="accent-text">career-ready</span>
             </h2>
-            <p className="text-gray-400 text-lg max-w-xl mx-auto">Five steps to your official career readiness report.</p>
+            <p className="text-gray-400 text-lg max-w-xl mx-auto">Five steps to your career readiness profile.</p>
           </div>
 
           <div className="relative">
-            {/* Connector line */}
             <div className="hidden lg:block absolute top-8 left-[10%] right-[10%] h-px bg-gradient-to-r from-blue-500/30 via-violet-500/30 to-emerald-500/30" />
-
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {steps.map((s,i) => (
                 <div key={i} className="reveal flex flex-col items-center text-center" style={{ transitionDelay:`${i*100}ms` }}>
@@ -458,66 +597,6 @@ const LandingPage = () => {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Career photo section ── */}
-      <section className="py-16 px-6 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative rounded-3xl overflow-hidden">
-            <img src={PHOTOS.career} alt="Career ready professional" className="w-full h-64 md:h-80 object-cover object-top" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#04040f] via-[#04040f]/70 to-transparent" />
-            <div className="absolute inset-0 flex items-center px-8 md:px-16">
-              <div className="max-w-lg">
-                <div className="inline-flex items-center gap-2 border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-semibold px-4 py-2 rounded-full mb-4">
-                  <FontAwesomeIcon icon={faMedal} /> Career Ready
-                </div>
-                <h2 className="text-3xl md:text-4xl font-black text-white mb-4 tracking-tight">
-                  A verified score that<br /><span className="gradient-text">employers trust</span>
-                </h2>
-                <p className="text-gray-400 mb-6">Your career readiness report is backed by AI evaluation and expert human review — not just a self-reported portfolio.</p>
-                <button onClick={() => navigate('/register')}
-                  className="relative text-white font-bold px-6 py-3 rounded-xl overflow-hidden group inline-flex items-center gap-2">
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 group-hover:opacity-90 transition-opacity" />
-                  <span className="relative">Get Your Report Free</span>
-                  <FontAwesomeIcon icon={faArrowRight} className="relative" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ── */}
-      <section id="testimonials" className="py-24 px-6 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16 reveal">
-            <div className="inline-flex items-center gap-2 border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
-              <FontAwesomeIcon icon={faStar} /> Student Reviews
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-              What students <span className="gradient-text">say</span>
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {testimonials.map((t,i) => (
-              <div key={i} className="reveal card-hover border border-white/8 bg-white/[0.03] rounded-3xl p-7"
-                style={{ transitionDelay:`${i*120}ms` }}>
-                <FontAwesomeIcon icon={faQuoteLeft} className="text-blue-500/30 text-3xl mb-5" />
-                <p className="text-gray-300 text-sm leading-relaxed mb-6">"{t.quote}"</p>
-                <div className="flex gap-1 mb-5">
-                  {[...Array(t.rating)].map((_,j) => <FontAwesomeIcon key={j} icon={faStar} className="text-amber-400 text-xs" />)}
-                </div>
-                <div className="flex items-center gap-3 pt-4 border-t border-white/5">
-                  <div className={`w-10 h-10 bg-gradient-to-br ${t.color} rounded-full flex items-center justify-center text-white font-black text-xs flex-shrink-0`}>{t.avatar}</div>
-                  <div>
-                    <p className="text-white font-bold text-sm">{t.name}</p>
-                    <p className="text-gray-500 text-xs">{t.course} · TCC</p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -554,28 +633,20 @@ const LandingPage = () => {
       <section className="py-24 px-6 relative z-10">
         <div className="max-w-4xl mx-auto">
           <div className="reveal relative rounded-3xl overflow-hidden">
-            {/* Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-violet-600/20 to-pink-600/20" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-sky-600/10 to-violet-600/10" />
             <div className="absolute inset-0 border border-white/10 rounded-3xl" />
-            <img src={PHOTOS.team} alt="Team" className="absolute inset-0 w-full h-full object-cover opacity-10" />
 
             <div className="relative z-10 p-12 md:p-20 text-center">
-              <div className="inline-flex items-center gap-2 border border-green-500/30 bg-green-500/10 text-green-300 text-xs font-semibold px-4 py-2 rounded-full mb-6">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> Free for all TCC Students
-              </div>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-                Ready to prove<br /><span className="gradient-text">your skills?</span>
+                Ready to prove<br /><span className="accent-text">your skills?</span>
               </h2>
               <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
-                Join hundreds of Tomas Claudio students who are already building their verified skill profiles on ProFolio.
+                Take all six assessments, get rubric-based feedback, and start building a portfolio a faculty panel already put its name behind.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button onClick={() => navigate('/register')}
-                  className="group relative text-white font-bold px-10 py-4 rounded-2xl overflow-hidden text-base w-full sm:w-auto">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500 group-hover:opacity-90 transition-opacity" />
-                  <span className="relative flex items-center justify-center gap-2">
-                    Start Free <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
-                  </span>
+                  className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-10 py-4 rounded-2xl text-base w-full sm:w-auto transition-colors flex items-center justify-center gap-2">
+                  Start Free <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
                 </button>
                 <button onClick={() => navigate('/login')}
                   className="flex items-center justify-center gap-2 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-semibold px-10 py-4 rounded-2xl transition-all text-base w-full sm:w-auto">
@@ -587,14 +658,9 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── Footer ── */}
+      {/* ── Footer — no logo/wordmark, socials on the left ── */}
       <footer className="relative z-10 border-t border-white/5 px-6 py-10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="ProFolio" className="w-8 h-8 object-contain" />
-            <span className="text-white font-black">Pro<span className="gradient-text">Folio</span></span>
-            <span className="text-gray-600 text-xs ml-2">Tomas Claudio Colleges</span>
-          </div>
           <div className="flex items-center gap-3">
             {socialLinks.map((s,i) => (
               <a key={i} href={s.href} target="_blank" rel="noreferrer"
@@ -603,7 +669,9 @@ const LandingPage = () => {
               </a>
             ))}
           </div>
-          <p className="text-gray-700 text-xs">© 2026 ProFolio. All rights reserved.</p>
+          <p className="text-gray-700 text-xs text-center md:text-right">
+            Developed by Gerald Baldogo, Rafaela Morelos &amp; Jedrick Peñaredondo · © 2026 · Tomas Claudio Colleges
+          </p>
         </div>
       </footer>
     </div>
