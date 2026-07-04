@@ -452,7 +452,6 @@ const LandingPage = () => {
                     <span className="text-white text-xs font-bold">Programs Supported</span>
                   </div>
                   <div className="text-lg font-black text-sky-400 mb-1 font-mono">BSIT · BSCS · BSIS</div>
-                  <div className="text-xs text-gray-500">Tomas Claudio Colleges</div>
                 </div>
 
                 {/* Fact card 3 — real */}
@@ -666,7 +665,7 @@ const LandingPage = () => {
             ))}
           </div>
           <p className="text-gray-700 text-xs text-center md:text-right">
-            Developed by Gerald Baldogo, Rafaela Morelos &amp; Jedrick Peñaredondo · © 2026 · Tomas Claudio Colleges
+            Developed by Gerald Baldogo, Rafaela Morelos &amp; Jedrick Peñaredondo · © 2026 ·
           </p>
         </div>
       </footer>
