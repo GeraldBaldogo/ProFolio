@@ -365,10 +365,6 @@ const LandingPage = () => {
 
             {/* Left */}
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2.5 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-8">
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                Tomas Claudio Colleges — Capstone Project, Group 6
-              </div>
 
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.02] mb-6 tracking-tight">
                 Prove Your<br />
