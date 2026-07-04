@@ -665,7 +665,7 @@ const LandingPage = () => {
             ))}
           </div>
           <p className="text-gray-700 text-xs text-center md:text-right">
-            Developed by Gerald Baldogo, Rafaela Morelos &amp; Jedrick Peñaredondo · © 2026 ·
+            Developed by Team ProFolio · © 2026 ·
           </p>
         </div>
       </footer>
