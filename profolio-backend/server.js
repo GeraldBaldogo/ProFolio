@@ -17,7 +17,7 @@ const cvRoutes = require('./src/routes/cv.routes');
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://pro-folio-lake.vercel.app'
+  'https://pro-folio-development.vercel.app'
 ]
 
 app.use(cors({
