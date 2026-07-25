@@ -1,7 +1,7 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const assessmentRepo = require('../repositories/assessment.repo');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ─── PROMPTS ──────────────────────────────────────────────────────────────────
 
@@ -66,20 +66,17 @@ const getCommunicationPrompt = ({ difficulty = 'easy' } = {}) => {
 
 const submitCommunicationResult = async (
   user_id,
-  { difficulty = 'easy', prompt_id, prompt_title, prompt_text, response_text, time_taken_seconds }
+  {
+    difficulty = 'easy', prompt_id, prompt_title, prompt_text, response_text, time_taken_seconds,
+    violation_count = 0, camera_violation_count = 0, session_id = null
+  }
 ) => {
   if (!response_text || response_text.trim().length < 10)
     throw { status: 400, message: 'response_text is required and must be meaningful.' };
 
   const criteria = COMMUNICATION_PROMPTS[difficulty]?.find((p) => p.id === prompt_id)?.criteria || 'clarity, professionalism, completeness';
 
-  const feedbackMsg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 700,
-    messages: [
-      {
-        role: 'user',
-        content: `You are evaluating a student's written communication skill for a portfolio assessment platform.
+  const prompt = `You are evaluating a student's written communication skill for a portfolio assessment platform.
 
 Prompt given to student: "${prompt_text}"
 Evaluation criteria: ${criteria}
@@ -99,18 +96,29 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
   "strengths": "1-2 specific things the student did well",
   "improvements": "1-2 specific areas to improve",
   "overall_feedback": "2-3 sentence holistic evaluation"
-}`,
-      },
-    ],
+}`;
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: { responseMimeType: 'application/json' }
   });
 
-  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
+  const geminiResult = await model.generateContent(prompt);
+  const raw = geminiResult.response.text().replace(/```json|```/g, '').trim();
   const aiResult = JSON.parse(raw);
+
+  // Anti-cheat penalty — this was previously the only assessment type
+  // with zero proctoring integration, despite text-paste being one of
+  // the easiest ways to cheat on a written-response test.
+  const totalViolations = violation_count + camera_violation_count;
+  const penalty = Math.min(totalViolations * 5, 25);
+  const finalScore = Math.max(0, aiResult.skill_score - penalty);
 
   const result = await assessmentRepo.saveResult({
     user_id,
     type: 'communication',
-    score: aiResult.skill_score,
+    score: finalScore,
+    session_id,
     metadata: {
       difficulty,
       prompt_id,
@@ -118,6 +126,10 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
       prompt_text,
       response_text,
       time_taken_seconds,
+      violation_count,
+      camera_violation_count,
+      penalty_applied: penalty,
+      ai_score: aiResult.skill_score,
       clarity_score: aiResult.clarity_score,
       professionalism_score: aiResult.professionalism_score,
       structure_score: aiResult.structure_score,

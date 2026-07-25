@@ -19,6 +19,8 @@ import SQLAssessment from './pages/student/assessment/SQLAssessment'
 import BugFixAssessment from './pages/student/assessment/BugFixAssessment'
 import CVPage from './pages/student/CVPage'
 import OriginalityCheck from './pages/student/OriginalityCheck'
+import CreateTest from './pages/evaluator/CreateTest'
+import StudentAssignedTests from './pages/student/StudentAssignedTests'
 
 // Assessment pages
 import AssessmentDashboard from './pages/student/assessment/AssessmentDashboard'
@@ -26,6 +28,10 @@ import TypingAssessment from './pages/student/assessment/TypingAssessment'
 import CodingAssessment from './pages/student/assessment/CodingAssessment'
 import FlowchartAssessment from './pages/student/assessment/FlowchartAssessment'
 import CommunicationAssessment from './pages/student/assessment/CommunicationAssessment'
+
+// Messaging pages (student <-> professor chat)
+import StudentMessagesPage from './pages/student/StudentMessagesPage'
+import EvaluatorMessagesPage from './pages/evaluator/EvaluatorMessagesPage'
 
 function App() {
   return (
@@ -63,6 +69,15 @@ function App() {
       <Route path="/student/originality" element={
         <ProtectedRoutes role="student"><OriginalityCheck /></ProtectedRoutes>
       } />
+      <Route path="/student/messages" element={
+        <ProtectedRoutes role="student"><StudentMessagesPage /></ProtectedRoutes>
+      } />
+      <Route path="/evaluator/create-test" element={
+        <ProtectedRoutes role="evaluator"><CreateTest /></ProtectedRoutes>
+      } />
+      <Route path="/student/assigned-tests" element={
+        <ProtectedRoutes role="student"><StudentAssignedTests /></ProtectedRoutes>
+      } />
 
       {/* Assessment routes */}
       <Route path="/student/assessment" element={
@@ -89,6 +104,9 @@ function App() {
       } />
       <Route path="/evaluator/history" element={
         <ProtectedRoutes role="evaluator"><EvaluatorHistory /></ProtectedRoutes>
+      } />
+      <Route path="/evaluator/messages" element={
+        <ProtectedRoutes role="evaluator"><EvaluatorMessagesPage /></ProtectedRoutes>
       } />
       <Route path="/admin/dashboard" element={
         <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>

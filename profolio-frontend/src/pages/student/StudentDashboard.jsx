@@ -6,7 +6,7 @@ import {
   faArrowRight, faChevronRight, faCircleCheck, faCircleExclamation,
   faClockRotateLeft, faPlus, faRightFromBracket, faBriefcase,
   faCode, faCertificate, faTrophy, faChartLine, faSpinner,
-  faFileAlt, faUserTie, faBell,
+  faFileAlt, faUserTie, faBell, faComments, faFingerprint, faLightbulb,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
@@ -18,6 +18,10 @@ const navItems = [
   { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
+  { label: 'Messages', icon: faComments, path: '/student/messages' },
+  { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
+  { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]
 
@@ -54,11 +58,11 @@ const StudentDashboard = () => {
         try {
           const aiRes = await api.get(`/evaluations/ai/${p.id}`)
           setAiEval(aiRes.data.data)
-        } catch {}
+        } catch { }
         try {
           const humanRes = await api.get(`/evaluations/human/${p.id}`)
           setHumanEval(humanRes.data.data)
-        } catch {}
+        } catch { }
       }
     } catch (err) {
       console.error(err)
@@ -152,11 +156,10 @@ const StudentDashboard = () => {
                 key={item.path}
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
                     ? 'bg-blue-500/15 text-white border border-blue-500/20'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
+                  }`}
               >
                 <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-blue-400' : ''}`} />
                 {item.label}

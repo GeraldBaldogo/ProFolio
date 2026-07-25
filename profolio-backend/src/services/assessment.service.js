@@ -1,7 +1,24 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const assessmentRepo = require('../repositories/assessment.repo');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Helper: call Gemini and force a clean JSON response.
+// imageParts (optional): array of { inlineData: { mimeType, data } } for vision inputs.
+const generateJSON = async (prompt, imageParts = []) => {
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: { responseMimeType: 'application/json' }
+  });
+
+  const contentParts = imageParts.length
+    ? [...imageParts, { text: prompt }]
+    : prompt;
+
+  const result = await model.generateContent(contentParts);
+  const raw = result.response.text().replace(/```json|```/g, '').trim();
+  return JSON.parse(raw);
+};
 
 // ─── TYPING ───────────────────────────────────────────────────────────────────
 
@@ -23,19 +40,29 @@ const TYPING_TEXTS = {
   ]
 };
 
-const submitTypingResult = async (user_id, { wpm, accuracy, time_seconds, difficulty = 'easy', camera_violation_count = 0 }) => {
+const submitTypingResult = async (user_id, {
+  wpm, accuracy, time_seconds, difficulty = 'easy',
+  violation_count = 0, camera_violation_count = 0, session_id = null
+}) => {
   if (wpm === undefined || wpm === null || accuracy === undefined || accuracy === null)
     throw { status: 400, message: 'wpm and accuracy are required.' };
 
   const wpmScore = Math.min((wpm / 100) * 100, 100);
   const accScore = accuracy;
-  const score = Math.round(wpmScore * 0.6 + accScore * 0.4);
+  const rawScore = Math.round(wpmScore * 0.6 + accScore * 0.4);
+
+  // Previously: violations were recorded but never affected the score.
+  // Now consistent with coding/sql/bugfix penalty logic.
+  const totalViolations = violation_count + camera_violation_count;
+  const penalty = Math.min(totalViolations * 5, 25);
+  const score = Math.max(0, rawScore - penalty);
 
   const result = await assessmentRepo.saveResult({
     user_id,
     type: 'typing',
     score,
-    metadata: { wpm, accuracy, time_seconds, difficulty, camera_violation_count }
+    session_id,
+    metadata: { wpm, accuracy, time_seconds, difficulty, violation_count, camera_violation_count, penalty_applied: penalty }
   });
 
   return result;
@@ -51,12 +78,7 @@ const getTypingText = ({ difficulty = 'easy' }) => {
 const generateChallenge = async ({ language, difficulty }) => {
   if (!language || !difficulty) throw { status: 400, message: 'language and difficulty are required.' };
 
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 500,
-    messages: [{
-      role: 'user',
-      content: `Generate a coding challenge for a student portfolio assessment.
+  const prompt = `Generate a coding challenge for a student portfolio assessment.
 
 Language: ${language}
 Difficulty: ${difficulty}
@@ -73,23 +95,18 @@ Respond with JSON only, no markdown:
   "example_input": "example input if applicable, or null",
   "example_output": "expected output if applicable, or null",
   "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
-}`
-    }]
-  });
+}`;
 
-  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
-  return JSON.parse(raw);
+  return generateJSON(prompt);
 };
 
-const submitCodingResult = async (user_id, { language, difficulty, challenge_title, code, violation_count, camera_violation_count = 0, time_taken_seconds }) => {
+const submitCodingResult = async (user_id, {
+  language, difficulty, challenge_title, code,
+  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null
+}) => {
   if (!code) throw { status: 400, message: 'code is required.' };
 
-  const feedbackMsg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{
-      role: 'user',
-      content: `You are evaluating a coding assessment submission for a student portfolio platform.
+  const prompt = `You are evaluating a coding assessment submission for a student portfolio platform.
 
 Language: ${language}
 Difficulty: ${difficulty}
@@ -108,12 +125,9 @@ Respond with JSON only, no markdown:
   "correctness": "correct" | "partial" | "incorrect",
   "feedback": "2-3 sentence evaluation: correctness, code quality, one improvement tip",
   "penalty_applied": boolean
-}`
-    }]
-  });
+}`;
 
-  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
-  const aiResult = JSON.parse(raw);
+  const aiResult = await generateJSON(prompt);
 
   const totalViolations = violation_count + camera_violation_count;
   const penalty = Math.min(totalViolations * 5, 25);
@@ -123,6 +137,7 @@ Respond with JSON only, no markdown:
     user_id,
     type: 'programming',
     score: finalScore,
+    session_id,
     metadata: {
       language, difficulty, challenge_title, code,
       violation_count, camera_violation_count, time_taken_seconds,
@@ -139,12 +154,7 @@ Respond with JSON only, no markdown:
 // ─── FLOWCHART ────────────────────────────────────────────────────────────────
 
 const generateFlowchartProblem = async ({ difficulty = 'easy' } = {}) => {
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 400,
-    messages: [{
-      role: 'user',
-      content: `Generate a flowchart problem for a student assessment.
+  const prompt = `Generate a flowchart problem for a student assessment.
 
 Difficulty: ${difficulty}
 
@@ -158,30 +168,18 @@ Respond with JSON only, no markdown:
   "title": "short title",
   "description": "describe what process the student should create a flowchart for, 2-3 sentences",
   "hints": ["hint 1", "hint 2", "hint 3"]
-}`
-    }]
-  });
+}`;
 
-  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
-  return JSON.parse(raw);
+  return generateJSON(prompt);
 };
 
-const submitFlowchartResult = async (user_id, { problem_title, difficulty = 'easy', image_base64, image_type, camera_violation_count = 0 }) => {
+const submitFlowchartResult = async (user_id, {
+  problem_title, difficulty = 'easy', image_base64, image_type,
+  camera_violation_count = 0, session_id = null
+}) => {
   if (!image_base64) throw { status: 400, message: 'image_base64 is required.' };
 
-  const feedbackMsg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: image_type || 'image/jpeg', data: image_base64 }
-        },
-        {
-          type: 'text',
-          text: `This is a student-drawn flowchart for the problem: "${problem_title}" (Difficulty: ${difficulty}).
+  const prompt = `This is a student-drawn flowchart for the problem: "${problem_title}" (Difficulty: ${difficulty}).
 
 Evaluate the flowchart and respond with JSON only, no markdown:
 {
@@ -190,14 +188,10 @@ Evaluate the flowchart and respond with JSON only, no markdown:
   "has_decision_diamond": boolean,
   "logical_flow": "correct" | "partial" | "incorrect",
   "feedback": "2-3 sentences: what is good, what needs improvement"
-}`
-        }
-      ]
-    }]
-  });
+}`;
 
-  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
-  const aiResult = JSON.parse(raw);
+  const imagePart = { inlineData: { mimeType: image_type || 'image/jpeg', data: image_base64 } };
+  const aiResult = await generateJSON(prompt, [imagePart]);
 
   const penalty = Math.min(camera_violation_count * 5, 25);
   const finalScore = Math.max(0, aiResult.skill_score - penalty);
@@ -206,6 +200,7 @@ Evaluate the flowchart and respond with JSON only, no markdown:
     user_id,
     type: 'flowchart',
     score: finalScore,
+    session_id,
     metadata: {
       problem_title, difficulty,
       camera_violation_count,
@@ -223,12 +218,7 @@ Evaluate the flowchart and respond with JSON only, no markdown:
 // ─── SQL ──────────────────────────────────────────────────────────────────────
 
 const generateSQLChallenge = async ({ difficulty = 'easy' }) => {
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{
-      role: 'user',
-      content: `Generate a SQL assessment challenge for a student.
+  const prompt = `Generate a SQL assessment challenge for a student.
 
 Difficulty: ${difficulty}
 
@@ -251,23 +241,18 @@ Respond with JSON only, no markdown:
   "question": "the specific SQL query they need to write, 1-2 sentences",
   "expected_output": "describe what the result should look like",
   "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
-}`
-    }]
-  });
+}`;
 
-  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
-  return JSON.parse(raw);
+  return generateJSON(prompt);
 };
 
-const submitSQLResult = async (user_id, { difficulty, challenge_title, scenario, question, sql_code, violation_count, camera_violation_count = 0, time_taken_seconds }) => {
+const submitSQLResult = async (user_id, {
+  difficulty, challenge_title, scenario, question, sql_code,
+  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null
+}) => {
   if (!sql_code) throw { status: 400, message: 'sql_code is required.' };
 
-  const feedbackMsg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{
-      role: 'user',
-      content: `You are evaluating a SQL assessment submission for a student portfolio platform.
+  const prompt = `You are evaluating a SQL assessment submission for a student portfolio platform.
 
 Difficulty: ${difficulty}
 Challenge: ${challenge_title}
@@ -287,12 +272,9 @@ Respond with JSON only, no markdown:
   "correctness": "correct" | "partial" | "incorrect",
   "syntax_valid": boolean,
   "feedback": "2-3 sentence evaluation: correctness, query quality, one improvement tip"
-}`
-    }]
-  });
+}`;
 
-  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
-  const aiResult = JSON.parse(raw);
+  const aiResult = await generateJSON(prompt);
 
   const totalViolations = violation_count + camera_violation_count;
   const penalty = Math.min(totalViolations * 5, 25);
@@ -302,6 +284,7 @@ Respond with JSON only, no markdown:
     user_id,
     type: 'sql',
     score: finalScore,
+    session_id,
     metadata: {
       difficulty, challenge_title, scenario, question, sql_code,
       violation_count, camera_violation_count, time_taken_seconds,
@@ -319,12 +302,7 @@ Respond with JSON only, no markdown:
 // ─── BUG FIXING ───────────────────────────────────────────────────────────────
 
 const generateBugFixChallenge = async ({ language, difficulty = 'easy' }) => {
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 700,
-    messages: [{
-      role: 'user',
-      content: `Generate a bug fixing challenge for a student assessment.
+  const prompt = `Generate a bug fixing challenge for a student assessment.
 
 Language: ${language}
 Difficulty: ${difficulty}
@@ -342,23 +320,18 @@ Respond with JSON only, no markdown:
   "bug_count": number,
   "hints": ["hint about bug 1", "hint about bug 2"],
   "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
-}`
-    }]
-  });
+}`;
 
-  const raw = message.content[0].text.replace(/```json|```/g, '').trim();
-  return JSON.parse(raw);
+  return generateJSON(prompt);
 };
 
-const submitBugFixResult = async (user_id, { language, difficulty, challenge_title, description, original_buggy_code, fixed_code, violation_count, camera_violation_count = 0, time_taken_seconds }) => {
+const submitBugFixResult = async (user_id, {
+  language, difficulty, challenge_title, description, original_buggy_code, fixed_code,
+  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null
+}) => {
   if (!fixed_code) throw { status: 400, message: 'fixed_code is required.' };
 
-  const feedbackMsg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages: [{
-      role: 'user',
-      content: `You are evaluating a bug fixing assessment for a student portfolio platform.
+  const prompt = `You are evaluating a bug fixing assessment for a student portfolio platform.
 
 Language: ${language}
 Difficulty: ${difficulty}
@@ -383,12 +356,9 @@ Respond with JSON only, no markdown:
   "bugs_fixed": "all" | "most" | "some" | "none",
   "correctness": "correct" | "partial" | "incorrect",
   "feedback": "2-3 sentences: which bugs were fixed, what was missed, one improvement tip"
-}`
-    }]
-  });
+}`;
 
-  const raw = feedbackMsg.content[0].text.replace(/```json|```/g, '').trim();
-  const aiResult = JSON.parse(raw);
+  const aiResult = await generateJSON(prompt);
 
   const totalViolations = violation_count + camera_violation_count;
   const penalty = Math.min(totalViolations * 5, 25);
@@ -398,6 +368,7 @@ Respond with JSON only, no markdown:
     user_id,
     type: 'bugfix',
     score: finalScore,
+    session_id,
     metadata: {
       language, difficulty, challenge_title, description,
       original_buggy_code, fixed_code,

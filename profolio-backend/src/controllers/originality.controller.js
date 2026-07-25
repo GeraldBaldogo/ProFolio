@@ -33,7 +33,7 @@ const getHistory = async (req, res) => {
 const getById = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = await originalityService.getOriginalityById(id);
+    const data = await originalityService.getOriginalityById(id, req.user);
     res.status(200).json(data);
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message || 'Originality check not found.' });

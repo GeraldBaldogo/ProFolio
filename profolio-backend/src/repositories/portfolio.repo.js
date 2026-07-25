@@ -14,7 +14,8 @@ const findByStudentId = async (student_id) => {
   const { data, error } = await supabase
     .from('portfolios')
     .select('*')
-    .eq('student_id', student_id);
+    .eq('student_id', student_id)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return data;
 };
@@ -22,26 +23,8 @@ const findByStudentId = async (student_id) => {
 const findById = async (id) => {
   const { data, error } = await supabase
     .from('portfolios')
-    .select(`
-      *,
-      projects (*),
-      skills (*),
-      certifications (*),
-      experiences (*),
-      achievements (*)
-    `)
+    .select('*')
     .eq('id', id)
-    .single();
-  if (error) throw error;
-  return data;
-};
-
-const updateStatus = async (id, status) => {
-  const { data, error } = await supabase
-    .from('portfolios')
-    .update({ status })
-    .eq('id', id)
-    .select()
     .single();
   if (error) throw error;
   return data;
@@ -50,7 +33,7 @@ const updateStatus = async (id, status) => {
 const submit = async (id) => {
   const { data, error } = await supabase
     .from('portfolios')
-    .update({ status: 'submitted', submitted_at: new Date() })
+    .update({ status: 'submitted' })
     .eq('id', id)
     .select()
     .single();
@@ -58,4 +41,4 @@ const submit = async (id) => {
   return data;
 };
 
-module.exports = { create, findByStudentId, findById, updateStatus, submit };
+module.exports = { create, findByStudentId, findById, submit };

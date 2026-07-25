@@ -1,32 +1,55 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const supabase = require('../config/db');
+const portfolioRepo = require('../repositories/portfolio.repo');
+const assessmentRepo = require('../repositories/assessment.repo');
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const generateRecommendations = async (user_id) => {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+  // Bug fix: 'profiles' table doesn't exist - same mismatch as cv.service.js
+  // had. Real data lives in 'users' + 'student_profiles'.
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .select('id, full_name, email')
+    .eq('id', user_id)
+    .single();
+  if (userError || !user) throw { status: 404, message: 'User not found.' };
+
+  const { data: studentProfile, error: profileError } = await supabase
+    .from('student_profiles')
     .select('*')
     .eq('user_id', user_id)
     .single();
+  if (profileError || !studentProfile) {
+    throw { status: 404, message: 'Student profile not found. Please complete your profile first.' };
+  }
 
-  if (profileError) throw { status: 404, message: 'User profile not found.' };
+  // Bug fix: student_profiles has no 'portfolio_id' column. A portfolio is
+  // linked via portfolios.student_id -> student_profiles.id.
+  const portfolios = await portfolioRepo.findByStudentId(studentProfile.id);
+  const portfolio = portfolios?.[0]; // most recent
 
-  const { data: assessments } = await supabase
-    .from('assessment_results')
-    .select('*')
-    .eq('user_id', user_id)
-    .order('created_at', { ascending: false });
+  let aiEval = null;
+  if (portfolio) {
+    const { data } = await supabase
+      .from('ai_evaluations')
+      .select('*')
+      .eq('portfolio_id', portfolio.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    aiEval = data || null;
+  }
 
-  const { data: aiEval } = await supabase
-    .from('ai_evaluations')
-    .select('*')
-    .eq('portfolio_id', profile.portfolio_id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+  const assessments = await assessmentRepo.getResultsByUser(user_id);
+
+  const profileForPrompt = {
+    full_name: user.full_name,
+    email: user.email,
+    course: studentProfile.course,
+    school: studentProfile.school,
+    year_level: studentProfile.year_level,
+  };
 
   const prompt = `
 You are a personalized learning advisor for students in computer-related fields.
@@ -34,7 +57,7 @@ You are a personalized learning advisor for students in computer-related fields.
 Based on the student's profile, assessment results, and AI portfolio evaluation, generate specific and actionable learning recommendations to close their skill gaps.
 
 STUDENT PROFILE:
-${JSON.stringify(profile, null, 2)}
+${JSON.stringify(profileForPrompt, null, 2)}
 
 ASSESSMENT RESULTS:
 ${JSON.stringify(assessments, null, 2)}
@@ -77,14 +100,13 @@ Generate personalized recommendations in the following JSON format only, no othe
 }
 `;
 
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 2048,
-    messages: [{ role: 'user', content: prompt }],
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: { responseMimeType: 'application/json' }
   });
 
-  const responseText = message.content[0].text;
-  const cleanJson = responseText.replace(/```json|```/g, '').trim();
+  const geminiResult = await model.generateContent(prompt);
+  const cleanJson = geminiResult.response.text().replace(/```json|```/g, '').trim();
   const result = JSON.parse(cleanJson);
 
   const { data, error } = await supabase

@@ -20,7 +20,7 @@ const getMyPortfolios = async (req, res, next) => {
 
 const getById = async (req, res, next) => {
   try {
-    const portfolio = await portfolioService.getPortfolioById(req.params.id);
+    const portfolio = await portfolioService.getPortfolioById(req.params.id, req.user);
     res.json({ success: true, data: portfolio });
   } catch (err) {
     next(err);
@@ -29,7 +29,7 @@ const getById = async (req, res, next) => {
 
 const submit = async (req, res, next) => {
   try {
-    const portfolio = await portfolioService.submitPortfolio(req.params.id);
+    const portfolio = await portfolioService.submitPortfolio(req.params.id, req.user);
     res.json({ success: true, data: portfolio });
   } catch (err) {
     next(err);

@@ -32,6 +32,35 @@ const toggleUserStatus = async (id, is_active) => {
 };
 
 const assignEvaluator = async (portfolio_id, evaluator_id, assigned_by) => {
+  // Fix: previously no check that evaluator_id actually belongs to a user
+  // with role 'evaluator' - an admin could accidentally assign a student
+  // as the reviewer of a portfolio.
+  const { data: evaluatorUser, error: evaluatorError } = await supabase
+    .from('users')
+    .select('id, role')
+    .eq('id', evaluator_id)
+    .single();
+  if (evaluatorError || !evaluatorUser) {
+    throw { status: 404, message: 'Evaluator not found.' };
+  }
+  if (evaluatorUser.role !== 'evaluator') {
+    throw { status: 400, message: 'The selected user is not an evaluator/professor.' };
+  }
+
+  // Fix: previously no check on portfolio status - an admin could assign a
+  // reviewer to a portfolio that's still a draft (student hasn't submitted).
+  const { data: portfolio, error: portfolioError } = await supabase
+    .from('portfolios')
+    .select('id, status')
+    .eq('id', portfolio_id)
+    .single();
+  if (portfolioError || !portfolio) {
+    throw { status: 404, message: 'Portfolio not found.' };
+  }
+  if (!['submitted', 'ai_reviewed'].includes(portfolio.status)) {
+    throw { status: 400, message: `Portfolio must be submitted before an evaluator can be assigned (current status: ${portfolio.status}).` };
+  }
+
   // Check if already assigned
   const { data: existing } = await supabase
     .from('evaluator_assignments')

@@ -1,10 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const http = require('http');
 
 dotenv.config();
 
 const supabase = require('./src/config/db');
+const initSocket = require('./src/sockets/socket');
+
 const app = express();
 
 const originalityRoutes = require('./src/routes/originality.routes');
@@ -54,18 +57,45 @@ app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/cv', cvRoutes);
 app.use('/api/communication', require('./src/routes/communication.routes'));
 
+// Previously missing - built earlier in this session but never mounted
+app.use('/api/chatbot', require('./src/routes/chatbot.routes'));
+app.use('/api/proctoring', require('./src/routes/proctoring.routes'));
+
+// New: student <-> professor real-time chat
+app.use('/api/messages', require('./src/routes/messaging.routes'));
+
+// New: professor-authored custom tests
+app.use('/api/tests', require('./src/routes/test.routes'));
+
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('❌ ERROR:', err.message);
-  console.error(err.stack);
-  res.status(err.status || 500).json({
+  const status = err.status || 500;
+
+  // Only log full errors for actual server problems (5xx).
+  // 4xx (not found, forbidden, bad request) are expected/normal — just log briefly.
+  if (status >= 500) {
+    console.error('❌ ERROR:', err.message);
+    console.error(err.stack);
+  } else {
+    console.warn(`⚠️  ${status}:`, err.message);
+  }
+
+  res.status(status).json({
     success: false,
     message: err.message || 'Internal Server Error'
   });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+
+// Wrap Express in a plain HTTP server so Socket.IO can attach to the same
+// port - app.listen() alone can't be shared with a websocket server.
+const httpServer = http.createServer(app);
+const io = initSocket(httpServer);
+app.set('io', io); // lets REST controllers (e.g. messaging.controller.js) emit too
+
+httpServer.listen(PORT, () => {
   console.log(`ProFolio server running on port ${PORT}`);
   console.log(`Supabase connected`);
+  console.log(`Socket.IO ready`);
 });

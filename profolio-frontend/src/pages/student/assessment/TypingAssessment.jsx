@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { submitTypingResult } from '../../../services/assessment.service'
 import ProctoringCamera from '../../../components/ProctoringCamera'
+import { useProctoring } from '../../../hooks/useProctoring'
 
 const SAMPLE_TEXTS = [
   "The best way to predict the future is to create it. Programming is not just about writing code, it is about solving problems and thinking logically.",
@@ -16,6 +17,9 @@ const SAMPLE_TEXTS = [
 
 const TypingAssessment = () => {
   const navigate = useNavigate()
+
+  const { sessionId, logEvent, resetSession, cameraViolationCount, tabViolationCount, getViolationCounts } = useProctoring('typing')
+
   const [sampleText] = useState(SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)])
   const [typed, setTyped] = useState('')
   const [started, setStarted] = useState(false)
@@ -29,8 +33,6 @@ const TypingAssessment = () => {
 
   // Camera proctoring state
   const [cameraReady, setCameraReady] = useState(false)
-  const [cameraViolations, setCameraViolations] = useState(0)
-  const cameraViolationsRef = useRef(0)
 
   const timerRef = useRef(null)
   const textareaRef = useRef(null)
@@ -41,11 +43,6 @@ const TypingAssessment = () => {
   useEffect(() => {
     return () => clearInterval(timerRef.current)
   }, [])
-
-  const handleCameraViolation = () => {
-    cameraViolationsRef.current += 1
-    setCameraViolations(cameraViolationsRef.current)
-  }
 
   const handleType = (e) => {
     const value = e.target.value
@@ -81,6 +78,15 @@ const TypingAssessment = () => {
     wpmRef.current = currentWpm
   }
 
+  // Pasting the sample text would give an instant, meaningless "perfect" score.
+  // Block it outright (not just log it) — this is the single easiest cheat on this test.
+  const handlePasteAttempt = (e) => {
+    e.preventDefault()
+    // Don't call logEvent here — useProctoring's document-level paste listener
+    // already catches and logs this automatically. Calling it again here
+    // would double-count the same paste event.
+  }
+
   const handleFinish = () => {
     if (finished || !started) return
     clearInterval(timerRef.current)
@@ -91,11 +97,14 @@ const TypingAssessment = () => {
   const handleSubmit = async (finalWpm, finalAcc, finalTime) => {
     setSubmitting(true)
     try {
+      const counts = getViolationCounts() // ref-backed, always current even mid-tick
       const data = await submitTypingResult({
         wpm: finalWpm,
         accuracy: finalAcc,
         time_seconds: finalTime,
-        camera_violation_count: cameraViolationsRef.current,
+        camera_violation_count: counts.camera_violation_count,
+        violation_count: counts.violation_count,
+        session_id: sessionId,
       })
       setResult(data)
     } catch (err) {
@@ -106,6 +115,7 @@ const TypingAssessment = () => {
   }
 
   const handleReset = () => {
+    resetSession() // fresh session_id + violation counts for the new attempt
     setTyped('')
     setStarted(false)
     setFinished(false)
@@ -114,11 +124,11 @@ const TypingAssessment = () => {
     setWpm(0)
     setAccuracy(100)
     setResult(null)
-    setCameraViolations(0)
-    cameraViolationsRef.current = 0
     clearInterval(timerRef.current)
     textareaRef.current?.focus()
   }
+
+  const totalViolations = cameraViolationCount + tabViolationCount
 
   // Render colored sample text
   const renderText = () => {
@@ -141,7 +151,7 @@ const TypingAssessment = () => {
       {/* Proctoring camera — active once started */}
       <ProctoringCamera
         active={started && !finished}
-        onViolation={handleCameraViolation}
+        onViolation={logEvent}
         onReady={() => setCameraReady(true)}
         onDenied={() => navigate('/student/assessment')}
       />
@@ -169,7 +179,7 @@ const TypingAssessment = () => {
           { label: 'WPM', value: wpm || '—' },
           { label: 'Accuracy', value: started ? `${accuracy}%` : '—' },
           { label: 'Time', value: started ? `${elapsed}s` : '—' },
-          { label: 'Cam Flags', value: cameraViolations > 0 ? cameraViolations : '—', warn: cameraViolations > 0 },
+          { label: 'Flags', value: totalViolations > 0 ? totalViolations : '—', warn: totalViolations > 0 },
         ].map((s) => (
           <div key={s.label} className={`border rounded-2xl p-4 text-center ${s.warn ? 'border-rose-500/20 bg-rose-500/5' : 'border-white/8 bg-white/[0.03]'}`}>
             <p className="text-gray-500 text-xs mb-1">{s.label}</p>
@@ -186,12 +196,12 @@ const TypingAssessment = () => {
         </div>
       )}
 
-      {/* Camera violation warning banner */}
-      {cameraViolations > 0 && (
+      {/* Violation warning banner */}
+      {totalViolations > 0 && (
         <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
           <FontAwesomeIcon icon={faShield} className="text-rose-400" />
           <p className="text-rose-400 text-sm font-semibold">
-            {cameraViolations} camera violation{cameraViolations > 1 ? 's' : ''} recorded — keep your face visible and centered.
+            {totalViolations} violation{totalViolations > 1 ? 's' : ''} recorded — keep your face visible, stay on this tab, and don't paste text.
           </p>
         </div>
       )}
@@ -208,6 +218,7 @@ const TypingAssessment = () => {
             ref={textareaRef}
             value={typed}
             onChange={handleType}
+            onPaste={handlePasteAttempt}
             disabled={!cameraReady}
             placeholder={cameraReady ? 'Start typing here...' : 'Waiting for camera...'}
             rows={3}
@@ -240,8 +251,8 @@ const TypingAssessment = () => {
               <div>
                 <p className="text-white font-bold text-lg mb-1">Assessment Complete!</p>
                 <p className="text-gray-500 text-sm">Skill score: <span className="text-white font-bold">{result.score}/100</span></p>
-                {cameraViolations > 0 && (
-                  <p className="text-rose-400 text-xs mt-1">{cameraViolations} camera violation{cameraViolations > 1 ? 's' : ''} recorded</p>
+                {totalViolations > 0 && (
+                  <p className="text-rose-400 text-xs mt-1">{totalViolations} violation{totalViolations > 1 ? 's' : ''} recorded</p>
                 )}
               </div>
               <div className="flex gap-3 mt-2">

@@ -1,9 +1,9 @@
 const supabase = require('../config/db');
 
-const saveResult = async ({ user_id, type, score, metadata }) => {
+const saveResult = async ({ user_id, type, score, metadata, session_id = null, test_id = null }) => {
   const { data, error } = await supabase
     .from('assessment_results')
-    .insert({ user_id, type, score, metadata })
+    .insert({ user_id, type, score, metadata, session_id, test_id })
     .select()
     .single();
 

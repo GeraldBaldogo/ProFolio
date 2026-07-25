@@ -6,6 +6,7 @@ import {
   faCircleCheck, faSpinner, faPlay, faTable, faCode,
 } from '@fortawesome/free-solid-svg-icons'
 import { generateSQLChallenge, submitSQLResult } from '../../../services/assessment.service'
+import { useProctoring } from '../../../hooks/useProctoring'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 const TIME_LIMITS = { easy: 600, medium: 900, hard: 1200 }
@@ -18,6 +19,8 @@ const diffColor = {
 const SQLAssessment = () => {
   const navigate = useNavigate()
 
+  const { sessionId, resetSession, tabViolationCount, getViolationCounts } = useProctoring('sql')
+
   const [phase, setPhase] = useState('setup') // setup | challenge | result
   const [difficulty, setDifficulty] = useState('easy')
   const [generating, setGenerating] = useState(false)
@@ -25,34 +28,32 @@ const SQLAssessment = () => {
   const [challenge, setChallenge] = useState(null)
   const [sqlCode, setSqlCode] = useState('')
   const [secsLeft, setSecsLeft] = useState(600)
-  const [violations, setViolations] = useState(0)
   const [showWarning, setShowWarning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
 
   const timerRef = useRef(null)
-  const violationsRef = useRef(0)
   const startTimeRef = useRef(null)
+  const prevTabRef = useRef(0)
 
-  // Anti-cheat: tab visibility
+  // Watch for new violations (from the hook's automatic tab/paste detection)
+  // to trigger the warning overlay - the hook logs/counts automatically,
+  // this effect only drives the UI popup.
   useEffect(() => {
-    const onHidden = () => {
-      if (phase !== 'challenge') return
-      if (document.hidden) {
-        violationsRef.current += 1
-        setViolations(violationsRef.current)
-        setShowWarning(true)
-      }
+    if (phase !== 'challenge') return
+    if (tabViolationCount > prevTabRef.current) {
+      setShowWarning(true)
     }
-    document.addEventListener('visibilitychange', onHidden)
-    return () => document.removeEventListener('visibilitychange', onHidden)
-  }, [phase])
+    prevTabRef.current = tabViolationCount
+  }, [tabViolationCount, phase])
 
   useEffect(() => {
     return () => clearInterval(timerRef.current)
   }, [])
 
   const startChallenge = async () => {
+    resetSession() // fresh session_id + violation counts for this attempt
+    prevTabRef.current = 0
     setGenerating(true)
     try {
       const data = await generateSQLChallenge({ difficulty })
@@ -90,14 +91,16 @@ const SQLAssessment = () => {
       : TIME_LIMITS[difficulty]
 
     try {
+      const counts = getViolationCounts() // ref-backed, always current
       const data = await submitSQLResult({
         difficulty,
         challenge_title: challenge?.title || '',
         scenario: challenge?.scenario || '',
         question: challenge?.question || '',
         sql_code: timedOut && !sqlCode ? '-- (no submission — time ran out)' : sqlCode,
-        violation_count: violationsRef.current,
+        violation_count: counts.violation_count,
         time_taken_seconds: timeTaken,
+        session_id: sessionId,
       })
       setResult(data)
       setPhase('result')
@@ -204,8 +207,8 @@ const SQLAssessment = () => {
         </div>
         <p className="text-white font-bold text-xl mb-1">Challenge Submitted!</p>
         <p className="text-gray-500 text-sm">Final Score: <span className="text-white font-black text-2xl">{result?.score}</span>/100</p>
-        {violations > 0 && (
-          <p className="text-rose-400 text-xs mt-2">{violations} violation{violations > 1 ? 's' : ''} recorded — {Math.min(violations * 5, 25)} pts deducted</p>
+        {tabViolationCount > 0 && (
+          <p className="text-rose-400 text-xs mt-2">{tabViolationCount} violation{tabViolationCount > 1 ? 's' : ''} recorded — {Math.min(tabViolationCount * 5, 25)} pts deducted</p>
         )}
       </div>
 
@@ -237,7 +240,7 @@ const SQLAssessment = () => {
       )}
 
       <div className="flex gap-3">
-        <button onClick={() => setPhase('setup')} className="flex-1 border border-white/8 text-gray-400 hover:text-white text-sm py-3 rounded-2xl transition-all">
+        <button onClick={() => { setResult(null); setSqlCode(''); setPhase('setup') }} className="flex-1 border border-white/8 text-gray-400 hover:text-white text-sm py-3 rounded-2xl transition-all">
           Try again
         </button>
         <button onClick={() => navigate('/student/assessment/bugfix')} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all">
@@ -256,7 +259,7 @@ const SQLAssessment = () => {
         <div className="fixed inset-0 z-50 bg-rose-950/95 flex items-center justify-center flex-col gap-4 text-center px-6">
           <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 text-5xl" />
           <h2 className="text-white font-black text-2xl">Tab Switch Detected!</h2>
-          <p className="text-rose-300 text-sm max-w-sm">Leaving the page is a violation. {violations} flag{violations > 1 ? 's' : ''} recorded so far.</p>
+          <p className="text-rose-300 text-sm max-w-sm">Leaving the page is a violation. {tabViolationCount} flag{tabViolationCount > 1 ? 's' : ''} recorded so far.</p>
           <button onClick={() => setShowWarning(false)} className="bg-white text-rose-800 font-bold px-6 py-2.5 rounded-xl mt-2">
             Return to Assessment
           </button>
@@ -272,12 +275,12 @@ const SQLAssessment = () => {
 
         {/* Violations */}
         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold ${
-          violations === 0 ? 'border-green-500/20 bg-green-500/10 text-green-400'
-          : violations < 3 ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
+          tabViolationCount === 0 ? 'border-green-500/20 bg-green-500/10 text-green-400'
+          : tabViolationCount < 3 ? 'border-amber-500/20 bg-amber-500/10 text-amber-400'
           : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
         }`}>
           <FontAwesomeIcon icon={faShield} />
-          {violations} flag{violations !== 1 ? 's' : ''}
+          {tabViolationCount} flag{tabViolationCount !== 1 ? 's' : ''}
         </div>
 
         {/* Timer */}
@@ -351,13 +354,12 @@ const SQLAssessment = () => {
             onChange={(e) => setSqlCode(e.target.value)}
             onPaste={(e) => {
               e.preventDefault()
-              violationsRef.current += 1
-              setViolations(violationsRef.current)
+              // Don't manually count here — useProctoring's document-level
+              // paste listener already catches and logs this automatically.
             }}
             onCopy={(e) => {
               e.preventDefault()
-              violationsRef.current += 1
-              setViolations(violationsRef.current)
+              // Same as above - blocking only, hook logs the copy event itself.
             }}
             placeholder={`-- Write your SQL query here...\nSELECT ...`}
             className="flex-1 bg-transparent text-gray-200 font-mono text-sm p-4 resize-none outline-none leading-7 min-h-[320px]"

@@ -12,7 +12,7 @@ const triggerAIEvaluation = async (req, res, next) => {
 
 const getAIEvaluation = async (req, res, next) => {
   try {
-    const result = await aiService.getEvaluation(req.params.portfolio_id);
+    const result = await aiService.getEvaluation(req.params.portfolio_id, req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -34,7 +34,7 @@ const submitHumanEvaluation = async (req, res, next) => {
 
 const getHumanEvaluation = async (req, res, next) => {
   try {
-    const result = await evaluationService.getHumanEvaluation(req.params.portfolio_id);
+    const result = await evaluationService.getHumanEvaluation(req.params.portfolio_id, req.user);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

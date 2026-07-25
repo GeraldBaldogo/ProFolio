@@ -6,6 +6,7 @@ import {
   faTriangleExclamation, faPen, faChartBar,
 } from '@fortawesome/free-solid-svg-icons'
 import api from '../../../services/api'
+import { useProctoring } from '../../../hooks/useProctoring'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 const TIME_LIMITS = { easy: 5 * 60, medium: 8 * 60, hard: 12 * 60 }
@@ -19,8 +20,8 @@ const ScoreBar = ({ label, score, max = 10 }) => {
   const pct = (score / max) * 100
   const color = pct >= 80 ? 'from-emerald-500 to-teal-500'
     : pct >= 60 ? 'from-blue-500 to-cyan-500'
-    : pct >= 40 ? 'from-amber-500 to-orange-500'
-    : 'from-rose-500 to-pink-500'
+      : pct >= 40 ? 'from-amber-500 to-orange-500'
+        : 'from-rose-500 to-pink-500'
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
@@ -36,6 +37,8 @@ const ScoreBar = ({ label, score, max = 10 }) => {
 
 const CommunicationAssessment = () => {
   const navigate = useNavigate()
+
+  const { sessionId, logEvent, violationCount, resetSession } = useProctoring('communication')
 
   const [phase, setPhase] = useState('setup') // setup | challenge | result
   const [difficulty, setDifficulty] = useState('easy')
@@ -60,6 +63,7 @@ const CommunicationAssessment = () => {
   }
 
   const startChallenge = async () => {
+    resetSession() // fresh session_id + violationCount for every new attempt (including retries)
     setLoading(true)
     try {
       const res = await api.get(`/communication/prompt?difficulty=${difficulty}`)
@@ -104,6 +108,8 @@ const CommunicationAssessment = () => {
         prompt_text: prompt.prompt,
         response_text: timedOut && !response ? '(no submission — time ran out)' : response,
         time_taken_seconds: timeTaken,
+        violation_count: violationCount,
+        session_id: sessionId,
       })
       setResult(res.data.data)
       setPhase('result')
@@ -153,9 +159,8 @@ const CommunicationAssessment = () => {
             <button
               key={d}
               onClick={() => setDifficulty(d)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${
-                difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
-              }`}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
+                }`}
             >
               {d}
             </button>

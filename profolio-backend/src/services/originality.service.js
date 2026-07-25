@@ -1,9 +1,7 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const supabase = require('../config/db');
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const checkOriginality = async (user_id, content, content_type = 'text') => {
   const prompt = `
@@ -33,14 +31,13 @@ Provide your analysis in the following JSON format only, no other text:
 }
 `;
 
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    messages: [{ role: 'user', content: prompt }],
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: { responseMimeType: 'application/json' }
   });
 
-  const responseText = message.content[0].text;
-  const cleanJson = responseText.replace(/```json|```/g, '').trim();
+  const geminiResult = await model.generateContent(prompt);
+  const cleanJson = geminiResult.response.text().replace(/```json|```/g, '').trim();
   const result = JSON.parse(cleanJson);
 
   const { data, error } = await supabase
@@ -75,7 +72,10 @@ const getOriginalityHistory = async (user_id) => {
   return data;
 };
 
-const getOriginalityById = async (check_id) => {
+// Fix: previously had no ownership check at all - any logged-in student
+// could view any other student's originality check by ID. Now only the
+// owner (or an admin) can view a given check.
+const getOriginalityById = async (check_id, requestingUser) => {
   const { data, error } = await supabase
     .from('originality_checks')
     .select('*')
@@ -83,6 +83,11 @@ const getOriginalityById = async (check_id) => {
     .single();
 
   if (error) throw { status: 404, message: 'Originality check not found.' };
+
+  if (requestingUser.role !== 'admin' && data.user_id !== requestingUser.id) {
+    throw { status: 403, message: 'You do not have permission to view this originality check.' };
+  }
+
   return data;
 };
 

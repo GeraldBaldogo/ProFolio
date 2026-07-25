@@ -5,7 +5,7 @@ import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faRightFromBracket, faSpinner, faCircleCheck, faTriangleExclamation,
   faPen, faSave, faGraduationCap, faBuilding, faLink, faTrophy,
-  faEnvelope, faBriefcase, faQuoteLeft,
+  faEnvelope, faBriefcase, faQuoteLeft, faComments, faFingerprint, faLightbulb, faFileAlt,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
@@ -18,6 +18,10 @@ const navItems = [
   { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
+  { label: 'Messages', icon: faComments, path: '/student/messages' },
+  { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
+  { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]
 

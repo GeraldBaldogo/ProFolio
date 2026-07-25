@@ -7,9 +7,16 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { generateFlowchartProblem, submitFlowchartResult } from '../../../services/assessment.service'
 import ProctoringCamera from '../../../components/ProctoringCamera'
+import { useProctoring } from '../../../hooks/useProctoring'
 
 const FlowchartAssessment = () => {
   const navigate = useNavigate()
+
+  const {
+    sessionId, logEvent, resetSession,
+    cameraViolationCount, tabViolationCount
+  } = useProctoring('flowchart')
+
   const [phase, setPhase] = useState('loading') // loading | problem | result
   const [problem, setProblem] = useState(null)
   const [imageFile, setImageFile] = useState(null)
@@ -20,17 +27,10 @@ const FlowchartAssessment = () => {
 
   // Camera proctoring
   const [cameraReady, setCameraReady] = useState(false)
-  const [cameraViolations, setCameraViolations] = useState(0)
-  const cameraViolationsRef = useRef(0)
 
   useEffect(() => {
     fetchProblem()
   }, [])
-
-  const handleCameraViolation = () => {
-    cameraViolationsRef.current += 1
-    setCameraViolations(cameraViolationsRef.current)
-  }
 
   const fetchProblem = async () => {
     setPhase('loading')
@@ -68,7 +68,8 @@ const FlowchartAssessment = () => {
       const data = await submitFlowchartResult({
         problem_title: problem?.title || 'Flowchart Assessment',
         imageFile,
-        camera_violation_count: cameraViolationsRef.current,
+        camera_violation_count: cameraViolationCount,
+        session_id: sessionId,
       })
       setResult(data)
       setPhase('result')
@@ -80,14 +81,15 @@ const FlowchartAssessment = () => {
   }
 
   const handleReset = () => {
+    resetSession() // fresh session_id + violation counts for the new attempt
     setImageFile(null)
     setPreview(null)
     setResult(null)
     setError(null)
-    setCameraViolations(0)
-    cameraViolationsRef.current = 0
     setPhase('problem')
   }
+
+  const totalViolations = cameraViolationCount + tabViolationCount
 
   // ── LOADING ───────────────────────────────────────────────────────────────
   if (phase === 'loading') return (
@@ -124,8 +126,8 @@ const FlowchartAssessment = () => {
         </div>
         <p className="text-white font-bold text-xl mb-1">Flowchart Submitted!</p>
         <p className="text-gray-500 text-sm">Score: <span className="text-white font-black text-2xl">{result?.score}</span>/100</p>
-        {cameraViolations > 0 && (
-          <p className="text-rose-400 text-xs mt-2">{cameraViolations} camera violation{cameraViolations > 1 ? 's' : ''} recorded</p>
+        {totalViolations > 0 && (
+          <p className="text-rose-400 text-xs mt-2">{totalViolations} violation{totalViolations > 1 ? 's' : ''} recorded</p>
         )}
       </div>
 
@@ -182,7 +184,7 @@ const FlowchartAssessment = () => {
       {/* Proctoring camera — active while on problem phase */}
       <ProctoringCamera
         active={phase === 'problem'}
-        onViolation={handleCameraViolation}
+        onViolation={logEvent}
         onReady={() => setCameraReady(true)}
         onDenied={() => navigate('/student/assessment')}
       />
@@ -197,11 +199,11 @@ const FlowchartAssessment = () => {
           </h1>
           <p className="text-gray-500 text-xs">Draw the flowchart on paper, take a photo, and upload it</p>
         </div>
-        {/* Camera violations badge */}
-        {cameraViolations > 0 && (
+        {/* Violations badge */}
+        {totalViolations > 0 && (
           <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 text-xs font-semibold">
             <FontAwesomeIcon icon={faShield} />
-            {cameraViolations} cam flag{cameraViolations !== 1 ? 's' : ''}
+            {totalViolations} flag{totalViolations !== 1 ? 's' : ''}
           </div>
         )}
       </div>
