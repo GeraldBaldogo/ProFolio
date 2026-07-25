@@ -4,19 +4,62 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowRight, faChevronRight, faChevronDown,
   faBars, faTimes, faRobot, faCode, faKeyboard,
-  faDiagramProject, faTrophy, faUserTie, faMedal,
+  faDiagramProject, faUserTie, faMedal,
   faGraduationCap, faChartLine, faCircleCheck, faPlay,
   faQuoteLeft, faFire, faListCheck,
   faFingerprint, faFolderOpen, faFileLines, faLightbulb,
   faComments, faCircle, faTerminal, faBug, faDatabase,
+  faEye,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin, faFacebook, faInstagram } from '@fortawesome/free-brands-svg-icons'
 import ProFolioLogo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
-// Only one real photo left in the whole page — genuine campus/student life for
-// institutional context. Everything assessment-related is a built UI mockup below,
-// so it actually represents what ProFolio does instead of generic stock photography.
-const STUDENTS_PHOTO = 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80'
+/* ─────────────────────────────────────────────────────────────────────────────
+   PHOTOS
+   All image URLs live here so they're easy to swap. Replace any of these with
+   real Tomas Claudio Colleges photos later — just drop the file in /assets,
+   import it, and point the key at the import. Nothing else needs to change.
+   ───────────────────────────────────────────────────────────────────────────── */
+const PHOTOS = {
+  campus:       'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80',
+  lecture:      'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
+  studyGroup:   'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1200&q=80',
+  typing:       'https://images.unsplash.com/photo-1541746972996-4e0b0f43e02a?w=1200&q=80',
+  coding:       'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&q=80',
+  debugging:    'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&q=80',
+  data:         'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1200&q=80',
+  whiteboard:   'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=1200&q=80',
+  presenting:   'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80',
+  workspace:    'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80',
+  team:         'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80',
+  graduation:   'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&q=80',
+  review:       'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1200&q=80',
+  laptopHands:  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80',
+}
+
+// ─── Photo with graceful fallback ─────────────────────────────────────────────
+// If an image ever fails to load, the card keeps its shape instead of
+// collapsing into a broken-image icon.
+const Photo = ({ src, alt = '', className = '', imgClassName = '', overlay = 'from-[#0a0d10] via-[#0a0d10]/35 to-transparent', children }) => {
+  const [failed, setFailed] = useState(false)
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {failed ? (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#141d29] via-[#0d1218] to-[#0a0d10]" />
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className={`absolute inset-0 w-full h-full object-cover ${imgClassName}`}
+        />
+      )}
+      <div className={`absolute inset-0 bg-gradient-to-t ${overlay}`} />
+      {children}
+    </div>
+  )
+}
 
 // ─── Animated Counter (integers only) ────────────────────────────────────────
 const Counter = ({ end, suffix = '', duration = 1400 }) => {
@@ -153,7 +196,7 @@ const CommunicationMock = () => (
       Explain your approach to this problem.
     </div>
     <div className="self-end max-w-[85%] bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-xl rounded-br-sm px-3 py-2 text-[11px] text-fuchsia-200">
-      I'd start by breaking the task into...
+      I&apos;d start by breaking the task into...
       <span className="inline-block w-[2px] h-3 bg-fuchsia-300 ml-0.5 align-middle animate-pulse" />
     </div>
   </div>
@@ -188,16 +231,16 @@ const LandingPage = () => {
       (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in') }),
       { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
     )
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el))
     return () => observer.disconnect()
   }, [])
 
   // ── Real, verifiable facts only — no scores/grades ──
   const factStats = [
-    { end: 6, suffix: '', label: 'Core Assessments', icon: faFire, color: 'text-blue-400' },
-    { end: 4, suffix: '', label: 'Faculty Panelists', icon: faUserTie, color: 'text-sky-400' },
-    { end: 9, suffix: '', label: 'Panel Recommendations Guiding the Build', icon: faLightbulb, color: 'text-violet-400' },
-    { end: 3, suffix: '', label: 'Degree Programs Supported', icon: faGraduationCap, color: 'text-emerald-400' },
+    { end: 6, label: 'Core assessments', icon: faFire, color: 'text-blue-400', photo: PHOTOS.workspace },
+    { end: 4, label: 'Faculty panelists', icon: faUserTie, color: 'text-sky-400', photo: PHOTOS.review },
+    { end: 9, label: 'Panel recommendations guiding the build', icon: faLightbulb, color: 'text-violet-400', photo: PHOTOS.whiteboard },
+    { end: 3, label: 'Degree programs supported', icon: faGraduationCap, color: 'text-emerald-400', photo: PHOTOS.graduation },
   ]
 
   const assessments = [
@@ -207,6 +250,7 @@ const LandingPage = () => {
       desc: 'Measure words-per-minute and accuracy — a baseline skill every tech professional is expected to have.',
       accent: 'blue',
       tag: 'Foundational',
+      photo: PHOTOS.typing,
       Mock: TypingMock,
     },
     {
@@ -215,6 +259,7 @@ const LandingPage = () => {
       desc: 'A real coding problem generated for your chosen language, taken under copy-paste and tab-switch monitoring.',
       accent: 'violet',
       tag: 'Core Skill',
+      photo: PHOTOS.coding,
       Mock: CodeMock,
     },
     {
@@ -223,6 +268,7 @@ const LandingPage = () => {
       desc: 'Given a broken snippet, find and correct the defect under time pressure — tests debugging instinct, not just writing new code.',
       accent: 'rose',
       tag: 'Debugging',
+      photo: PHOTOS.debugging,
       Mock: BugFixMock,
     },
     {
@@ -231,6 +277,7 @@ const LandingPage = () => {
       desc: 'Write queries against a sample schema — tests whether you can retrieve and shape data correctly, not just recall syntax.',
       accent: 'sky',
       tag: 'Data Skill',
+      photo: PHOTOS.data,
       Mock: SqlMock,
     },
     {
@@ -239,6 +286,7 @@ const LandingPage = () => {
       desc: 'Draw a process flowchart, submit a photo, and get it evaluated for logical structure and clarity.',
       accent: 'emerald',
       tag: 'Logic & Design',
+      photo: PHOTOS.whiteboard,
       Mock: FlowchartMock,
     },
     {
@@ -247,6 +295,7 @@ const LandingPage = () => {
       desc: 'Respond to a prompt and get evaluated on clarity, structure, and how well you explain a technical idea in plain language.',
       accent: 'fuchsia',
       tag: 'Soft Skill',
+      photo: PHOTOS.presenting,
       Mock: CommunicationMock,
     },
   ]
@@ -261,21 +310,21 @@ const LandingPage = () => {
   }
 
   const steps = [
-    { n:'01', title:'Create Account', desc:'Sign up with your Tomas Claudio Colleges email.', icon: faGraduationCap, color:'from-blue-400 to-blue-600' },
-    { n:'02', title:'Take Assessments', desc:'Complete the six assessments at your own pace.', icon: faFire, color:'from-violet-500 to-purple-600' },
-    { n:'03', title:'Get AI Scored', desc:'Each submission is evaluated against a fixed rubric.', icon: faRobot, color:'from-rose-500 to-pink-500' },
-    { n:'04', title:'Human Review', desc:'Faculty and industry evaluators confirm the final verdict.', icon: faUserTie, color:'from-amber-500 to-orange-500' },
-    { n:'05', title:'Build Your Profile', desc:'Results feed into a portfolio and CV you can share.', icon: faMedal, color:'from-emerald-500 to-teal-600' },
+    { n:'01', title:'Create account',   desc:'Sign up with your Tomas Claudio Colleges email.',        icon: faGraduationCap, color:'from-blue-400 to-blue-600',    photo: PHOTOS.studyGroup },
+    { n:'02', title:'Take assessments', desc:'Complete the six assessments at your own pace.',         icon: faFire,          color:'from-violet-500 to-purple-600', photo: PHOTOS.laptopHands },
+    { n:'03', title:'Get AI scored',    desc:'Each submission is evaluated against a fixed rubric.',   icon: faRobot,         color:'from-rose-500 to-pink-500',     photo: PHOTOS.coding },
+    { n:'04', title:'Human review',     desc:'Faculty and industry evaluators confirm the verdict.',   icon: faUserTie,       color:'from-amber-500 to-orange-500',  photo: PHOTOS.review },
+    { n:'05', title:'Build your profile', desc:'Results feed into a portfolio and CV you can share.',  icon: faMedal,         color:'from-emerald-500 to-teal-600',  photo: PHOTOS.graduation },
   ]
 
   // ── Roadmap grid, mapped directly to the panel's written recommendations ──
   const panelFeatures = [
-    { icon: faListCheck, title: 'Standardized Scoring Rubric', desc: 'Every submission is graded against the same fixed, documented criteria — so a score means the same thing no matter who takes the assessment or when.', status: 'Live' },
-    { icon: faFingerprint, title: 'Originality & Anti-Cheat Checks', desc: 'Copy-paste blocking and tab-switch monitoring during the coding challenge, so a result reflects the student\u2019s own work.', status: 'Live' },
-    { icon: faFolderOpen, title: 'Built-In Portfolio Storage', desc: 'Projects, certificates, and past assessment results stay organized in one place a student can point an employer to.', status: 'Live' },
-    { icon: faFileLines, title: 'Auto-Generated CV', desc: 'A shareable profile that compiles typing speed, programming proficiency, and other verified results into one document.', status: 'Live' },
-    { icon: faLightbulb, title: 'Personalized Growth Recommendations', desc: 'Suggested courses, training modules, and certifications targeted at the specific skill gaps an assessment uncovers.', status: 'Roadmap' },
-    { icon: faComments, title: 'Conversational AI Assistant', desc: 'A chat- or voice-based guide to make taking assessments and reading feedback more interactive.', status: 'Roadmap' },
+    { icon: faListCheck,    title: 'Standardized scoring rubric',        desc: 'Every submission is graded against the same fixed, documented criteria — so a score means the same thing no matter who takes the assessment or when.', status: 'Live' },
+    { icon: faFingerprint,  title: 'Originality & anti-cheat checks',    desc: 'Copy-paste blocking and tab-switch monitoring during the coding challenge, so a result reflects the student\u2019s own work.', status: 'Live' },
+    { icon: faFolderOpen,   title: 'Built-in portfolio storage',         desc: 'Projects, certificates, and past assessment results stay organized in one place a student can point an employer to.', status: 'Live' },
+    { icon: faFileLines,    title: 'Auto-generated CV',                  desc: 'A shareable profile that compiles typing speed, programming proficiency, and other verified results into one document.', status: 'Live' },
+    { icon: faLightbulb,    title: 'Personalized growth recommendations', desc: 'Suggested courses, training modules, and certifications targeted at the specific skill gaps an assessment uncovers.', status: 'Roadmap' },
+    { icon: faComments,     title: 'Conversational AI assistant',        desc: 'A chat- or voice-based guide to make taking assessments and reading feedback more interactive.', status: 'Roadmap' },
   ]
 
   // ── Paraphrased, non-verbatim excerpts of the panel's written comments ──
@@ -283,6 +332,17 @@ const LandingPage = () => {
     'Keep the evaluation criteria consistent and standardized across every assessment, tied to clear learning outcomes.',
     'Verify that submitted work reflects the student\u2019s own effort rather than being entirely AI-generated.',
     'Expand testing beyond typing and coding to cover communication, problem-solving, creativity, and documentation.',
+  ]
+
+  // ── Photo strip: what the platform is actually for ──
+  const strip = [
+    { src: PHOTOS.lecture,     caption: 'Classroom to career' },
+    { src: PHOTOS.typing,      caption: 'Timed typing runs' },
+    { src: PHOTOS.coding,      caption: 'Monitored coding challenge' },
+    { src: PHOTOS.whiteboard,  caption: 'Flowchart design' },
+    { src: PHOTOS.presenting,  caption: 'Explaining your work' },
+    { src: PHOTOS.team,        caption: 'Faculty review panel' },
+    { src: PHOTOS.graduation,  caption: 'Portfolio you can share' },
   ]
 
   const faqs = [
@@ -294,11 +354,13 @@ const LandingPage = () => {
   ]
 
   const socialLinks = [
-    { href:'https://www.instagram.com/gerald.baldogo/', icon:faInstagram },
-    { href:'https://www.facebook.com/gerald.baldogo/', icon:faFacebook },
-    { href:'https://github.com/GeraldBaldogo', icon:faGithub },
-    { href:'https://www.linkedin.com/in/gerald-baldogo-06741440a/', icon:faLinkedin },
+    { href:'https://www.instagram.com/gerald.baldogo/', icon:faInstagram, label:'Instagram' },
+    { href:'https://www.facebook.com/gerald.baldogo/', icon:faFacebook, label:'Facebook' },
+    { href:'https://github.com/GeraldBaldogo', icon:faGithub, label:'GitHub' },
+    { href:'https://www.linkedin.com/in/gerald-baldogo-06741440a/', icon:faLinkedin, label:'LinkedIn' },
   ]
+
+  const navLinks = [['#assessments','Assessments'],['#how-it-works','How it works'],['#roadmap','Features'],['#faq','FAQ']]
 
   return (
     <div className="min-h-screen bg-[#0a0d10] font-sans overflow-x-hidden">
@@ -311,11 +373,16 @@ const LandingPage = () => {
         .reveal-right { opacity:0; transform:translateX(28px); transition:opacity 0.6s ease, transform 0.6s ease; }
         .reveal-right.in { opacity:1; transform:translateX(0); }
         .accent-text { color: #60a5fa; }
-        .accent-text-warm { color: #fbbf24; }
         .glow-blue { box-shadow: 0 0 40px rgba(96,165,250,0.15); }
-        .glow-amber { box-shadow: 0 0 40px rgba(251,191,36,0.12); }
-        .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover { transition: transform 0.25s ease, box-shadow 0.25s ease; }
         .card-hover:hover { transform: translateY(-4px); }
+
+        /* keyboard focus stays visible everywhere */
+        a:focus-visible, button:focus-visible {
+          outline: 2px solid #60a5fa;
+          outline-offset: 3px;
+          border-radius: 12px;
+        }
 
         /* ── Ambient background motion ── */
         @keyframes drift {
@@ -335,8 +402,6 @@ const LandingPage = () => {
           100% { transform: translateY(120vh); opacity: 0; }
         }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-
-        /* ── Small, deliberate touches on specific elements only ── */
         @keyframes iconFloat {
           0%, 100% { transform: translateY(0); }
           50%      { transform: translateY(-5px); }
@@ -349,11 +414,27 @@ const LandingPage = () => {
           0%   { transform: translateX(-260%) skewX(-20deg); }
           100% { transform: translateX(360%) skewX(-20deg); }
         }
+        /* ── Photo strip ── */
+        @keyframes marquee {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        .marquee-track { animation: marquee 46s linear infinite; }
+        .marquee-mask {
+          -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+          mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation: none !important;
+            transition-duration: 0.01ms !important;
+          }
+          .reveal, .reveal-left, .reveal-right { opacity: 1; transform: none; }
+        }
       `}</style>
 
-      {/* ── Ambient background: three drifting gradient orbs + a scan-line
-           sweep, echoing the "monitoring / assessment" theme of the product
-           rather than a generic decorative glow ── */}
+      {/* ── Ambient background ── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute w-[700px] h-[700px] rounded-full -top-64 -left-32 opacity-[0.07]"
           style={{ background:'radial-gradient(circle, #60a5fa, transparent 70%)', animation:'drift 15s ease-in-out infinite' }} />
@@ -371,35 +452,35 @@ const LandingPage = () => {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0a0d10]/90 backdrop-blur-xl border-b border-white/5' : ''}`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src={ProFolioLogo} alt="ProFolio Logo" className="h-8 w-auto" />
+            <img src={ProFolioLogo} alt="ProFolio" className="h-8 w-auto" />
             <span className="text-xl font-black text-white tracking-tight">Pro<span className="accent-text">Folio</span></span>
           </div>
           <div className="hidden md:flex items-center gap-1">
-            {[['#assessments','Assessments'],['#roadmap','Features'],['#faq','FAQ']].map(([href,label]) => (
+            {navLinks.map(([href,label]) => (
               <a key={href} href={href} className="text-gray-400 hover:text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/5 transition-all">{label}</a>
             ))}
           </div>
           <div className="hidden md:flex items-center gap-3">
-            <button onClick={() => navigate('/login')} className="text-gray-400 hover:text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/5 transition-all">Sign In</button>
+            <button onClick={() => navigate('/login')} className="text-gray-400 hover:text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/5 transition-all">Sign in</button>
             <button onClick={() => navigate('/register')}
               className="bg-blue-400 hover:bg-blue-300 text-black text-sm font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2">
-              Get Started Free <FontAwesomeIcon icon={faArrowRight} />
+              Get started free <FontAwesomeIcon icon={faArrowRight} />
             </button>
           </div>
-          <button className="md:hidden w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
+          <button aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            className="md:hidden w-9 h-9 flex items-center justify-center text-gray-400 hover:text-white" onClick={() => setMenuOpen(!menuOpen)}>
             <FontAwesomeIcon icon={menuOpen ? faTimes : faBars} />
           </button>
         </div>
         {menuOpen && (
           <div className="md:hidden bg-[#0a0d10]/98 backdrop-blur-xl border-t border-white/5 px-6 py-4 flex flex-col gap-2">
-            {[['#assessments','Assessments'],['#roadmap','Features'],['#faq','FAQ']].map(([href,label]) => (
+            {navLinks.map(([href,label]) => (
               <a key={href} href={href} className="text-gray-400 text-sm py-2.5 px-3 rounded-xl hover:bg-white/5 hover:text-white" onClick={() => setMenuOpen(false)}>{label}</a>
             ))}
             <div className="flex flex-col gap-2 pt-3 border-t border-white/5">
-              <button onClick={() => navigate('/login')} className="text-gray-400 text-sm py-2.5 px-3 rounded-xl hover:bg-white/5 text-left">Sign In</button>
-              <button onClick={() => navigate('/register')}
-                className="bg-blue-400 text-black text-sm font-bold py-3 rounded-xl">
-                Get Started Free
+              <button onClick={() => navigate('/login')} className="text-gray-400 text-sm py-2.5 px-3 rounded-xl hover:bg-white/5 text-left">Sign in</button>
+              <button onClick={() => navigate('/register')} className="bg-blue-400 text-black text-sm font-bold py-3 rounded-xl">
+                Get started free
               </button>
             </div>
           </div>
@@ -407,36 +488,40 @@ const LandingPage = () => {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative min-h-screen flex items-center px-6 pt-24 pb-16">
+      <section className="relative min-h-screen flex items-center px-6 pt-28 pb-16">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
             {/* Left */}
             <div className="relative z-10">
+              <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-6"
+                style={{ animation:'badgeGlow 3s ease-in-out infinite' }}>
+                <FontAwesomeIcon icon={faGraduationCap} /> Built for Tomas Claudio Colleges
+              </div>
 
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.02] mb-6 tracking-tight">
-                Prove Your<br />
-                <span className="accent-text">Skills.</span><br />
-                Launch Your<br />Career.
+                Prove your<br />
+                <span className="accent-text">skills.</span><br />
+                Launch your<br />career.
               </h1>
 
               <p className="text-xl text-gray-400 max-w-lg mb-10 leading-relaxed">
-                ProFolio is a skills assessment and career readiness platform built for BSIT, BSCS, and BSIS students. Take six real challenges, get scored against a fixed rubric, and walk away with a portfolio you can actually show.
+                ProFolio is a skills assessment and career readiness platform for BSIT, BSCS, and BSIS students. Take six real challenges, get scored against a fixed rubric, and walk away with a portfolio you can actually show.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
                 <ShimmerButton onClick={() => navigate('/register')}
                   className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-8 py-4 rounded-2xl text-base transition-colors">
-                  Start Free Assessment <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
+                  Start free assessment <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
                 </ShimmerButton>
                 <button onClick={() => navigate('/login')}
                   className="flex items-center justify-center gap-2 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white font-semibold px-8 py-4 rounded-2xl transition-all text-base">
-                  Sign In <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
+                  Sign in <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
                 </button>
               </div>
 
               <div className="flex flex-wrap gap-6">
-                {['Rubric-Based Scoring','Anti-Cheat Monitored','Human-Reviewed',].map((b,i) => (
+                {['Rubric-based scoring','Anti-cheat monitored','Human-reviewed'].map((b,i) => (
                   <span key={i} className="flex items-center gap-2 text-sm text-gray-500">
                     <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-400" />{b}
                   </span>
@@ -444,17 +529,27 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* Right — product mockup + real fact cards */}
-            <div className="relative hidden lg:block" style={{ animation:'float 6s ease-in-out infinite' }}>
-              <div className="relative w-full aspect-square max-w-lg mx-auto">
-                <div className="absolute inset-4 rounded-3xl overflow-hidden glow-blue border border-white/10 bg-[#0d1218]">
-                  <div className="flex items-center gap-1.5 px-5 pt-5">
+            {/* Right — photo collage + live product panel */}
+            <div className="relative" style={{ animation:'float 6s ease-in-out infinite' }}>
+              <div className="relative w-full max-w-lg mx-auto aspect-square">
+
+                {/* Big photo behind everything */}
+                <Photo
+                  src={PHOTOS.laptopHands}
+                  alt="Student working on a coding assessment"
+                  className="absolute inset-0 rounded-[2rem] border border-white/10 glow-blue"
+                  overlay="from-[#0a0d10] via-[#0a0d10]/55 to-[#0a0d10]/10"
+                />
+
+                {/* Product panel floating on the photo */}
+                <div className="absolute left-4 right-4 bottom-6 rounded-2xl overflow-hidden border border-white/10 bg-[#0d1218]/95 backdrop-blur-md shadow-2xl">
+                  <div className="flex items-center gap-1.5 px-5 pt-4">
                     <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
                     <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
                     <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
                     <span className="text-gray-600 text-[11px] font-mono ml-2">profolio — assessment.session</span>
                   </div>
-                  <div className="p-5 pt-4 flex flex-col gap-3">
+                  <div className="p-5 pt-4 flex flex-col gap-2.5">
                     <div className="flex items-center gap-2 text-xs font-mono text-gray-500">
                       <FontAwesomeIcon icon={faTerminal} className="text-blue-400" /> initializing rubric...
                     </div>
@@ -462,7 +557,6 @@ const LandingPage = () => {
                       { w:'w-3/5', c:'bg-blue-400/60' },
                       { w:'w-4/5', c:'bg-gray-700' },
                       { w:'w-2/5', c:'bg-violet-400/50' },
-                      { w:'w-3/4', c:'bg-gray-700' },
                       { w:'w-1/2', c:'bg-emerald-400/50' },
                     ].map((l,i)=>(
                       <div key={i} className="flex items-center gap-2">
@@ -470,7 +564,7 @@ const LandingPage = () => {
                         <div className={`h-2.5 rounded ${l.w} ${l.c}`} />
                       </div>
                     ))}
-                    <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                    <div className="mt-2 pt-3 border-t border-white/5 flex items-center justify-between">
                       <span className="text-gray-600 text-[11px] font-mono">status</span>
                       <span className="text-emerald-400 text-[11px] font-mono flex items-center gap-1.5">
                         <FontAwesomeIcon icon={faCircle} className="text-[6px]" /> monitoring active
@@ -479,55 +573,79 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                {/* Fact card 1 — real */}
-                <div className="absolute -top-4 -right-4 bg-[#0d1218] border border-blue-500/30 rounded-2xl p-4 w-48 glow-blue">
+                {/* Small photo card, top-left */}
+                <Photo
+                  src={PHOTOS.studyGroup}
+                  alt="Students studying together"
+                  className="hidden sm:block absolute -top-6 -left-6 w-36 h-28 rounded-2xl border border-white/10 shadow-xl"
+                  overlay="from-[#0a0d10]/70 to-transparent"
+                >
+                  <span className="absolute bottom-2 left-3 text-[10px] font-semibold text-white/90">BSIT · BSCS · BSIS</span>
+                </Photo>
+
+                {/* Fact card, top-right */}
+                <div className="absolute -top-4 -right-4 bg-[#0d1218]/95 backdrop-blur border border-blue-500/30 rounded-2xl p-4 w-44 sm:w-48 glow-blue">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-7 h-7 bg-blue-400 rounded-lg flex items-center justify-center" style={{ animation:'iconFloat 3.4s ease-in-out infinite' }}>
                       <FontAwesomeIcon icon={faFire} className="text-black text-xs" />
                     </div>
-                    <span className="text-white text-xs font-bold">Core Assessments</span>
+                    <span className="text-white text-xs font-bold">Core assessments</span>
                   </div>
                   <div className="text-3xl font-black text-blue-400 mb-1 font-mono">6</div>
-                  <div className="text-xs text-gray-500">Typing · Coding · Bug Fix · SQL · Flowchart · Communication</div>
+                  <div className="text-xs text-gray-500">Typing · Coding · Bug fix · SQL · Flowchart · Communication</div>
                 </div>
 
-                {/* Fact card 2 — real, no grade */}
-                <div className="absolute -bottom-4 -left-4 bg-[#0d1218] border border-sky-500/30 rounded-2xl p-4 w-56">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center" style={{ animation:'iconFloat 3.4s ease-in-out infinite 0.6s' }}>
-                      <FontAwesomeIcon icon={faGraduationCap} className="text-white text-xs" />
-                    </div>
-                    <span className="text-white text-xs font-bold">Programs Supported</span>
-                  </div>
-                  <div className="text-lg font-black text-sky-400 mb-1 font-mono">BSIT · BSCS · BSIS</div>
-                </div>
-
-                {/* Fact card 3 — real */}
-                <div className="absolute bottom-16 -right-6 bg-[#0d1218] border border-emerald-500/30 rounded-2xl p-3 w-44">
-                  <div className="text-gray-500 text-[10px] mb-1">Anti-Cheat Monitoring</div>
-                  <div className="text-sm font-black text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Active
-                  </div>
-                </div>
+                {/* Small photo card, bottom-right */}
+                <Photo
+                  src={PHOTOS.review}
+                  alt="Faculty reviewing student results"
+                  className="hidden sm:block absolute -bottom-8 -right-6 w-40 h-28 rounded-2xl border border-white/10 shadow-xl"
+                  overlay="from-[#0a0d10]/75 to-transparent"
+                >
+                  <span className="absolute bottom-2 left-3 text-[10px] font-semibold text-white/90">Human-reviewed results</span>
+                </Photo>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ── Photo strip ── */}
+      <section className="relative z-10 py-10 border-y border-white/5">
+        <p className="text-center text-gray-600 text-xs font-mono uppercase tracking-[0.2em] mb-6">
+          What a ProFolio run looks like
+        </p>
+        <div className="marquee-mask overflow-hidden">
+          <div className="marquee-track flex gap-4 w-max">
+            {[...strip, ...strip].map((s,i) => (
+              <Photo
+                key={i}
+                src={s.src}
+                alt={s.caption}
+                className="w-56 h-32 rounded-2xl border border-white/8 flex-shrink-0"
+                imgClassName="grayscale-[0.4] hover:grayscale-0 transition-all duration-500"
+                overlay="from-[#0a0d10]/80 via-[#0a0d10]/10 to-transparent"
+              >
+                <span className="absolute bottom-3 left-4 text-xs font-semibold text-white/90">{s.caption}</span>
+              </Photo>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Assessments ── */}
-      <section id="assessments" className="py-24 px-6 relative z-10">
+      <section id="assessments" className="py-24 px-6 relative z-10 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 reveal">
             <div className="inline-flex items-center gap-2 border border-violet-500/30 bg-violet-500/10 text-violet-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
               style={{ animation:'badgeGlow 3s ease-in-out infinite' }}>
-              <FontAwesomeIcon icon={faFire} /> 6 Core Assessments
+              <FontAwesomeIcon icon={faFire} /> 6 core assessments
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
               Real challenges.<br /><span className="accent-text">Rubric-graded.</span>
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Each assessment measures one specific skill. Complete all six to build your career readiness profile.
+              Each assessment measures one specific skill. Hover any card to see the actual screen you&apos;ll be working in.
             </p>
           </div>
 
@@ -536,15 +654,28 @@ const LandingPage = () => {
               const ac = accentMap[a.accent]
               const Mock = a.Mock
               return (
-                <div key={i} className={`reveal card-hover border ${ac.border} ${ac.bg} rounded-3xl overflow-hidden`}
+                <div key={i} className={`group reveal card-hover border ${ac.border} ${ac.bg} rounded-3xl overflow-hidden`}
                   style={{ transitionDelay:`${(i%3)*120}ms` }}>
-                  <div className="relative h-44 overflow-hidden">
-                    <Mock />
-                    <div className={`absolute top-4 left-4 w-10 h-10 bg-gradient-to-br ${ac.grad} rounded-xl flex items-center justify-center shadow-lg`}>
+                  <div className="relative h-48">
+                    <Photo
+                      src={a.photo}
+                      alt={a.title}
+                      className="absolute inset-0"
+                      imgClassName="transition-transform duration-700 group-hover:scale-105"
+                      overlay="from-[#0d1218] via-[#0d1218]/35 to-transparent"
+                    />
+                    {/* the real UI, revealed on hover */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                      <Mock />
+                    </div>
+                    <div className={`absolute top-4 left-4 w-10 h-10 bg-gradient-to-br ${ac.grad} rounded-xl flex items-center justify-center shadow-lg z-10`}>
                       <FontAwesomeIcon icon={a.icon} className={ac.text} />
                     </div>
-                    <span className={`absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full border ${ac.border} ${ac.bg} text-white`}>
+                    <span className={`absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full border ${ac.border} bg-black/40 backdrop-blur-sm text-white z-10`}>
                       {a.tag}
+                    </span>
+                    <span className="absolute bottom-3 right-4 flex items-center gap-1.5 text-[10px] font-mono text-white/50 group-hover:opacity-0 transition-opacity z-10">
+                      <FontAwesomeIcon icon={faEye} /> hover to preview
                     </span>
                   </div>
                   <div className="p-6">
@@ -559,50 +690,46 @@ const LandingPage = () => {
               )
             })}
           </div>
-
-          <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
-            {['Typing','Coding','Bug Fix','SQL','Flowchart','Communication','Career Profile'].map((label,i,arr) => (
-              <span key={i} className={`text-sm font-semibold px-3 py-1 rounded-full border ${
-                i === arr.length - 1 ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-gray-400 border-white/10 bg-white/[0.03]'
-              }`}>{label}</span>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* ── TCC section (keeps one real, authentic photo) ── */}
+      {/* ── TCC section ── */}
       <section className="py-16 px-6 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            <div className="reveal-left">
-              <div className="relative rounded-3xl overflow-hidden h-80">
-                <img src={STUDENTS_PHOTO} alt="Students working" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0a0d10]/60 to-transparent" />
-                <div className="absolute bottom-6 left-6">
-                  <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-sm border border-white/10 text-white text-sm font-semibold px-4 py-2 rounded-full">
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                    Tomas Claudio Colleges
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            {/* Photo cluster */}
+            <div className="reveal-left grid grid-cols-2 gap-4">
+              <Photo src={PHOTOS.campus} alt="Students on campus"
+                className="col-span-2 h-56 rounded-3xl border border-white/8"
+                overlay="from-[#0a0d10]/85 via-[#0a0d10]/20 to-transparent">
+                <div className="absolute bottom-5 left-5 inline-flex items-center gap-2 bg-black/60 backdrop-blur-sm border border-white/10 text-white text-sm font-semibold px-4 py-2 rounded-full">
+                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                  Tomas Claudio Colleges
                 </div>
-              </div>
+              </Photo>
+              <Photo src={PHOTOS.lecture} alt="Lecture hall" className="h-36 rounded-2xl border border-white/8"
+                overlay="from-[#0a0d10]/60 to-transparent" />
+              <Photo src={PHOTOS.team} alt="Students collaborating" className="h-36 rounded-2xl border border-white/8"
+                overlay="from-[#0a0d10]/60 to-transparent" />
             </div>
+
             <div className="reveal-right">
               <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
                 style={{ animation:'badgeGlow 3s ease-in-out infinite 1s' }}>
-                <FontAwesomeIcon icon={faGraduationCap} /> For TCC Students
+                <FontAwesomeIcon icon={faGraduationCap} /> For TCC students
               </div>
               <h2 className="text-4xl font-black text-white mb-5 tracking-tight leading-tight">
                 Built specifically for <span className="accent-text">TCC students</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-6">
-                ProFolio is a capstone system built for Tomas Claudio Colleges' BSIT, BSCS, and BSIS programs. Scores are tied to a student's profile and reviewed by TCC faculty.
+                ProFolio is a capstone system built for Tomas Claudio Colleges&apos; BSIT, BSCS, and BSIS programs. Scores are tied to a student&apos;s profile and reviewed by TCC faculty.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   ['BSIT','Bachelor of Science in Information Technology'],
                   ['BSCS','Bachelor of Science in Computer Science'],
                   ['BSIS','Bachelor of Science in Information Systems'],
-                  ['All Levels','1st year to graduating students'],
+                  ['All levels','1st year to graduating students'],
                 ].map(([title,desc],i) => (
                   <div key={i} className="border border-white/8 bg-white/[0.03] rounded-2xl p-4">
                     <div className="text-white font-bold text-sm mb-1">{title}</div>
@@ -615,28 +742,52 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* ── Facts ── */}
+      <section className="py-16 px-6 relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {factStats.map((f,i) => (
+            <Photo key={i} src={f.photo} alt=""
+              className="reveal h-44 rounded-3xl border border-white/8 card-hover"
+              imgClassName="opacity-30 transition-opacity duration-500 hover:opacity-45"
+              overlay="from-[#0a0d10] via-[#0a0d10]/85 to-[#0a0d10]/60">
+              <div className="absolute inset-0 p-5 flex flex-col justify-end">
+                <FontAwesomeIcon icon={f.icon} className={`${f.color} mb-3 text-lg`} />
+                <div className={`text-4xl font-black font-mono ${f.color} mb-1`}>
+                  <Counter end={f.end} />
+                </div>
+                <div className="text-gray-400 text-xs leading-snug">{f.label}</div>
+              </div>
+            </Photo>
+          ))}
+        </div>
+      </section>
+
       {/* ── How it works ── */}
-      <section id="how-it-works" className="py-24 px-6 relative z-10">
-        <div className="max-w-5xl mx-auto">
+      <section id="how-it-works" className="py-24 px-6 relative z-10 scroll-mt-24">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16 reveal">
             <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
               style={{ animation:'badgeGlow 3s ease-in-out infinite 2s' }}>
-              <FontAwesomeIcon icon={faChartLine} /> How It Works
+              <FontAwesomeIcon icon={faChartLine} /> How it works
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
               From sign-up to <span className="accent-text">career-ready</span>
             </h2>
-            <p className="text-gray-400 text-lg max-w-xl mx-auto">Five steps to your career readiness profile.</p>
+            <p className="text-gray-400 text-lg max-w-xl mx-auto">Five steps, in order — each one unlocks the next.</p>
           </div>
 
           <div className="relative">
-            <div className="hidden lg:block absolute top-8 left-[10%] right-[10%] h-px bg-gradient-to-r from-blue-500/30 via-violet-500/30 to-emerald-500/30" />
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="hidden lg:block absolute top-14 left-[10%] right-[10%] h-px bg-gradient-to-r from-blue-500/30 via-violet-500/30 to-emerald-500/30" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
               {steps.map((s,i) => (
                 <div key={i} className="reveal flex flex-col items-center text-center" style={{ transitionDelay:`${i*100}ms` }}>
-                  <div className={`w-16 h-16 bg-gradient-to-br ${s.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg relative z-10`}
-                    style={{ animation:`iconFloat 3.6s ease-in-out infinite ${i * 0.3}s` }}>
-                    <FontAwesomeIcon icon={s.icon} className="text-white text-xl" />
+                  <div className="relative mb-4">
+                    <Photo src={s.photo} alt="" className="w-28 h-28 rounded-full border border-white/10"
+                      imgClassName="opacity-70" overlay="from-[#0a0d10]/70 to-transparent" />
+                    <div className={`absolute -bottom-1 -right-1 w-11 h-11 bg-gradient-to-br ${s.color} rounded-2xl flex items-center justify-center shadow-lg z-10`}
+                      style={{ animation:`iconFloat 3.6s ease-in-out infinite ${i * 0.3}s` }}>
+                      <FontAwesomeIcon icon={s.icon} className="text-white" />
+                    </div>
                   </div>
                   <div className="text-xs text-gray-600 font-mono mb-1">{s.n}</div>
                   <h3 className="text-white font-bold text-sm mb-1">{s.title}</h3>
@@ -648,8 +799,66 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* ── Features / roadmap (this is what the #roadmap nav link points to) ── */}
+      <section id="roadmap" className="py-24 px-6 relative z-10 scroll-mt-24">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16 reveal">
+            <div className="inline-flex items-center gap-2 border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
+              <FontAwesomeIcon icon={faListCheck} /> Features &amp; roadmap
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
+              Shaped by the <span className="accent-text">faculty panel</span>
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Every item below traces back to a written recommendation from the defense panel. Four are already running; two are next.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-14">
+            {panelFeatures.map((f,i) => (
+              <div key={i} className="reveal card-hover border border-white/8 bg-white/[0.03] rounded-3xl p-6"
+                style={{ transitionDelay:`${(i%3)*100}ms` }}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <FontAwesomeIcon icon={f.icon} className="text-blue-400" />
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                    f.status === 'Live'
+                      ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                      : 'text-amber-300 border-amber-500/30 bg-amber-500/10'
+                  }`}>{f.status}</span>
+                </div>
+                <h3 className="text-white font-bold text-base mb-2">{f.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Panel comments, next to a photo */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+            <Photo src={PHOTOS.whiteboard} alt="Project review session"
+              className="reveal-left lg:col-span-2 min-h-[220px] rounded-3xl border border-white/8"
+              overlay="from-[#0a0d10]/85 via-[#0a0d10]/25 to-transparent">
+              <div className="absolute bottom-5 left-5">
+                <div className="text-white font-bold text-sm">Capstone defense panel</div>
+                <div className="text-gray-400 text-xs">4 faculty and industry evaluators</div>
+              </div>
+            </Photo>
+            <div className="reveal-right lg:col-span-3 flex flex-col gap-3">
+              {panelHighlights.map((h,i) => (
+                <div key={i} className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 flex gap-4">
+                  <FontAwesomeIcon icon={faQuoteLeft} className="text-blue-400/50 mt-1" />
+                  <p className="text-gray-400 text-sm leading-relaxed">{h}</p>
+                </div>
+              ))}
+              <p className="text-gray-600 text-xs pl-1">Paraphrased from the panel&apos;s written comments.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── FAQ ── */}
-      <section id="faq" className="py-24 px-6 relative z-10">
+      <section id="faq" className="py-24 px-6 relative z-10 scroll-mt-24">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-16 reveal">
             <h2 className="text-4xl font-black text-white mb-4 tracking-tight">Got questions?</h2>
@@ -660,6 +869,7 @@ const LandingPage = () => {
               <div key={i} className="reveal border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden"
                 style={{ transitionDelay:`${i*60}ms` }}>
                 <button className="w-full flex items-center justify-between px-6 py-5 text-left gap-4"
+                  aria-expanded={openFaq === i}
                   onClick={() => setOpenFaq(openFaq===i ? null : i)}>
                   <span className="font-semibold text-white text-sm">{faq.q}</span>
                   <FontAwesomeIcon icon={faChevronDown}
@@ -676,48 +886,48 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* ── CTA — now on a photo ── */}
       <section className="py-24 px-6 relative z-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="reveal relative rounded-3xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-sky-600/10 to-violet-600/10" />
-            <div className="absolute inset-0 border border-white/10 rounded-3xl" />
-
+        <div className="max-w-5xl mx-auto">
+          <Photo src={PHOTOS.graduation} alt="Graduating students"
+            className="reveal rounded-3xl border border-white/10"
+            imgClassName="opacity-45"
+            overlay="from-[#0a0d10] via-[#0a0d10]/85 to-[#0a0d10]/70">
             <div className="relative z-10 p-12 md:p-20 text-center">
               <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
                 Ready to prove<br /><span className="accent-text">your skills?</span>
               </h2>
-              <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
-                Take all six assessments, get rubric-based feedback, and start building a portfolio a faculty panel already put its name behind.
+              <p className="text-gray-300 text-lg mb-10 max-w-xl mx-auto">
+                Take all six assessments, get rubric-based feedback, and start building a portfolio you can hand to an employer.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <ShimmerButton onClick={() => navigate('/register')}
                   className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-10 py-4 rounded-2xl text-base w-full sm:w-auto transition-colors">
-                  Start Free <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
+                  Start free <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
                 </ShimmerButton>
                 <button onClick={() => navigate('/login')}
-                  className="flex items-center justify-center gap-2 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-semibold px-10 py-4 rounded-2xl transition-all text-base w-full sm:w-auto">
-                  Sign In <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
+                  className="flex items-center justify-center gap-2 border border-white/20 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white font-semibold px-10 py-4 rounded-2xl transition-all text-base w-full sm:w-auto">
+                  Sign in <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
                 </button>
               </div>
             </div>
-          </div>
+          </Photo>
         </div>
       </section>
 
-      {/* ── Footer — no logo/wordmark, socials on the left ── */}
+      {/* ── Footer ── */}
       <footer className="relative z-10 border-t border-white/5 px-6 py-10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             {socialLinks.map((s,i) => (
-              <a key={i} href={s.href} target="_blank" rel="noreferrer"
+              <a key={i} href={s.href} target="_blank" rel="noreferrer" aria-label={s.label}
                 className="w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
                 <FontAwesomeIcon icon={s.icon} />
               </a>
             ))}
           </div>
           <p className="text-gray-700 text-xs text-center md:text-right">
-            Developed by Team ProFolio · © 2026 ·
+            Developed by Team ProFolio · © 2026
           </p>
         </div>
       </footer>
