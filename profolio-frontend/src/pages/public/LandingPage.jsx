@@ -159,6 +159,17 @@ const CommunicationMock = () => (
   </div>
 )
 
+// ─── Shimmering CTA button — used only for the two highest-priority CTAs ──────
+const ShimmerButton = ({ onClick, className, children }) => (
+  <button onClick={onClick} className={`relative overflow-hidden group ${className}`}>
+    <span
+      className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none"
+      style={{ animation: 'shimmer 3.2s ease-in-out infinite' }}
+    />
+    <span className="relative z-10 flex items-center justify-center gap-2 w-full">{children}</span>
+  </button>
+)
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -305,18 +316,55 @@ const LandingPage = () => {
         .glow-amber { box-shadow: 0 0 40px rgba(251,191,36,0.12); }
         .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .card-hover:hover { transform: translateY(-4px); }
-        @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.06} 50%{transform:scale(1.1);opacity:0.11} }
+
+        /* ── Ambient background motion ── */
+        @keyframes drift {
+          0%   { transform: translate(0, 0) scale(1); }
+          33%  { transform: translate(50px, -35px) scale(1.08); }
+          66%  { transform: translate(-35px, 25px) scale(0.94); }
+          100% { transform: translate(0, 0) scale(1); }
+        }
+        @keyframes gridPulse {
+          0%, 100% { opacity: 0.02; }
+          50%      { opacity: 0.045; }
+        }
+        @keyframes scanline {
+          0%   { transform: translateY(-20%); opacity: 0; }
+          8%   { opacity: 0.5; }
+          85%  { opacity: 0.5; }
+          100% { transform: translateY(120vh); opacity: 0; }
+        }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+        /* ── Small, deliberate touches on specific elements only ── */
+        @keyframes iconFloat {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-5px); }
+        }
+        @keyframes badgeGlow {
+          0%, 100% { box-shadow: 0 0 0px rgba(96,165,250,0); }
+          50%      { box-shadow: 0 0 16px rgba(96,165,250,0.22); }
+        }
+        @keyframes shimmer {
+          0%   { transform: translateX(-260%) skewX(-20deg); }
+          100% { transform: translateX(360%) skewX(-20deg); }
+        }
       `}</style>
 
-      {/* ── Ambient background ── */}
+      {/* ── Ambient background: three drifting gradient orbs + a scan-line
+           sweep, echoing the "monitoring / assessment" theme of the product
+           rather than a generic decorative glow ── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-[700px] h-[700px] rounded-full -top-64 -left-32 opacity-[0.06]"
-          style={{ background:'radial-gradient(circle, #60a5fa, transparent 70%)', animation:'pulse 8s ease-in-out infinite' }} />
-        <div className="absolute w-[500px] h-[500px] rounded-full top-1/3 -right-20 opacity-[0.05]"
-          style={{ background:'radial-gradient(circle, #a78bfa, transparent 70%)', animation:'pulse 10s ease-in-out infinite 2s' }} />
-        <div className="absolute inset-0 opacity-[0.02]"
-          style={{ backgroundImage:'linear-gradient(rgba(148,163,184,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.8) 1px,transparent 1px)', backgroundSize:'48px 48px' }} />
+        <div className="absolute w-[700px] h-[700px] rounded-full -top-64 -left-32 opacity-[0.07]"
+          style={{ background:'radial-gradient(circle, #60a5fa, transparent 70%)', animation:'drift 15s ease-in-out infinite' }} />
+        <div className="absolute w-[550px] h-[550px] rounded-full top-1/3 -right-20 opacity-[0.06]"
+          style={{ background:'radial-gradient(circle, #a78bfa, transparent 70%)', animation:'drift 19s ease-in-out infinite 3s' }} />
+        <div className="absolute w-[460px] h-[460px] rounded-full bottom-[-10%] left-1/4 opacity-[0.05]"
+          style={{ background:'radial-gradient(circle, #34d399, transparent 70%)', animation:'drift 17s ease-in-out infinite 6s' }} />
+        <div className="absolute inset-0"
+          style={{ backgroundImage:'linear-gradient(rgba(148,163,184,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.8) 1px,transparent 1px)', backgroundSize:'48px 48px', animation:'gridPulse 6s ease-in-out infinite' }} />
+        <div className="absolute left-0 right-0 h-40"
+          style={{ background:'linear-gradient(to bottom, transparent, rgba(96,165,250,0.07), transparent)', animation:'scanline 8s linear infinite', filter:'blur(6px)' }} />
       </div>
 
       {/* ── Navbar ── */}
@@ -377,10 +425,10 @@ const LandingPage = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
-                <button onClick={() => navigate('/register')}
-                  className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-8 py-4 rounded-2xl text-base transition-colors flex items-center justify-center gap-2">
+                <ShimmerButton onClick={() => navigate('/register')}
+                  className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-8 py-4 rounded-2xl text-base transition-colors">
                   Start Free Assessment <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
-                </button>
+                </ShimmerButton>
                 <button onClick={() => navigate('/login')}
                   className="flex items-center justify-center gap-2 border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white font-semibold px-8 py-4 rounded-2xl transition-all text-base">
                   Sign In <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
@@ -434,7 +482,7 @@ const LandingPage = () => {
                 {/* Fact card 1 — real */}
                 <div className="absolute -top-4 -right-4 bg-[#0d1218] border border-blue-500/30 rounded-2xl p-4 w-48 glow-blue">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 bg-blue-400 rounded-lg flex items-center justify-center">
+                    <div className="w-7 h-7 bg-blue-400 rounded-lg flex items-center justify-center" style={{ animation:'iconFloat 3.4s ease-in-out infinite' }}>
                       <FontAwesomeIcon icon={faFire} className="text-black text-xs" />
                     </div>
                     <span className="text-white text-xs font-bold">Core Assessments</span>
@@ -446,7 +494,7 @@ const LandingPage = () => {
                 {/* Fact card 2 — real, no grade */}
                 <div className="absolute -bottom-4 -left-4 bg-[#0d1218] border border-sky-500/30 rounded-2xl p-4 w-56">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-7 h-7 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center" style={{ animation:'iconFloat 3.4s ease-in-out infinite 0.6s' }}>
                       <FontAwesomeIcon icon={faGraduationCap} className="text-white text-xs" />
                     </div>
                     <span className="text-white text-xs font-bold">Programs Supported</span>
@@ -471,7 +519,8 @@ const LandingPage = () => {
       <section id="assessments" className="py-24 px-6 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 reveal">
-            <div className="inline-flex items-center gap-2 border border-violet-500/30 bg-violet-500/10 text-violet-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
+            <div className="inline-flex items-center gap-2 border border-violet-500/30 bg-violet-500/10 text-violet-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
+              style={{ animation:'badgeGlow 3s ease-in-out infinite' }}>
               <FontAwesomeIcon icon={faFire} /> 6 Core Assessments
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
@@ -538,7 +587,8 @@ const LandingPage = () => {
               </div>
             </div>
             <div className="reveal-right">
-              <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
+              <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
+                style={{ animation:'badgeGlow 3s ease-in-out infinite 1s' }}>
                 <FontAwesomeIcon icon={faGraduationCap} /> For TCC Students
               </div>
               <h2 className="text-4xl font-black text-white mb-5 tracking-tight leading-tight">
@@ -569,7 +619,8 @@ const LandingPage = () => {
       <section id="how-it-works" className="py-24 px-6 relative z-10">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16 reveal">
-            <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5">
+            <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
+              style={{ animation:'badgeGlow 3s ease-in-out infinite 2s' }}>
               <FontAwesomeIcon icon={faChartLine} /> How It Works
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
@@ -583,7 +634,8 @@ const LandingPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {steps.map((s,i) => (
                 <div key={i} className="reveal flex flex-col items-center text-center" style={{ transitionDelay:`${i*100}ms` }}>
-                  <div className={`w-16 h-16 bg-gradient-to-br ${s.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg relative z-10`}>
+                  <div className={`w-16 h-16 bg-gradient-to-br ${s.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg relative z-10`}
+                    style={{ animation:`iconFloat 3.6s ease-in-out infinite ${i * 0.3}s` }}>
                     <FontAwesomeIcon icon={s.icon} className="text-white text-xl" />
                   </div>
                   <div className="text-xs text-gray-600 font-mono mb-1">{s.n}</div>
@@ -639,10 +691,10 @@ const LandingPage = () => {
                 Take all six assessments, get rubric-based feedback, and start building a portfolio a faculty panel already put its name behind.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button onClick={() => navigate('/register')}
-                  className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-10 py-4 rounded-2xl text-base w-full sm:w-auto transition-colors flex items-center justify-center gap-2">
+                <ShimmerButton onClick={() => navigate('/register')}
+                  className="group bg-blue-400 hover:bg-blue-300 text-black font-bold px-10 py-4 rounded-2xl text-base w-full sm:w-auto transition-colors">
                   Start Free <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
-                </button>
+                </ShimmerButton>
                 <button onClick={() => navigate('/login')}
                   className="flex items-center justify-center gap-2 border border-white/15 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-semibold px-10 py-4 rounded-2xl transition-all text-base w-full sm:w-auto">
                   Sign In <FontAwesomeIcon icon={faChevronRight} className="text-sm" />
