@@ -2,14 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowRight, faChevronRight, faChevronDown,
+  faArrowRight, faChevronRight, faChevronLeft, faChevronDown,
   faBars, faTimes, faRobot, faCode, faKeyboard,
   faDiagramProject, faUserTie, faMedal,
   faGraduationCap, faChartLine, faCircleCheck, faPlay,
   faQuoteLeft, faFire, faListCheck,
   faFingerprint, faFolderOpen, faFileLines, faLightbulb,
   faComments, faCircle, faTerminal, faBug, faDatabase,
-  faEye,
+  faEye, faImage,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin, faFacebook, faInstagram } from '@fortawesome/free-brands-svg-icons'
 import ProFolioLogo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
@@ -21,37 +21,46 @@ import ProFolioLogo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
    import it, and point the key at the import. Nothing else needs to change.
    ───────────────────────────────────────────────────────────────────────────── */
 const PHOTOS = {
-  campus:       'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80',
-  lecture:      'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
-  studyGroup:   'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1200&q=80',
-  typing:       'https://images.unsplash.com/photo-1541746972996-4e0b0f43e02a?w=1200&q=80',
-  coding:       'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&q=80',
-  debugging:    'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&q=80',
-  data:         'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1200&q=80',
-  whiteboard:   'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=1200&q=80',
-  presenting:   'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80',
-  workspace:    'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80',
-  team:         'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80',
-  graduation:   'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&q=80',
-  review:       'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1200&q=80',
-  laptopHands:  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80',
+  campus: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&q=80',
+  lecture: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
+  studyGroup: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1200&q=80',
+  typing: 'https://images.unsplash.com/photo-1541746972996-4e0b0f43e02a?w=1200&q=80',
+  coding: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1200&q=80',
+  debugging: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=1200&q=80',
+  data: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=1200&q=80',
+  whiteboard: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=1200&q=80',
+  presenting: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80',
+  workspace: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80',
+  team: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80',
+  graduation: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&q=80',
+  review: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1200&q=80',
+  laptopHands: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80',
 }
 
 // ─── Photo with graceful fallback ─────────────────────────────────────────────
 // If an image ever fails to load, the card keeps its shape instead of
 // collapsing into a broken-image icon.
-const Photo = ({ src, alt = '', className = '', imgClassName = '', overlay = 'from-[#0a0d10] via-[#0a0d10]/35 to-transparent', children }) => {
-  const [failed, setFailed] = useState(false)
+const Photo = ({ src, alt = '', seed, className = '', imgClassName = '', style, overlay = 'from-[#0a0d10] via-[#0a0d10]/35 to-transparent', children }) => {
+  // stage 0 = the photo we asked for, 1 = a backup that always resolves,
+  // 2 = give up and draw a placeholder. A dead URL can't leave a hole.
+  const [stage, setStage] = useState(0)
+  const backup = `https://picsum.photos/seed/${encodeURIComponent(seed || alt || 'profolio')}/1200/900`
+  const failed = stage > 1
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden ${className}`} style={style}>
       {failed ? (
-        <div className="absolute inset-0 bg-gradient-to-br from-[#141d29] via-[#0d1218] to-[#0a0d10]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#141d29] via-[#0d1218] to-[#0a0d10] flex items-center justify-center">
+          <div className="absolute inset-0 opacity-[0.18]"
+            style={{ backgroundImage: 'radial-gradient(rgba(148,163,184,0.7) 1px, transparent 1px)', backgroundSize: '14px 14px' }} />
+          <FontAwesomeIcon icon={faImage} className="relative text-white/15 text-2xl" />
+        </div>
       ) : (
         <img
-          src={src}
+          key={stage}
+          src={stage === 0 ? src : backup}
           alt={alt}
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={() => setStage(v => v + 1)}
           className={`absolute inset-0 w-full h-full object-cover ${imgClassName}`}
         />
       )}
@@ -59,29 +68,6 @@ const Photo = ({ src, alt = '', className = '', imgClassName = '', overlay = 'fr
       {children}
     </div>
   )
-}
-
-// ─── Animated Counter (integers only) ────────────────────────────────────────
-const Counter = ({ end, suffix = '', duration = 1400 }) => {
-  const [count, setCount] = useState(0)
-  const ref = useRef(null)
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        let start = 0
-        const step = end / (duration / 16)
-        const timer = setInterval(() => {
-          start += step
-          if (start >= end) { setCount(end); clearInterval(timer) }
-          else setCount(Math.floor(start))
-        }, 16)
-        observer.disconnect()
-      }
-    })
-    if (ref.current) observer.observe(ref.current)
-    return () => observer.disconnect()
-  }, [end, duration])
-  return <span ref={ref}>{count}{suffix}</span>
 }
 
 // ─── Mock UI: typing test ─────────────────────────────────────────────────────
@@ -118,9 +104,9 @@ const CodeMock = () => (
       { w: 'w-3/5', c: 'bg-violet-400/40' },
       { w: 'w-1/2', c: 'bg-gray-700' },
       { w: 'w-2/3', c: 'bg-violet-400/70' },
-    ].map((l,i) => (
+    ].map((l, i) => (
       <div key={i} className="flex items-center gap-2">
-        <span className="text-gray-700 text-[10px] font-mono w-3">{i+1}</span>
+        <span className="text-gray-700 text-[10px] font-mono w-3">{i + 1}</span>
         <div className={`h-2 rounded ${l.w} ${l.c}`} />
       </div>
     ))}
@@ -159,7 +145,7 @@ const SqlMock = () => (
       <span className="text-sky-400">FROM</span><span className="text-gray-500"> students</span>
     </p>
     <div className="grid grid-cols-2 gap-1.5 mt-1">
-      {[0,1,2].map(i => (
+      {[0, 1, 2].map(i => (
         <div key={i} className="contents">
           <div className="h-2 rounded bg-gray-700" />
           <div className="h-2 rounded bg-sky-400/30" />
@@ -202,6 +188,67 @@ const CommunicationMock = () => (
   </div>
 )
 
+// ─── Hero page panel: live assessment session ─────────────────────────────────
+const SessionPanel = () => (
+  <div className="w-full h-full bg-[#0d1218] flex flex-col">
+    <div className="flex items-center gap-1.5 px-5 pt-4">
+      <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+      <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+      <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+      <span className="text-gray-600 text-[11px] font-mono ml-2">profolio — assessment.session</span>
+    </div>
+    <div className="p-5 pt-3 flex flex-col gap-2.5 flex-1">
+      <div className="flex items-center gap-2 text-xs font-mono text-gray-500">
+        <FontAwesomeIcon icon={faTerminal} className="text-blue-400" /> initializing rubric...
+      </div>
+      {[
+        { w: 'w-3/5', c: 'bg-blue-400/60' },
+        { w: 'w-4/5', c: 'bg-gray-700' },
+        { w: 'w-2/5', c: 'bg-violet-400/50' },
+      ].map((l, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="text-gray-700 text-[10px] font-mono w-3">{i + 1}</span>
+          <div className={`h-2.5 rounded ${l.w} ${l.c}`} />
+        </div>
+      ))}
+      <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
+        <span className="text-gray-600 text-[11px] font-mono">status</span>
+        <span className="text-emerald-400 text-[11px] font-mono flex items-center gap-1.5">
+          <FontAwesomeIcon icon={faCircle} className="text-[6px]" /> monitoring active
+        </span>
+      </div>
+    </div>
+  </div>
+)
+
+// ─── Hero page panel: finished readiness report ───────────────────────────────
+const ReportPanel = () => (
+  <div className="w-full h-full bg-[#0d1218] p-5 flex flex-col gap-3">
+    <div className="flex items-center gap-2">
+      <FontAwesomeIcon icon={faFileLines} className="text-amber-400 text-xs" />
+      <span className="text-gray-500 text-[10px] font-mono uppercase tracking-wide">career-report.pdf</span>
+    </div>
+    {[
+      { label: 'Accuracy', w: 'w-4/5', c: 'bg-blue-400/70' },
+      { label: 'Logic', w: 'w-3/5', c: 'bg-violet-400/70' },
+      { label: 'Clarity', w: 'w-2/3', c: 'bg-emerald-400/70' },
+    ].map((r, i) => (
+      <div key={i} className="flex items-center gap-3">
+        <span className="text-gray-600 text-[10px] font-mono w-14">{r.label}</span>
+        <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
+          <div className={`h-full rounded-full ${r.w} ${r.c}`} />
+        </div>
+      </div>
+    ))}
+    <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
+      <span className="text-gray-600 text-[11px] font-mono">cv</span>
+      <span className="text-amber-300 text-[11px] font-mono flex items-center gap-1.5">
+        <FontAwesomeIcon icon={faCircleCheck} className="text-[10px]" /> ready to share
+      </span>
+    </div>
+  </div>
+)
+
 // ─── Shimmering CTA button — used only for the two highest-priority CTAs ──────
 const ShimmerButton = ({ onClick, className, children }) => (
   <button onClick={onClick} className={`relative overflow-hidden group ${className}`}>
@@ -220,11 +267,66 @@ const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false)
   const [openFaq, setOpenFaq] = useState(null)
 
+  // ── Hero showcase pages ──
+  // `cur` is the visible page, `prev` is the one sliding out, `dir` is which
+  // way the pair travels: 1 = next (enters from the right), -1 = previous.
+  const [view, setView] = useState({ cur: 0, prev: null, dir: 1 })
+  const [paused, setPaused] = useState(false)
+  const touchX = useRef(null)
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', onScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Four pages, each showing a different moment in the flow.
+  const heroSlides = [
+    {
+      key: 'session',
+      label: 'Assessment session',
+      photo: PHOTOS.laptopHands,
+      Panel: SessionPanel,
+      badge: { icon: faListCheck, title: 'Scoring rubric', value: 'Fixed', sub: 'The same documented criteria, whoever takes it and whenever' },
+    },
+    {
+      key: 'typing',
+      label: 'Speed typing',
+      photo: PHOTOS.typing,
+      Panel: TypingMock,
+      badge: { icon: faKeyboard, title: 'Measured live', value: 'WPM', sub: 'Words per minute and accuracy, scored the moment you stop' },
+    },
+    {
+      key: 'coding',
+      label: 'Programming challenge',
+      photo: PHOTOS.coding,
+      Panel: CodeMock,
+      badge: { icon: faFingerprint, title: 'Anti-cheat', value: 'On', sub: 'Copy-paste blocked, tab switches logged' },
+    },
+    {
+      key: 'report',
+      label: 'Career readiness report',
+      photo: PHOTOS.graduation,
+      Panel: ReportPanel,
+      badge: { icon: faFileLines, title: 'Auto-generated CV', value: 'Ready', sub: 'Verified results compiled into one shareable profile' },
+    },
+  ]
+
+  const go = (d) => setView(v => ({
+    cur: (v.cur + d + heroSlides.length) % heroSlides.length,
+    prev: v.cur,
+    dir: d,
+  }))
+  const jump = (i) => setView(v => (i === v.cur ? v : { cur: i, prev: v.cur, dir: i > v.cur ? 1 : -1 }))
+
+  // Pages advance on their own, but stop the moment someone hovers, focuses,
+  // or has asked for reduced motion.
+  useEffect(() => {
+    if (paused) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const t = setTimeout(() => go(1), 7000)
+    return () => clearTimeout(t)
+  }, [view, paused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -234,14 +336,6 @@ const LandingPage = () => {
     document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el))
     return () => observer.disconnect()
   }, [])
-
-  // ── Real, verifiable facts only — no scores/grades ──
-  const factStats = [
-    { end: 6, label: 'Core assessments', icon: faFire, color: 'text-blue-400', photo: PHOTOS.workspace },
-    { end: 4, label: 'Faculty panelists', icon: faUserTie, color: 'text-sky-400', photo: PHOTOS.review },
-    { end: 9, label: 'Panel recommendations guiding the build', icon: faLightbulb, color: 'text-violet-400', photo: PHOTOS.whiteboard },
-    { end: 3, label: 'Degree programs supported', icon: faGraduationCap, color: 'text-emerald-400', photo: PHOTOS.graduation },
-  ]
 
   const assessments = [
     {
@@ -301,30 +395,30 @@ const LandingPage = () => {
   ]
 
   const accentMap = {
-    blue:     { border: 'border-blue-500/30',     bg: 'bg-blue-500/10',     grad: 'from-blue-400 to-blue-600',       text: 'text-black' },
-    violet:   { border: 'border-violet-500/30',   bg: 'bg-violet-500/10',   grad: 'from-violet-500 to-purple-600',    text: 'text-white' },
-    rose:     { border: 'border-rose-500/30',     bg: 'bg-rose-500/10',     grad: 'from-rose-500 to-red-600',         text: 'text-white' },
-    sky:      { border: 'border-sky-500/30',      bg: 'bg-sky-500/10',      grad: 'from-sky-500 to-blue-600',         text: 'text-white' },
-    emerald:  { border: 'border-emerald-500/30',  bg: 'bg-emerald-500/10',  grad: 'from-emerald-500 to-teal-600',     text: 'text-white' },
-    fuchsia:  { border: 'border-fuchsia-500/30',  bg: 'bg-fuchsia-500/10',  grad: 'from-fuchsia-500 to-pink-600',     text: 'text-white' },
+    blue: { border: 'border-blue-500/30', bg: 'bg-blue-500/10', grad: 'from-blue-400 to-blue-600', text: 'text-black' },
+    violet: { border: 'border-violet-500/30', bg: 'bg-violet-500/10', grad: 'from-violet-500 to-purple-600', text: 'text-white' },
+    rose: { border: 'border-rose-500/30', bg: 'bg-rose-500/10', grad: 'from-rose-500 to-red-600', text: 'text-white' },
+    sky: { border: 'border-sky-500/30', bg: 'bg-sky-500/10', grad: 'from-sky-500 to-blue-600', text: 'text-white' },
+    emerald: { border: 'border-emerald-500/30', bg: 'bg-emerald-500/10', grad: 'from-emerald-500 to-teal-600', text: 'text-white' },
+    fuchsia: { border: 'border-fuchsia-500/30', bg: 'bg-fuchsia-500/10', grad: 'from-fuchsia-500 to-pink-600', text: 'text-white' },
   }
 
   const steps = [
-    { n:'01', title:'Create account',   desc:'Sign up with your Tomas Claudio Colleges email.',        icon: faGraduationCap, color:'from-blue-400 to-blue-600',    photo: PHOTOS.studyGroup },
-    { n:'02', title:'Take assessments', desc:'Complete the six assessments at your own pace.',         icon: faFire,          color:'from-violet-500 to-purple-600', photo: PHOTOS.laptopHands },
-    { n:'03', title:'Get AI scored',    desc:'Each submission is evaluated against a fixed rubric.',   icon: faRobot,         color:'from-rose-500 to-pink-500',     photo: PHOTOS.coding },
-    { n:'04', title:'Human review',     desc:'Faculty and industry evaluators confirm the verdict.',   icon: faUserTie,       color:'from-amber-500 to-orange-500',  photo: PHOTOS.review },
-    { n:'05', title:'Build your profile', desc:'Results feed into a portfolio and CV you can share.',  icon: faMedal,         color:'from-emerald-500 to-teal-600',  photo: PHOTOS.graduation },
+    { n: '01', title: 'Create account', desc: 'Sign up with your Tomas Claudio Colleges email.', icon: faGraduationCap, color: 'from-blue-400 to-blue-600', photo: PHOTOS.studyGroup },
+    { n: '02', title: 'Take assessments', desc: 'Complete the six assessments at your own pace.', icon: faFire, color: 'from-violet-500 to-purple-600', photo: PHOTOS.laptopHands },
+    { n: '03', title: 'Get AI scored', desc: 'Each submission is evaluated against a fixed rubric.', icon: faRobot, color: 'from-rose-500 to-pink-500', photo: PHOTOS.coding },
+    { n: '04', title: 'Human review', desc: 'Faculty and industry evaluators confirm the verdict.', icon: faUserTie, color: 'from-amber-500 to-orange-500', photo: PHOTOS.review },
+    { n: '05', title: 'Build your profile', desc: 'Results feed into a portfolio and CV you can share.', icon: faMedal, color: 'from-emerald-500 to-teal-600', photo: PHOTOS.graduation },
   ]
 
   // ── Roadmap grid, mapped directly to the panel's written recommendations ──
   const panelFeatures = [
-    { icon: faListCheck,    title: 'Standardized scoring rubric',        desc: 'Every submission is graded against the same fixed, documented criteria — so a score means the same thing no matter who takes the assessment or when.', status: 'Live' },
-    { icon: faFingerprint,  title: 'Originality & anti-cheat checks',    desc: 'Copy-paste blocking and tab-switch monitoring during the coding challenge, so a result reflects the student\u2019s own work.', status: 'Live' },
-    { icon: faFolderOpen,   title: 'Built-in portfolio storage',         desc: 'Projects, certificates, and past assessment results stay organized in one place a student can point an employer to.', status: 'Live' },
-    { icon: faFileLines,    title: 'Auto-generated CV',                  desc: 'A shareable profile that compiles typing speed, programming proficiency, and other verified results into one document.', status: 'Live' },
-    { icon: faLightbulb,    title: 'Personalized growth recommendations', desc: 'Suggested courses, training modules, and certifications targeted at the specific skill gaps an assessment uncovers.', status: 'Roadmap' },
-    { icon: faComments,     title: 'Conversational AI assistant',        desc: 'A chat- or voice-based guide to make taking assessments and reading feedback more interactive.', status: 'Roadmap' },
+    { icon: faListCheck, title: 'Standardized scoring rubric', desc: 'Every submission is graded against the same fixed, documented criteria — so a score means the same thing no matter who takes the assessment or when.', status: 'Live' },
+    { icon: faFingerprint, title: 'Originality & anti-cheat checks', desc: 'Copy-paste blocking and tab-switch monitoring during the coding challenge, so a result reflects the student\u2019s own work.', status: 'Live' },
+    { icon: faFolderOpen, title: 'Built-in portfolio storage', desc: 'Projects, certificates, and past assessment results stay organized in one place a student can point an employer to.', status: 'Live' },
+    { icon: faFileLines, title: 'Auto-generated CV', desc: 'A shareable profile that compiles typing speed, programming proficiency, and other verified results into one document.', status: 'Live' },
+    { icon: faLightbulb, title: 'Personalized growth recommendations', desc: 'Suggested courses, training modules, and certifications targeted at the specific skill gaps an assessment uncovers.', status: 'Roadmap' },
+    { icon: faComments, title: 'Conversational AI assistant', desc: 'A chat- or voice-based guide to make taking assessments and reading feedback more interactive.', status: 'Roadmap' },
   ]
 
   // ── Paraphrased, non-verbatim excerpts of the panel's written comments ──
@@ -336,13 +430,13 @@ const LandingPage = () => {
 
   // ── Photo strip: what the platform is actually for ──
   const strip = [
-    { src: PHOTOS.lecture,     caption: 'Classroom to career' },
-    { src: PHOTOS.typing,      caption: 'Timed typing runs' },
-    { src: PHOTOS.coding,      caption: 'Monitored coding challenge' },
-    { src: PHOTOS.whiteboard,  caption: 'Flowchart design' },
-    { src: PHOTOS.presenting,  caption: 'Explaining your work' },
-    { src: PHOTOS.team,        caption: 'Faculty review panel' },
-    { src: PHOTOS.graduation,  caption: 'Portfolio you can share' },
+    { src: PHOTOS.lecture, caption: 'Classroom to career' },
+    { src: PHOTOS.typing, caption: 'Timed typing runs' },
+    { src: PHOTOS.coding, caption: 'Monitored coding challenge' },
+    { src: PHOTOS.whiteboard, caption: 'Flowchart design' },
+    { src: PHOTOS.presenting, caption: 'Explaining your work' },
+    { src: PHOTOS.team, caption: 'Faculty review panel' },
+    { src: PHOTOS.graduation, caption: 'Portfolio you can share' },
   ]
 
   const faqs = [
@@ -354,13 +448,13 @@ const LandingPage = () => {
   ]
 
   const socialLinks = [
-    { href:'https://www.instagram.com/gerald.baldogo/', icon:faInstagram, label:'Instagram' },
-    { href:'https://www.facebook.com/gerald.baldogo/', icon:faFacebook, label:'Facebook' },
-    { href:'https://github.com/GeraldBaldogo', icon:faGithub, label:'GitHub' },
-    { href:'https://www.linkedin.com/in/gerald-baldogo-06741440a/', icon:faLinkedin, label:'LinkedIn' },
+    { href: 'https://www.instagram.com/gerald.baldogo/', icon: faInstagram, label: 'Instagram' },
+    { href: 'https://www.facebook.com/gerald.baldogo/', icon: faFacebook, label: 'Facebook' },
+    { href: 'https://github.com/GeraldBaldogo', icon: faGithub, label: 'GitHub' },
+    { href: 'https://www.linkedin.com/in/gerald-baldogo-06741440a/', icon: faLinkedin, label: 'LinkedIn' },
   ]
 
-  const navLinks = [['#assessments','Assessments'],['#how-it-works','How it works'],['#roadmap','Features'],['#faq','FAQ']]
+  const navLinks = [['#assessments', 'Assessments'], ['#how-it-works', 'How it works'], ['#roadmap', 'Features'], ['#faq', 'FAQ']]
 
   return (
     <div className="min-h-screen bg-[#0a0d10] font-sans overflow-x-hidden">
@@ -375,6 +469,7 @@ const LandingPage = () => {
         .accent-text { color: #60a5fa; }
         .glow-blue { box-shadow: 0 0 40px rgba(96,165,250,0.15); }
         .card-hover { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+
         .card-hover:hover { transform: translateY(-4px); }
 
         /* keyboard focus stays visible everywhere */
@@ -414,6 +509,11 @@ const LandingPage = () => {
           0%   { transform: translateX(-260%) skewX(-20deg); }
           100% { transform: translateX(360%) skewX(-20deg); }
         }
+        @keyframes pageTimer {
+          from { width: 0%; }
+          to   { width: 100%; }
+        }
+
         /* ── Photo strip ── */
         @keyframes marquee {
           from { transform: translateX(0); }
@@ -437,15 +537,15 @@ const LandingPage = () => {
       {/* ── Ambient background ── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute w-[700px] h-[700px] rounded-full -top-64 -left-32 opacity-[0.07]"
-          style={{ background:'radial-gradient(circle, #60a5fa, transparent 70%)', animation:'drift 15s ease-in-out infinite' }} />
+          style={{ background: 'radial-gradient(circle, #60a5fa, transparent 70%)', animation: 'drift 15s ease-in-out infinite' }} />
         <div className="absolute w-[550px] h-[550px] rounded-full top-1/3 -right-20 opacity-[0.06]"
-          style={{ background:'radial-gradient(circle, #a78bfa, transparent 70%)', animation:'drift 19s ease-in-out infinite 3s' }} />
+          style={{ background: 'radial-gradient(circle, #a78bfa, transparent 70%)', animation: 'drift 19s ease-in-out infinite 3s' }} />
         <div className="absolute w-[460px] h-[460px] rounded-full bottom-[-10%] left-1/4 opacity-[0.05]"
-          style={{ background:'radial-gradient(circle, #34d399, transparent 70%)', animation:'drift 17s ease-in-out infinite 6s' }} />
+          style={{ background: 'radial-gradient(circle, #34d399, transparent 70%)', animation: 'drift 17s ease-in-out infinite 6s' }} />
         <div className="absolute inset-0"
-          style={{ backgroundImage:'linear-gradient(rgba(148,163,184,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.8) 1px,transparent 1px)', backgroundSize:'48px 48px', animation:'gridPulse 6s ease-in-out infinite' }} />
+          style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.8) 1px,transparent 1px)', backgroundSize: '48px 48px', animation: 'gridPulse 6s ease-in-out infinite' }} />
         <div className="absolute left-0 right-0 h-40"
-          style={{ background:'linear-gradient(to bottom, transparent, rgba(96,165,250,0.07), transparent)', animation:'scanline 8s linear infinite', filter:'blur(6px)' }} />
+          style={{ background: 'linear-gradient(to bottom, transparent, rgba(96,165,250,0.07), transparent)', animation: 'scanline 8s linear infinite', filter: 'blur(6px)' }} />
       </div>
 
       {/* ── Navbar ── */}
@@ -456,7 +556,7 @@ const LandingPage = () => {
             <span className="text-xl font-black text-white tracking-tight">Pro<span className="accent-text">Folio</span></span>
           </div>
           <div className="hidden md:flex items-center gap-1">
-            {navLinks.map(([href,label]) => (
+            {navLinks.map(([href, label]) => (
               <a key={href} href={href} className="text-gray-400 hover:text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/5 transition-all">{label}</a>
             ))}
           </div>
@@ -474,7 +574,7 @@ const LandingPage = () => {
         </div>
         {menuOpen && (
           <div className="md:hidden bg-[#0a0d10]/98 backdrop-blur-xl border-t border-white/5 px-6 py-4 flex flex-col gap-2">
-            {navLinks.map(([href,label]) => (
+            {navLinks.map(([href, label]) => (
               <a key={href} href={href} className="text-gray-400 text-sm py-2.5 px-3 rounded-xl hover:bg-white/5 hover:text-white" onClick={() => setMenuOpen(false)}>{label}</a>
             ))}
             <div className="flex flex-col gap-2 pt-3 border-t border-white/5">
@@ -494,11 +594,6 @@ const LandingPage = () => {
 
             {/* Left */}
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-6"
-                style={{ animation:'badgeGlow 3s ease-in-out infinite' }}>
-                <FontAwesomeIcon icon={faGraduationCap} /> Built for Tomas Claudio Colleges
-              </div>
-
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.02] mb-6 tracking-tight">
                 Prove your<br />
                 <span className="accent-text">skills.</span><br />
@@ -506,7 +601,7 @@ const LandingPage = () => {
               </h1>
 
               <p className="text-xl text-gray-400 max-w-lg mb-10 leading-relaxed">
-                ProFolio is a skills assessment and career readiness platform for BSIT, BSCS, and BSIS students. Take six real challenges, get scored against a fixed rubric, and walk away with a portfolio you can actually show.
+                ProFolio is a skills assessment and career readiness platform for Computer Science students at Tomas Claudio Colleges. Take six real challenges, get scored against a fixed rubric, and walk away with a portfolio you can actually show.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
@@ -521,7 +616,7 @@ const LandingPage = () => {
               </div>
 
               <div className="flex flex-wrap gap-6">
-                {['Rubric-based scoring','Anti-cheat monitored','Human-reviewed'].map((b,i) => (
+                {['Rubric-based scoring', 'Anti-cheat monitored', 'Human-reviewed'].map((b, i) => (
                   <span key={i} className="flex items-center gap-2 text-sm text-gray-500">
                     <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-400" />{b}
                   </span>
@@ -529,106 +624,127 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* Right — photo collage + live product panel */}
-            <div className="relative" style={{ animation:'float 6s ease-in-out infinite' }}>
-              <div className="relative w-full max-w-lg mx-auto aspect-square">
+            {/* Right — the showcase, paged. Four scenes, previous / next,
+                each one a different moment in the ProFolio flow. */}
+            <div className="relative w-full max-w-lg mx-auto">
+              <div
+                className="relative aspect-[4/5] sm:aspect-square rounded-[2rem] overflow-hidden border border-white/10 bg-[#0d1218] glow-blue"
+                tabIndex={0}
+                role="region"
+                aria-roledescription="carousel"
+                aria-label="ProFolio showcase"
+                onMouseEnter={() => setPaused(true)}
+                onMouseLeave={() => setPaused(false)}
+                onFocus={() => setPaused(true)}
+                onBlur={() => setPaused(false)}
+                onTouchStart={(e) => { touchX.current = e.touches[0].clientX }}
+                onTouchEnd={(e) => {
+                  if (touchX.current === null) return
+                  const d = e.changedTouches[0].clientX - touchX.current
+                  if (Math.abs(d) > 50) go(d < 0 ? 1 : -1)
+                  touchX.current = null
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight') { e.preventDefault(); go(1) }
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1) }
+                }}
+              >
+                {heroSlides.map((s, i) => {
+                  const isCur = i === view.cur
+                  const isOut = i === view.prev && !isCur
+                  // outgoing leaves the way the incoming came from
+                  const offset = isCur ? 0 : (isOut ? -view.dir * 55 : view.dir * 55)
+                  const Panel = s.Panel
+                  return (
+                    <div
+                      key={s.key}
+                      aria-hidden={!isCur}
+                      className="absolute inset-0"
+                      style={{
+                        transform: `translateX(${offset}%)`,
+                        opacity: isCur ? 1 : 0,
+                        pointerEvents: isCur ? 'auto' : 'none',
+                        transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease',
+                      }}
+                    >
+                      <Photo
+                        src={s.photo}
+                        alt={s.label}
+                        className="absolute inset-0"
+                        overlay="from-[#0a0d10] via-[#0a0d10]/60 to-[#0a0d10]/15"
+                      />
 
-                {/* Big photo behind everything */}
-                <Photo
-                  src={PHOTOS.laptopHands}
-                  alt="Student working on a coding assessment"
-                  className="absolute inset-0 rounded-[2rem] border border-white/10 glow-blue"
-                  overlay="from-[#0a0d10] via-[#0a0d10]/55 to-[#0a0d10]/10"
-                />
+                      {/* the one fact this page is making */}
+                      {s.badge && (
+                        <div className="absolute top-14 right-5 w-44 bg-[#0d1218]/95 backdrop-blur border border-blue-500/30 rounded-2xl p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-7 h-7 bg-blue-400 rounded-lg flex items-center justify-center">
+                              <FontAwesomeIcon icon={s.badge.icon} className="text-black text-xs" />
+                            </div>
+                            <span className="text-white text-xs font-bold leading-tight">{s.badge.title}</span>
+                          </div>
+                          <div className="text-2xl font-black text-blue-400 mb-1 font-mono">{s.badge.value}</div>
+                          <div className="text-[11px] text-gray-500 leading-snug">{s.badge.sub}</div>
+                        </div>
+                      )}
 
-                {/* Product panel floating on the photo */}
-                <div className="absolute left-4 right-4 bottom-6 rounded-2xl overflow-hidden border border-white/10 bg-[#0d1218]/95 backdrop-blur-md shadow-2xl">
-                  <div className="flex items-center gap-1.5 px-5 pt-4">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
-                    <span className="text-gray-600 text-[11px] font-mono ml-2">profolio — assessment.session</span>
-                  </div>
-                  <div className="p-5 pt-4 flex flex-col gap-2.5">
-                    <div className="flex items-center gap-2 text-xs font-mono text-gray-500">
-                      <FontAwesomeIcon icon={faTerminal} className="text-blue-400" /> initializing rubric...
-                    </div>
-                    {[
-                      { w:'w-3/5', c:'bg-blue-400/60' },
-                      { w:'w-4/5', c:'bg-gray-700' },
-                      { w:'w-2/5', c:'bg-violet-400/50' },
-                      { w:'w-1/2', c:'bg-emerald-400/50' },
-                    ].map((l,i)=>(
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-gray-700 text-[10px] font-mono w-3">{i+1}</span>
-                        <div className={`h-2.5 rounded ${l.w} ${l.c}`} />
-                      </div>
-                    ))}
-                    <div className="mt-2 pt-3 border-t border-white/5 flex items-center justify-between">
-                      <span className="text-gray-600 text-[11px] font-mono">status</span>
-                      <span className="text-emerald-400 text-[11px] font-mono flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faCircle} className="text-[6px]" /> monitoring active
+                      {/* which page you're on */}
+                      <span className="absolute top-5 left-6 text-[11px] font-mono uppercase tracking-[0.16em] text-white/70">
+                        {s.label}
                       </span>
+
+                      {/* the screen itself */}
+                      <div className="absolute left-5 right-5 bottom-5 h-44 rounded-2xl overflow-hidden border border-white/10 bg-[#0d1218]/95 backdrop-blur-md shadow-2xl">
+                        <Panel />
+                      </div>
                     </div>
-                  </div>
+                  )
+                })}
+
+                {/* how long until the next page turns itself */}
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/5 z-20">
+                  <div
+                    key={view.cur}
+                    className="h-full bg-blue-400/70"
+                    style={{ animation: 'pageTimer 7s linear forwards', animationPlayState: paused ? 'paused' : 'running' }}
+                  />
+                </div>
+              </div>
+
+              {/* Previous / next, with the page you're on */}
+              <div className="mt-5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  {heroSlides.map((s, i) => (
+                    <button
+                      key={s.key}
+                      onClick={() => jump(i)}
+                      aria-label={`Show ${s.label}`}
+                      aria-current={view.cur === i}
+                      className={`h-2 rounded-full transition-all duration-300 ${view.cur === i ? 'w-8 bg-blue-400' : 'w-2 bg-white/15 hover:bg-white/35'
+                        }`}
+                    />
+                  ))}
                 </div>
 
-                {/* Small photo card, top-left */}
-                <Photo
-                  src={PHOTOS.studyGroup}
-                  alt="Students studying together"
-                  className="hidden sm:block absolute -top-6 -left-6 w-36 h-28 rounded-2xl border border-white/10 shadow-xl"
-                  overlay="from-[#0a0d10]/70 to-transparent"
-                >
-                  <span className="absolute bottom-2 left-3 text-[10px] font-semibold text-white/90">BSIT · BSCS · BSIS</span>
-                </Photo>
-
-                {/* Fact card, top-right */}
-                <div className="absolute -top-4 -right-4 bg-[#0d1218]/95 backdrop-blur border border-blue-500/30 rounded-2xl p-4 w-44 sm:w-48 glow-blue">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 bg-blue-400 rounded-lg flex items-center justify-center" style={{ animation:'iconFloat 3.4s ease-in-out infinite' }}>
-                      <FontAwesomeIcon icon={faFire} className="text-black text-xs" />
-                    </div>
-                    <span className="text-white text-xs font-bold">Core assessments</span>
-                  </div>
-                  <div className="text-3xl font-black text-blue-400 mb-1 font-mono">6</div>
-                  <div className="text-xs text-gray-500">Typing · Coding · Bug fix · SQL · Flowchart · Communication</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => go(-1)}
+                    aria-label="Previous page"
+                    className="w-11 h-11 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.09] hover:border-white/25 text-gray-400 hover:text-white transition-all flex items-center justify-center">
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                  </button>
+                  <span className="text-gray-600 text-xs font-mono tabular-nums w-10 text-center">
+                    {view.cur + 1}/{heroSlides.length}
+                  </span>
+                  <button
+                    onClick={() => go(1)}
+                    aria-label="Next page"
+                    className="w-11 h-11 rounded-2xl border border-blue-500/40 bg-blue-500/10 hover:bg-blue-400 hover:text-black text-blue-300 transition-all flex items-center justify-center">
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
                 </div>
-
-                {/* Small photo card, bottom-right */}
-                <Photo
-                  src={PHOTOS.review}
-                  alt="Faculty reviewing student results"
-                  className="hidden sm:block absolute -bottom-8 -right-6 w-40 h-28 rounded-2xl border border-white/10 shadow-xl"
-                  overlay="from-[#0a0d10]/75 to-transparent"
-                >
-                  <span className="absolute bottom-2 left-3 text-[10px] font-semibold text-white/90">Human-reviewed results</span>
-                </Photo>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Photo strip ── */}
-      <section className="relative z-10 py-10 border-y border-white/5">
-        <p className="text-center text-gray-600 text-xs font-mono uppercase tracking-[0.2em] mb-6">
-          What a ProFolio run looks like
-        </p>
-        <div className="marquee-mask overflow-hidden">
-          <div className="marquee-track flex gap-4 w-max">
-            {[...strip, ...strip].map((s,i) => (
-              <Photo
-                key={i}
-                src={s.src}
-                alt={s.caption}
-                className="w-56 h-32 rounded-2xl border border-white/8 flex-shrink-0"
-                imgClassName="grayscale-[0.4] hover:grayscale-0 transition-all duration-500"
-                overlay="from-[#0a0d10]/80 via-[#0a0d10]/10 to-transparent"
-              >
-                <span className="absolute bottom-3 left-4 text-xs font-semibold text-white/90">{s.caption}</span>
-              </Photo>
-            ))}
           </div>
         </div>
       </section>
@@ -637,10 +753,6 @@ const LandingPage = () => {
       <section id="assessments" className="py-24 px-6 relative z-10 scroll-mt-24">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 reveal">
-            <div className="inline-flex items-center gap-2 border border-violet-500/30 bg-violet-500/10 text-violet-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
-              style={{ animation:'badgeGlow 3s ease-in-out infinite' }}>
-              <FontAwesomeIcon icon={faFire} /> 6 core assessments
-            </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
               Real challenges.<br /><span className="accent-text">Rubric-graded.</span>
             </h2>
@@ -650,21 +762,21 @@ const LandingPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {assessments.map((a,i) => {
+            {assessments.map((a, i) => {
               const ac = accentMap[a.accent]
               const Mock = a.Mock
               return (
                 <div key={i} className={`group reveal card-hover border ${ac.border} ${ac.bg} rounded-3xl overflow-hidden`}
-                  style={{ transitionDelay:`${(i%3)*120}ms` }}>
+                  style={{ transitionDelay: `${(i % 3) * 120}ms` }}>
                   <div className="relative h-48">
                     <Photo
                       src={a.photo}
                       alt={a.title}
                       className="absolute inset-0"
-                      imgClassName="transition-transform duration-700 group-hover:scale-105"
-                      overlay="from-[#0d1218] via-[#0d1218]/35 to-transparent"
+                      imgClassName="saturate-[0.2] opacity-65 group-hover:saturate-100 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                      overlay="from-[#0d1218] via-[#0d1218]/30 to-transparent"
                     />
-                    {/* the real UI, revealed on hover */}
+                    {/* the real UI, on hover */}
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                       <Mock />
                     </div>
@@ -675,7 +787,7 @@ const LandingPage = () => {
                       {a.tag}
                     </span>
                     <span className="absolute bottom-3 right-4 flex items-center gap-1.5 text-[10px] font-mono text-white/50 group-hover:opacity-0 transition-opacity z-10">
-                      <FontAwesomeIcon icon={faEye} /> hover to preview
+                      <FontAwesomeIcon icon={faEye} /> hover for the real screen
                     </span>
                   </div>
                   <div className="p-6">
@@ -715,22 +827,22 @@ const LandingPage = () => {
 
             <div className="reveal-right">
               <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
-                style={{ animation:'badgeGlow 3s ease-in-out infinite 1s' }}>
-                <FontAwesomeIcon icon={faGraduationCap} /> For TCC students
+                style={{ animation: 'badgeGlow 3s ease-in-out infinite 1s' }}>
+                <FontAwesomeIcon icon={faGraduationCap} /> For TCC Computer Science
               </div>
               <h2 className="text-4xl font-black text-white mb-5 tracking-tight leading-tight">
-                Built specifically for <span className="accent-text">TCC students</span>
+                One program. <span className="accent-text">Built around it.</span>
               </h2>
               <p className="text-gray-400 leading-relaxed mb-6">
-                ProFolio is a capstone system built for Tomas Claudio Colleges&apos; BSIT, BSCS, and BSIS programs. Scores are tied to a student&apos;s profile and reviewed by TCC faculty.
+                ProFolio is a capstone system made for the BSCS program at Tomas Claudio Colleges. The assessments follow the CS curriculum, scores are tied to your student profile, and TCC faculty confirm the final verdict.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  ['BSIT','Bachelor of Science in Information Technology'],
-                  ['BSCS','Bachelor of Science in Computer Science'],
-                  ['BSIS','Bachelor of Science in Information Systems'],
-                  ['All levels','1st year to graduating students'],
-                ].map(([title,desc],i) => (
+                  ['BSCS', 'Bachelor of Science in Computer Science'],
+                  ['All year levels', '1st year to graduating students'],
+                  ['TCC accounts only', 'Sign up with your college email'],
+                  ['Faculty-reviewed', 'Confirmed by TCC evaluators'],
+                ].map(([title, desc], i) => (
                   <div key={i} className="border border-white/8 bg-white/[0.03] rounded-2xl p-4">
                     <div className="text-white font-bold text-sm mb-1">{title}</div>
                     <div className="text-gray-500 text-xs">{desc}</div>
@@ -742,32 +854,12 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── Facts ── */}
-      <section className="py-16 px-6 relative z-10">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {factStats.map((f,i) => (
-            <Photo key={i} src={f.photo} alt=""
-              className="reveal h-44 rounded-3xl border border-white/8 card-hover"
-              imgClassName="opacity-30 transition-opacity duration-500 hover:opacity-45"
-              overlay="from-[#0a0d10] via-[#0a0d10]/85 to-[#0a0d10]/60">
-              <div className="absolute inset-0 p-5 flex flex-col justify-end">
-                <FontAwesomeIcon icon={f.icon} className={`${f.color} mb-3 text-lg`} />
-                <div className={`text-4xl font-black font-mono ${f.color} mb-1`}>
-                  <Counter end={f.end} />
-                </div>
-                <div className="text-gray-400 text-xs leading-snug">{f.label}</div>
-              </div>
-            </Photo>
-          ))}
-        </div>
-      </section>
-
       {/* ── How it works ── */}
       <section id="how-it-works" className="py-24 px-6 relative z-10 scroll-mt-24">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16 reveal">
             <div className="inline-flex items-center gap-2 border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold px-4 py-2 rounded-full mb-5"
-              style={{ animation:'badgeGlow 3s ease-in-out infinite 2s' }}>
+              style={{ animation: 'badgeGlow 3s ease-in-out infinite 2s' }}>
               <FontAwesomeIcon icon={faChartLine} /> How it works
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
@@ -779,13 +871,13 @@ const LandingPage = () => {
           <div className="relative">
             <div className="hidden lg:block absolute top-14 left-[10%] right-[10%] h-px bg-gradient-to-r from-blue-500/30 via-violet-500/30 to-emerald-500/30" />
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-              {steps.map((s,i) => (
-                <div key={i} className="reveal flex flex-col items-center text-center" style={{ transitionDelay:`${i*100}ms` }}>
+              {steps.map((s, i) => (
+                <div key={i} className="reveal flex flex-col items-center text-center" style={{ transitionDelay: `${i * 100}ms` }}>
                   <div className="relative mb-4">
-                    <Photo src={s.photo} alt="" className="w-28 h-28 rounded-full border border-white/10"
+                    <Photo src={s.photo} alt={s.title} seed={s.title} className="w-28 h-28 rounded-full border border-white/10"
                       imgClassName="opacity-70" overlay="from-[#0a0d10]/70 to-transparent" />
                     <div className={`absolute -bottom-1 -right-1 w-11 h-11 bg-gradient-to-br ${s.color} rounded-2xl flex items-center justify-center shadow-lg z-10`}
-                      style={{ animation:`iconFloat 3.6s ease-in-out infinite ${i * 0.3}s` }}>
+                      style={{ animation: `iconFloat 3.6s ease-in-out infinite ${i * 0.3}s` }}>
                       <FontAwesomeIcon icon={s.icon} className="text-white" />
                     </div>
                   </div>
@@ -815,18 +907,17 @@ const LandingPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-14">
-            {panelFeatures.map((f,i) => (
+            {panelFeatures.map((f, i) => (
               <div key={i} className="reveal card-hover border border-white/8 bg-white/[0.03] rounded-3xl p-6"
-                style={{ transitionDelay:`${(i%3)*100}ms` }}>
+                style={{ transitionDelay: `${(i % 3) * 100}ms` }}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                     <FontAwesomeIcon icon={f.icon} className="text-blue-400" />
                   </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
-                    f.status === 'Live'
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${f.status === 'Live'
                       ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
                       : 'text-amber-300 border-amber-500/30 bg-amber-500/10'
-                  }`}>{f.status}</span>
+                    }`}>{f.status}</span>
                 </div>
                 <h3 className="text-white font-bold text-base mb-2">{f.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
@@ -845,7 +936,7 @@ const LandingPage = () => {
               </div>
             </Photo>
             <div className="reveal-right lg:col-span-3 flex flex-col gap-3">
-              {panelHighlights.map((h,i) => (
+              {panelHighlights.map((h, i) => (
                 <div key={i} className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 flex gap-4">
                   <FontAwesomeIcon icon={faQuoteLeft} className="text-blue-400/50 mt-1" />
                   <p className="text-gray-400 text-sm leading-relaxed">{h}</p>
@@ -865,17 +956,17 @@ const LandingPage = () => {
             <p className="text-gray-400">Everything you need to know about ProFolio.</p>
           </div>
           <div className="flex flex-col gap-3">
-            {faqs.map((faq,i) => (
+            {faqs.map((faq, i) => (
               <div key={i} className="reveal border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden"
-                style={{ transitionDelay:`${i*60}ms` }}>
+                style={{ transitionDelay: `${i * 60}ms` }}>
                 <button className="w-full flex items-center justify-between px-6 py-5 text-left gap-4"
                   aria-expanded={openFaq === i}
-                  onClick={() => setOpenFaq(openFaq===i ? null : i)}>
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}>
                   <span className="font-semibold text-white text-sm">{faq.q}</span>
                   <FontAwesomeIcon icon={faChevronDown}
-                    className={`text-gray-500 text-xs flex-shrink-0 transition-transform duration-300 ${openFaq===i ? 'rotate-180 text-blue-400' : ''}`} />
+                    className={`text-gray-500 text-xs flex-shrink-0 transition-transform duration-300 ${openFaq === i ? 'rotate-180 text-blue-400' : ''}`} />
                 </button>
-                {openFaq===i && (
+                {openFaq === i && (
                   <div className="px-6 pb-5 border-t border-white/5">
                     <p className="text-gray-400 text-sm leading-relaxed pt-4">{faq.a}</p>
                   </div>
@@ -919,7 +1010,7 @@ const LandingPage = () => {
       <footer className="relative z-10 border-t border-white/5 px-6 py-10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            {socialLinks.map((s,i) => (
+            {socialLinks.map((s, i) => (
               <a key={i} href={s.href} target="_blank" rel="noreferrer" aria-label={s.label}
                 className="w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
                 <FontAwesomeIcon icon={s.icon} />

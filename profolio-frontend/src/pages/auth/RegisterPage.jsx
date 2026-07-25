@@ -4,37 +4,83 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faEnvelope, faLock, faEye, faEyeSlash,
   faArrowRight, faCircleNotch, faTriangleExclamation,
-  faUser, faCircleCheck,
+  faUser, faCircleCheck, faImage,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
+// Different photo from the login page, so the two screens don't feel like a
+// reload of each other. Swap for a real TCC photo whenever you have one.
+const SIDE_PHOTO = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1400&q=80'
+
 // ─── Social providers config ───────────────────────────────────────────────────
 const SOCIAL_PROVIDERS = [
   {
     key: 'google',
-    label: 'Continue with Google',
+    label: 'Google',
     icon: faGoogle,
     href: `${import.meta.env.VITE_API_URL}/auth/google`,
     iconColor: '#EA4335',
   },
   {
     key: 'facebook',
-    label: 'Continue with Facebook',
+    label: 'Facebook',
     icon: faFacebook,
     href: `${import.meta.env.VITE_API_URL}/auth/facebook`,
     iconColor: '#1877F2',
   },
   {
     key: 'github',
-    label: 'Continue with GitHub',
+    label: 'GitHub',
     icon: faGithub,
     href: `${import.meta.env.VITE_API_URL}/auth/github`,
     iconColor: '#ffffff',
   },
 ]
+
+const ROLES = [
+  { value: 'student', label: 'Student', desc: 'Take the assessments' },
+  { value: 'evaluator', label: 'Evaluator', desc: 'Review submissions' },
+]
+
+// What they're signing up to actually do.
+const WHAT_YOU_DO = ['Typing', 'Coding', 'Bug fix', 'SQL', 'Flowchart', 'Communication']
+
+// Length alone says very little — a 12-character all-lowercase password isn't
+// strong. This also counts character variety.
+const scorePassword = (p) => {
+  if (!p) return null
+  if (p.length < 8) return { label: 'Too short', color: 'bg-red-500', text: 'text-red-400', width: 'w-1/4' }
+
+  let variety = 0
+  if (/[a-z]/.test(p) && /[A-Z]/.test(p)) variety++
+  if (/\d/.test(p)) variety++
+  if (/[^A-Za-z0-9]/.test(p)) variety++
+  if (p.length >= 12) variety++
+
+  if (variety <= 1) return { label: 'Fair', color: 'bg-amber-500', text: 'text-amber-400', width: 'w-2/4' }
+  if (variety === 2) return { label: 'Good', color: 'bg-blue-400', text: 'text-blue-400', width: 'w-3/4' }
+  return { label: 'Strong', color: 'bg-emerald-500', text: 'text-emerald-400', width: 'w-full' }
+}
+
+const validate = (f) => {
+  const e = {}
+  if (!f.full_name.trim()) e.full_name = 'Enter your full name.'
+  else if (f.full_name.trim().length < 2) e.full_name = 'That name looks too short.'
+
+  if (!f.email.trim()) e.email = 'Enter your email.'
+  else if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) e.email = 'That doesn\u2019t look like an email address.'
+
+  if (!f.password) e.password = 'Choose a password.'
+  else if (f.password.length < 8) e.password = 'Use at least 8 characters.'
+
+  if (!f.confirm_password) e.confirm_password = 'Re-enter your password.'
+  else if (f.password !== f.confirm_password) e.confirm_password = 'The two passwords don\u2019t match.'
+
+  return e
+}
 
 const RegisterPage = () => {
   const navigate = useNavigate()
@@ -47,35 +93,41 @@ const RegisterPage = () => {
     confirm_password: '',
     role: 'student',
   })
+  const [fieldErrors, setFieldErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [photoFailed, setPhotoFailed] = useState(false)
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+    setForm(f => ({ ...f, [name]: value }))
+    setFieldErrors(v => ({ ...v, [name]: undefined }))
     setError('')
+  }
+
+  const handleBlur = (e) => {
+    const { name } = e.target
+    const found = validate(form)
+    setFieldErrors(v => ({ ...v, [name]: found[name] }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.full_name || !form.email || !form.password || !form.confirm_password) {
-      setError('Please fill in all fields.')
+
+    const found = validate(form)
+    if (Object.keys(found).length) {
+      setFieldErrors(found)
       return
     }
-    if (form.password !== form.confirm_password) {
-      setError('Passwords do not match.')
-      return
-    }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
+
     setLoading(true)
+    setError('')
     try {
       const res = await api.post('/auth/register', {
-        full_name: form.full_name,
-        email: form.email,
+        full_name: form.full_name.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password,
         role: form.role,
       })
@@ -84,6 +136,7 @@ const RegisterPage = () => {
       if (user.role === 'student') navigate('/student/dashboard')
       else if (user.role === 'evaluator') navigate('/evaluator/dashboard')
       else if (user.role === 'admin') navigate('/admin/dashboard')
+      else navigate('/') // unknown role — don't strand them on this screen
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.')
     } finally {
@@ -91,267 +144,379 @@ const RegisterPage = () => {
     }
   }
 
-  const passwordStrength = () => {
-    const p = form.password
-    if (!p) return null
-    if (p.length < 6) return { label: 'Weak', color: 'bg-red-500', width: 'w-1/4' }
-    if (p.length < 8) return { label: 'Fair', color: 'bg-amber-500', width: 'w-2/4' }
-    if (p.length < 12) return { label: 'Good', color: 'bg-blue-500', width: 'w-3/4' }
-    return { label: 'Strong', color: 'bg-green-500', width: 'w-full' }
-  }
+  const strength = scorePassword(form.password)
+  const matches = form.confirm_password && form.password === form.confirm_password
 
-  const strength = passwordStrength()
+  const inputBase = 'w-full bg-white/[0.04] rounded-2xl px-4 py-3 pl-11 text-white text-sm placeholder-gray-600 outline-none transition-all border'
+  const inputState = (name) => fieldErrors[name]
+    ? 'border-red-500/50 focus:border-red-400'
+    : 'border-white/10 hover:border-white/20 focus:border-blue-400/60 focus:bg-blue-400/[0.06]'
 
   return (
-    <div className="min-h-screen bg-[#060612] flex items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-[#0a0d10] font-sans grid lg:grid-cols-2">
 
-      {/* Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: 'linear-gradient(rgba(99,102,241,1) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,1) 1px, transparent 1px)', backgroundSize: '60px 60px' }}
-        />
-        <div className="orb w-[500px] h-[500px] bg-blue-600 -top-40 -right-40 pulse-slow opacity-10" />
-        <div className="orb w-[400px] h-[400px] bg-violet-600 -bottom-32 -left-32 float-delay opacity-10" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
-      </div>
+      <style>{`
+        @keyframes drift {
+          0%   { transform: translate(0, 0) scale(1); }
+          33%  { transform: translate(40px, -30px) scale(1.08); }
+          66%  { transform: translate(-30px, 20px) scale(0.94); }
+          100% { transform: translate(0, 0) scale(1); }
+        }
+        @keyframes shimmer {
+          0%   { transform: translateX(-260%) skewX(-20deg); }
+          100% { transform: translateX(360%) skewX(-20deg); }
+        }
+        @keyframes riseIn {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .rise { animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-      <div className="w-full max-w-md relative z-10">
+        a:focus-visible, button:focus-visible, input:focus-visible {
+          outline: 2px solid #60a5fa;
+          outline-offset: 3px;
+          border-radius: 12px;
+        }
 
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 bg-blue-500/30 rounded-3xl blur-xl" />
-            <img src={logo} alt="ProFolio" className="relative w-16 h-16 object-contain drop-shadow-lg" />
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Create your <span className="text-blue-400">ProFolio</span> account
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">Start building your portfolio today — it's free</p>
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation: none !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      `}</style>
+
+      {/* ══ The form — second column on wide screens, but first in the DOM so
+           keyboard and screen-reader users reach it straight away ══ */}
+      <div className="relative flex items-center justify-center px-6 py-10 lg:py-8 lg:order-2 lg:h-screen lg:overflow-y-auto">
+
+        {/* ambient background, same language as the landing page */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute w-[520px] h-[520px] rounded-full -top-40 -right-40 opacity-[0.07]"
+            style={{ background: 'radial-gradient(circle, #60a5fa, transparent 70%)', animation: 'drift 16s ease-in-out infinite' }} />
+          <div className="absolute w-[420px] h-[420px] rounded-full -bottom-32 -left-24 opacity-[0.06]"
+            style={{ background: 'radial-gradient(circle, #a78bfa, transparent 70%)', animation: 'drift 20s ease-in-out infinite 4s' }} />
+          <div className="absolute inset-0 opacity-[0.025]"
+            style={{ backgroundImage: 'linear-gradient(rgba(148,163,184,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.8) 1px,transparent 1px)', backgroundSize: '48px 48px' }} />
         </div>
 
-        {/* Card */}
-        <div className="border border-white/8 bg-white/[0.03] rounded-3xl p-8 backdrop-blur-sm shadow-2xl shadow-black/50">
+        <div className="w-full max-w-md relative z-10 rise">
 
-          {/* Error */}
+          {/* Logo — clickable, back to the landing page */}
+          <div className="flex justify-center mb-6">
+            <Link to="/" className="inline-flex items-center gap-2.5 group">
+              <img src={logo} alt="" className="h-9 w-auto" />
+              <span className="text-xl font-black text-white tracking-tight">
+                Pro<span className="text-blue-400">Folio</span>
+              </span>
+            </Link>
+          </div>
+
+          <h1 className="text-3xl font-black text-white tracking-tight leading-tight mb-1.5">
+            Create your account.
+          </h1>
+          <p className="text-gray-400 text-sm mb-6">
+            Free for every student. Takes about a minute.
+          </p>
+
+          {/* Server-side error */}
           {error && (
-            <div className="flex items-center gap-3 border border-red-500/30 bg-red-500/10 text-red-400 text-sm px-4 py-3 rounded-xl mb-6">
-              <FontAwesomeIcon icon={faTriangleExclamation} className="flex-shrink-0" />
-              {error}
+            <div role="alert"
+              className="flex items-start gap-3 border border-red-500/30 bg-red-500/10 text-red-300 text-sm px-4 py-3 rounded-2xl mb-6">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
 
-            {/* Full Name */}
+            <div className="grid sm:grid-cols-2 gap-4 items-start">
+            {/* Full name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Full Name</label>
+              <label htmlFor="full_name" className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                Full name
+              </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                  <FontAwesomeIcon icon={faUser} className="text-sm" />
-                </div>
+                <FontAwesomeIcon icon={faUser}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none" />
                 <input
+                  id="full_name"
                   type="text"
                   name="full_name"
                   value={form.full_name}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  autoComplete="name"
+                  aria-invalid={!!fieldErrors.full_name}
+                  aria-describedby={fieldErrors.full_name ? 'full_name-error' : undefined}
                   placeholder="Juan dela Cruz"
-                  className="w-full bg-white/5 border border-white/8 hover:border-white/15 focus:border-blue-500/50 focus:bg-blue-500/5 rounded-xl px-4 py-3 pl-11 text-white text-sm placeholder-gray-600 outline-none transition-all"
+                  className={`${inputBase} ${inputState('full_name')}`}
                 />
               </div>
+              {fieldErrors.full_name && (
+                <span id="full_name-error" className="text-red-400 text-xs">{fieldErrors.full_name}</span>
+              )}
             </div>
 
             {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Email</label>
+              <label htmlFor="email" className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                Email
+              </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                  <FontAwesomeIcon icon={faEnvelope} className="text-sm" />
-                </div>
+                <FontAwesomeIcon icon={faEnvelope}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none" />
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  autoComplete="email"
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                   placeholder="you@email.com"
-                  className="w-full bg-white/5 border border-white/8 hover:border-white/15 focus:border-blue-500/50 focus:bg-blue-500/5 rounded-xl px-4 py-3 pl-11 text-white text-sm placeholder-gray-600 outline-none transition-all"
+                  className={`${inputBase} ${inputState('email')}`}
                 />
               </div>
+              {fieldErrors.email && (
+                <span id="email-error" className="text-red-400 text-xs">{fieldErrors.email}</span>
+              )}
+            </div>
             </div>
 
             {/* Role */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-gray-400 text-xs font-semibold uppercase tracking-wider">I am a</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: 'student', label: 'Student', desc: 'Build my portfolio' },
-                  { value: 'evaluator', label: 'Evaluator', desc: 'Review portfolios' },
-                ].map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setForm({ ...form, role: r.value })}
-                    className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
-                      form.role === r.value
-                        ? 'border-blue-500/50 bg-blue-500/10 text-white'
-                        : 'border-white/8 bg-white/5 text-gray-400 hover:border-white/15 hover:bg-white/8'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-0.5">
-                      {form.role === r.value && (
-                        <FontAwesomeIcon icon={faCircleCheck} className="text-blue-400 text-xs" />
-                      )}
-                      <span className="text-sm font-semibold">{r.label}</span>
-                    </div>
-                    <span className="text-xs text-gray-500">{r.desc}</span>
-                  </button>
-                ))}
+              <span id="role-label" className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                I am a
+              </span>
+              <div role="radiogroup" aria-labelledby="role-label" className="grid grid-cols-2 gap-2.5">
+                {ROLES.map((r) => {
+                  const active = form.role === r.value
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setForm(f => ({ ...f, role: r.value }))}
+                      className={`flex flex-col items-start p-3 rounded-2xl border text-left transition-all ${
+                        active
+                          ? 'border-blue-400/60 bg-blue-400/10 text-white'
+                          : 'border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/25 hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 mb-0.5">
+                        <FontAwesomeIcon icon={faCircleCheck}
+                          className={`text-xs transition-colors ${active ? 'text-blue-400' : 'text-white/15'}`} />
+                        <span className="text-sm font-bold">{r.label}</span>
+                      </span>
+                      <span className="text-xs text-gray-500">{r.desc}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
+            <div className="grid sm:grid-cols-2 gap-4 items-start">
             {/* Password */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Password</label>
+              <label htmlFor="password" className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                Password
+              </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                  <FontAwesomeIcon icon={faLock} className="text-sm" />
-                </div>
+                <FontAwesomeIcon icon={faLock}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none" />
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Min. 8 characters"
-                  className="w-full bg-white/5 border border-white/8 hover:border-white/15 focus:border-blue-500/50 focus:bg-blue-500/5 rounded-xl px-4 py-3 pl-11 pr-11 text-white text-sm placeholder-gray-600 outline-none transition-all"
+                  onBlur={handleBlur}
+                  autoComplete="new-password"
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+                  placeholder="At least 8 characters"
+                  className={`${inputBase} pr-11 ${inputState('password')}`}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                 >
                   <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="text-sm" />
                 </button>
               </div>
-              {strength && (
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+
+              {strength && !fieldErrors.password && (
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="flex-1 h-1 bg-white/8 rounded-full overflow-hidden">
                     <div className={`h-full ${strength.color} ${strength.width} rounded-full transition-all duration-300`} />
                   </div>
-                  <span className={`text-xs font-medium ${
-                    strength.label === 'Weak' ? 'text-red-400' :
-                    strength.label === 'Fair' ? 'text-amber-400' :
-                    strength.label === 'Good' ? 'text-blue-400' : 'text-green-400'
-                  }`}>{strength.label}</span>
+                  <span className={`text-xs font-semibold ${strength.text}`}>{strength.label}</span>
                 </div>
+              )}
+              {fieldErrors.password && (
+                <span id="password-error" className="text-red-400 text-xs">{fieldErrors.password}</span>
               )}
             </div>
 
-            {/* Confirm Password */}
+            {/* Confirm password */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Confirm Password</label>
+              <label htmlFor="confirm_password" className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                Confirm password
+              </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                  <FontAwesomeIcon icon={faLock} className="text-sm" />
-                </div>
+                <FontAwesomeIcon icon={faLock}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none" />
                 <input
+                  id="confirm_password"
                   type={showConfirm ? 'text' : 'password'}
                   name="confirm_password"
                   value={form.confirm_password}
                   onChange={handleChange}
-                  placeholder="Re-enter your password"
-                  className={`w-full bg-white/5 border rounded-xl px-4 py-3 pl-11 pr-11 text-white text-sm placeholder-gray-600 outline-none transition-all ${
-                    form.confirm_password && form.password !== form.confirm_password
-                      ? 'border-red-500/50 bg-red-500/5'
-                      : form.confirm_password && form.password === form.confirm_password
-                      ? 'border-green-500/50 bg-green-500/5'
-                      : 'border-white/8 hover:border-white/15 focus:border-blue-500/50 focus:bg-blue-500/5'
+                  onBlur={handleBlur}
+                  autoComplete="new-password"
+                  aria-invalid={!!fieldErrors.confirm_password}
+                  aria-describedby={fieldErrors.confirm_password ? 'confirm_password-error' : undefined}
+                  placeholder="Type it once more"
+                  className={`${inputBase} pr-20 ${
+                    fieldErrors.confirm_password
+                      ? 'border-red-500/50 focus:border-red-400'
+                      : matches
+                        ? 'border-emerald-500/50 bg-emerald-500/[0.06]'
+                        : 'border-white/10 hover:border-white/20 focus:border-blue-400/60 focus:bg-blue-400/[0.06]'
                   }`}
                 />
+                {/* tick sits clear of the eye button rather than under it */}
+                {matches && (
+                  <FontAwesomeIcon icon={faCircleCheck}
+                    className="absolute right-11 top-1/2 -translate-y-1/2 text-emerald-400 text-sm pointer-events-none" />
+                )}
                 <button
                   type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
+                  onClick={() => setShowConfirm(v => !v)}
+                  aria-label={showConfirm ? 'Hide password' : 'Show password'}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                 >
                   <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} className="text-sm" />
                 </button>
-                {form.confirm_password && form.password === form.confirm_password && (
-                  <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                    <FontAwesomeIcon icon={faCircleCheck} className="text-green-400 text-sm" />
-                  </div>
-                )}
               </div>
+              {fieldErrors.confirm_password && (
+                <span id="confirm_password-error" className="text-red-400 text-xs">{fieldErrors.confirm_password}</span>
+              )}
+            </div>
             </div>
 
             {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="group relative flex items-center justify-center gap-3 text-white py-3.5 rounded-xl font-bold text-sm overflow-hidden mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="group relative overflow-hidden bg-blue-400 hover:bg-blue-300 text-black font-bold py-3 rounded-2xl text-sm mt-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 group-hover:from-blue-400 group-hover:to-cyan-500" />
-              <span className="relative">
+              {!loading && (
+                <span className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"
+                  style={{ animation: 'shimmer 3.2s ease-in-out infinite' }} />
+              )}
+              <span className="relative z-10 flex items-center justify-center gap-2">
                 {loading ? (
-                  <span className="flex items-center gap-2">
+                  <>
                     <FontAwesomeIcon icon={faCircleNotch} className="animate-spin" />
                     Creating account...
-                  </span>
+                  </>
                 ) : (
-                  <span className="flex items-center gap-2">
-                    Create Account <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
-                  </span>
+                  <>
+                    Create account
+                    <FontAwesomeIcon icon={faArrowRight} className="transition-transform group-hover:translate-x-1" />
+                  </>
                 )}
               </span>
             </button>
-
           </form>
 
-          {/* Divider — or continue with */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-white/5" />
+          {/* Social */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-white/8" />
             <span className="text-gray-600 text-xs">or continue with</span>
-            <div className="flex-1 h-px bg-white/5" />
+            <div className="flex-1 h-px bg-white/8" />
           </div>
 
-          {/* ── Social Buttons ── */}
-          <div className="flex gap-3 mb-6">
-            {SOCIAL_PROVIDERS.map((provider) => (
+          <div className="grid grid-cols-3 gap-2.5">
+            {SOCIAL_PROVIDERS.map((p) => (
               <a
-                key={provider.key}
-                href={provider.href}
-                title={provider.label}
-                className="flex-1 flex items-center justify-center gap-2 border border-white/8 hover:border-white/20 bg-white/[0.03] hover:bg-white/[0.06] text-gray-300 hover:text-white py-3 rounded-xl text-sm font-semibold transition-all"
+                key={p.key}
+                href={p.href}
+                aria-label={`Continue with ${p.label}`}
+                className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white py-3 rounded-2xl text-sm font-semibold transition-all"
               >
-                <FontAwesomeIcon
-                  icon={provider.icon}
-                  className="text-base"
-                  style={{ color: provider.iconColor }}
-                />
+                <FontAwesomeIcon icon={p.icon} className="text-base" style={{ color: p.iconColor }} />
+                <span className="hidden sm:inline lg:hidden xl:inline">{p.label}</span>
               </a>
             ))}
           </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-white/5" />
-            <span className="text-gray-600 text-xs">Already have an account?</span>
-            <div className="flex-1 h-px bg-white/5" />
+          {/* Sign in */}
+          <p className="text-center text-sm text-gray-500 mt-5">
+            Already have an account?{' '}
+            <Link to="/login" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
+              Sign in
+            </Link>
+          </p>
+
+          <div className="text-center mt-2">
+            <Link to="/" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
+              ← Back to home
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ What they're signing up for — sits on the left ══ */}
+      <div className="relative hidden lg:block overflow-hidden lg:order-1">
+        {photoFailed ? (
+          <div className="absolute inset-0 bg-gradient-to-br from-[#141d29] via-[#0d1218] to-[#0a0d10] flex items-center justify-center">
+            <FontAwesomeIcon icon={faImage} className="text-white/10 text-3xl" />
+          </div>
+        ) : (
+          <img
+            src={SIDE_PHOTO}
+            alt=""
+            onError={() => setPhotoFailed(true)}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-bl from-[#0a0d10] via-[#0a0d10]/85 to-[#0a0d10]/60" />
+        <div className="absolute inset-y-0 right-0 w-px bg-white/8" />
+
+        <div className="relative h-full flex flex-col justify-center px-14 xl:px-20">
+          <h2 className="text-4xl xl:text-5xl font-black text-white leading-[1.05] tracking-tight mb-6">
+            One account.<br />
+            <span className="text-blue-400">Ready for your Future.</span>
+          </h2>
+          <p className="text-gray-400 text-lg max-w-md mb-10 leading-relaxed">
+            Everything you finish feeds one profile — a portfolio and CV you can hand to an employer.
+          </p>
+
+          <div className="flex flex-wrap gap-2 max-w-md mb-10">
+            {WHAT_YOU_DO.map((w, i) => (
+              <span key={i}
+                className="text-xs font-semibold text-gray-300 border border-white/10 bg-white/[0.04] px-3 py-1.5 rounded-full">
+                {w}
+              </span>
+            ))}
           </div>
 
-          {/* Login link */}
-          <Link
-            to="/login"
-            className="flex items-center justify-center gap-2 border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/15 text-gray-300 hover:text-white py-3 rounded-xl text-sm font-semibold transition-all"
-          >
-            Sign in instead
-          </Link>
+          <div className="flex flex-col gap-3">
+            {['Free for every student', 'Take an assessments', 'Reviewed by CS Faculty'].map((p, i) => (
+              <span key={i} className="flex items-center gap-3 text-sm text-gray-400">
+                <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-400" />{p}
+              </span>
+            ))}
+          </div>
         </div>
-
-        {/* Back to home */}
-        <div className="text-center mt-6">
-          <Link to="/" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
-            ← Back to home
-          </Link>
-        </div>
-
       </div>
     </div>
   )
