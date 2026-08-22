@@ -21,10 +21,10 @@ const navItems = [
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
   { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
-  { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]
