@@ -28,10 +28,17 @@ const sendMessage = async (user_id, { message }) => {
   const history = await chatbotRepo.getHistoryByUser(user_id, MAX_HISTORY_MESSAGES);
 
   // Gemini uses 'user' / 'model' roles (not 'assistant')
-  const geminiHistory = history.map((m) => ({
+  let geminiHistory = history.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }]
   }));
+
+  // Gemini rejects a history that opens with a model turn. That happens
+  // whenever the window cuts mid-exchange — drop leading model turns rather
+  // than failing the whole message.
+  while (geminiHistory.length && geminiHistory[0].role === 'model') {
+    geminiHistory = geminiHistory.slice(1);
+  }
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-3.6-flash',

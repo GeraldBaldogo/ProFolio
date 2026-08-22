@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
-  faTrophy, faRightFromBracket, faFileAlt, faSpinner, faDownload,
-  faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase,
+  faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes, faShieldHalved, 
+  faTrophy, faRightFromBracket, faFileAlt, faSpinner, faDownload, faSeedling, 
+  faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase, 
   faGraduationCap, faCertificate, faCode, faComments, faClipboardList,
-  faFingerprint, faLightbulb, faChartLine, faTriangleExclamation,
+  faFingerprint, faLightbulb, faChartLine, faTriangleExclamation, 
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
