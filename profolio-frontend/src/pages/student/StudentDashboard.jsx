@@ -26,6 +26,7 @@ const navItems = [
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]

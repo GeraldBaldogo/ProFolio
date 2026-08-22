@@ -5,7 +5,7 @@ import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faChartLine, faRightFromBracket, faSpinner, faArrowRight, faTrophy,
   faCircleCheck, faTriangleExclamation, faLightbulb, faBolt, faClipboardList, 
-  faChevronRight, faComments, faFileAlt, faFingerprint,
+  faChevronRight, faComments, faFileAlt, faWandMagicSparkles, faFingerprint,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
@@ -22,6 +22,7 @@ const navItems = [
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]

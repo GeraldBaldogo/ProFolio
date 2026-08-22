@@ -6,7 +6,7 @@ import {
   faTrophy, faRightFromBracket, faFileAlt, faSpinner, faDownload,
   faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase,
   faGraduationCap, faCertificate, faCode, faComments, faClipboardList,
-  faFingerprint, faLightbulb, faChartLine, faTriangleExclamation,
+  faFingerprint, faLightbulb, faChartLine, faTriangleExclamation, faWandMagicSparkles,
   faSeedling, faShieldHalved, faArrowRight,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
@@ -25,6 +25,7 @@ const navItems = [
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]

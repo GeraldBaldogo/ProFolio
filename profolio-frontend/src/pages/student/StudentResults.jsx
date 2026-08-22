@@ -6,7 +6,7 @@ import {
   faTrophy, faRightFromBracket, faKeyboard, faCode, faDiagramProject,
   faDatabase, faBug, faComments, faSpinner, faClipboardList,
   faCircleCheck, faFileAlt, faFingerprint, faLightbulb, faChartLine,
-  faTriangleExclamation, faRotateRight, faShield, faVideoSlash,
+  faTriangleExclamation, faRotateRight, faShield, faVideoSlash, faWandMagicSparkles, 
   faChevronDown, faArrowTrendUp, faArrowTrendDown, faUserTie,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
@@ -24,6 +24,7 @@ const navItems = [
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]

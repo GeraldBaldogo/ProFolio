@@ -21,6 +21,7 @@ import CVPage from './pages/student/CVPage'
 import OriginalityCheck from './pages/student/OriginalityCheck'
 import StudentAssignedTests from './pages/student/StudentAssignedTests'
 import StudentResults from './pages/student/StudentResults'
+import StudentAssistant from './pages/student/StudentAssistant'
 
 // Assessment pages
 import AssessmentDashboard from './pages/student/assessment/AssessmentDashboard'
@@ -79,6 +80,9 @@ function App() {
       } />
       <Route path="/student/results" element={
         <ProtectedRoutes role="student"><StudentResults /></ProtectedRoutes>
+      } />
+      <Route path="/student/assistant" element={
+        <ProtectedRoutes role="student"><StudentAssistant /></ProtectedRoutes>
       } />
 
       {/* Assessment routes */}

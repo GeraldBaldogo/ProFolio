@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
-  faTrophy, faRightFromBracket, faKeyboard, faCode, faDiagramProject,
+  faTrophy, faRightFromBracket, faKeyboard, faCode, faDiagramProject, faWandMagicSparkles, 
   faDatabase, faBug, faComments, faChevronRight, faSpinner, faClipboardList, 
   faCircleCheck, faLock, faBell, faChartLine, faCertificate, faFileAlt, faFingerprint, faLightbulb,
 } from '@fortawesome/free-solid-svg-icons'
@@ -22,6 +22,7 @@ const navItems = [
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]

@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faRightFromBracket, faSpinner, faArrowRight, faCircleCheck,
-  faUserTie, faTrophy, faChartLine, faFileAlt, faTriangleExclamation,
+  faUserTie, faTrophy, faChartLine, faFileAlt, faTriangleExclamation, faWandMagicSparkles,
   faClockRotateLeft, faComments, faFingerprint, faLightbulb, faClipboardList,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
@@ -22,6 +22,7 @@ const navItems = [
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]
