@@ -6,8 +6,7 @@ import {
   faTrophy, faRightFromBracket, faFileAlt, faSpinner, faDownload,
   faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase,
   faGraduationCap, faCertificate, faCode, faComments, faClipboardList,
-  faFingerprint, faLightbulb, faChartLine, faTriangleExclamation, faWandMagicSparkles,
-  faSeedling, faShieldHalved, faArrowRight,
+  faFingerprint, faLightbulb, faChartLine, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
