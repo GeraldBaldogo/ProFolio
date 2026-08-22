@@ -31,6 +31,17 @@ const assertOwnsTest = (test, professor_id) => {
   }
 };
 
+const assertNotOverdue = (assignment) => {
+  if (!assignment?.due_date) return;               // no deadline set
+  if (assignment.status !== 'pending') return;     // already started, let them finish
+  if (new Date(assignment.due_date) >= new Date()) return;
+ 
+  const when = new Date(assignment.due_date).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+  throw { status: 403, message: `This test closed on ${when}.` };
+};
+
 const createTest = async (professor_id, { type, title, description, config, time_limit_minutes, is_published }) => {
   if (!VALID_TYPES.includes(type)) {
     throw { status: 400, message: `Invalid type. Must be one of: ${VALID_TYPES.join(', ')}` };
@@ -54,6 +65,18 @@ const updateTest = async (test_id, professor_id, updates) => {
   }
 
   return testRepo.updateTest(test_id, updates);
+};
+
+const listStudents = async () => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, full_name, email')
+    .eq('role', 'student')
+    // A deactivated student can't sign in, so there's no point assigning to them.
+    .neq('is_active', false)
+    .order('full_name', { ascending: true });
+  if (error) throw error;
+  return data || [];
 };
 
 const deleteTest = async (test_id, professor_id) => {
@@ -116,10 +139,23 @@ const getAssignmentsForTest = async (test_id, professor_id) => {
   const test = await testRepo.findById(test_id);
   if (!test) throw { status: 404, message: 'Test not found.' };
   assertOwnsTest(test, professor_id);
+ 
+  const [assignments, results] = await Promise.all([
+    testRepo.findAssignmentsByTest(test_id),
+    testRepo.findResultsByTest(test_id),
+  ]);
 
-  return testRepo.findAssignmentsByTest(test_id);
+  const resultByStudent = new Map();
+  for (const r of results) {
+    if (!resultByStudent.has(r.user_id)) resultByStudent.set(r.user_id, r);
+  }
+ 
+  return assignments.map((a) => ({
+    ...a,
+    result: resultByStudent.get(a.student_id) || null,
+  }));
 };
-
+ 
 const getMyAssignedTests = async (student_id) => {
   return testRepo.findAssignmentsForStudent(student_id);
 };
@@ -127,11 +163,13 @@ const getMyAssignedTests = async (student_id) => {
 const startAssignment = async (test_id, student_id) => {
   const assignment = await testRepo.findAssignment(test_id, student_id);
   if (!assignment) throw { status: 404, message: 'This test was not assigned to you.' };
-
+ 
+  assertNotOverdue(assignment);
+ 
   if (assignment.status === 'pending') {
     await testRepo.updateAssignmentStatus(test_id, student_id, 'in_progress');
   }
-
+ 
   const test = await testRepo.findById(test_id);
   return test;
 };
@@ -150,5 +188,7 @@ module.exports = {
   getAssignmentsForTest,
   getMyAssignedTests,
   startAssignment,
+  listStudents,
+  assertNotOverdue,
   markAssignmentSubmitted,
 };

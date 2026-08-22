@@ -40,7 +40,7 @@ const assignTest = async (req, res, next) => {
     const result = await testService.assignTest(
       req.params.id,
       req.user.id,
-      req.body.student_ids,
+      req.body.studentUserIds,
       req.body.due_date
     );
     res.status(201).json({ success: true, data: result });
@@ -68,6 +68,15 @@ const startAssignment = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const listStudents = async (req, res, next) => {
+  try {
+    const students = await testService.listStudents();
+    res.json({ success: true, data: students });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createTest,
   updateTest,
@@ -77,5 +86,6 @@ module.exports = {
   assignTest,
   getAssignmentsForTest,
   getMyAssignedTests,
+  listStudents,
   startAssignment,
 };

@@ -5,7 +5,7 @@ const messagingRepo = require('../repositories/messaging.repo');
 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://pro-folio-lake.vercel.app'
+  'https://pro-folio-development.vercel.app'
 ];
 
 function initSocket(httpServer) {

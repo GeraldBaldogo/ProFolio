@@ -25,8 +25,12 @@ router.post('/sql/submit', c.submitSQL);
 router.post('/bugfix/generate', c.generateBugFixChallenge);
 router.post('/bugfix/submit', c.submitBugFix);
 
+router.post('/communication/submit', c.submitCommunication);
+
 // Summary & Reset
 router.get('/summary', c.getSummary);
 router.delete('/reset', c.resetScores);
+
+router.get('/history', c.getMyResults);
 
 module.exports = router;

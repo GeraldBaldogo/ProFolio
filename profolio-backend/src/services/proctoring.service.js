@@ -16,19 +16,19 @@ const logEvent = async (user_id, { session_id, assessment_type, event_type, even
     throw { status: 400, message: `Invalid event_type. Must be one of: ${VALID_EVENT_TYPES.join(', ')}` };
   }
 
-  return proctoringRepo.logEvent({ session_id, user_id, assessment_type, event_type, event_data: event_data || null });
+  return proctoringRepo.createEvent({ session_id, user_id, assessment_type, event_type, event_data: event_data || null });
 };
 
 const getSessionReport = async (session_id) => {
   const [events, summary] = await Promise.all([
     proctoringRepo.getEventsBySession(session_id),
-    proctoringRepo.getSummaryBySession(session_id),
+    proctoringRepo.getViolationCounts(session_id),
   ]);
   return { session_id, summary, events };
 };
 
 const getStudentFlagHistory = async (user_id) => {
-  return proctoringRepo.getSummaryByUser(user_id);
+  throw { status: 501, message: 'Flag history is not available yet.' };
 };
 
 module.exports = { logEvent, getSessionReport, getStudentFlagHistory };

@@ -1,5 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const assessmentRepo = require('../repositories/assessment.repo');
+const testRepo = require('../repositories/test.repo');
+const { assertNotOverdue } = require('./test.service');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -7,7 +9,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // imageParts (optional): array of { inlineData: { mimeType, data } } for vision inputs.
 const generateJSON = async (prompt, imageParts = []) => {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });
 
@@ -18,6 +20,42 @@ const generateJSON = async (prompt, imageParts = []) => {
   const result = await model.generateContent(contentParts);
   const raw = result.response.text().replace(/```json|```/g, '').trim();
   return JSON.parse(raw);
+};
+
+// ─── TEST-BACKED SUBMISSIONS ──────────────────────────────────────────────────
+// Every submit below works two ways. With no test_id it's a practice attempt,
+// exactly as before. With a test_id it's an answer to a professor's test, and
+// the result is tied to that test.
+//
+// Every submit also carries unproctored / unproctored_reason, set when the
+// student's device had no working camera. metadata is built by hand in each
+// function, so a field that isn't named here is silently dropped — that's how
+// test_id, is_approved and user_id each went missing once already.
+
+// A student may only submit against a test that was actually assigned to them.
+// Without this, anyone could post a test_id and attach a result to a test they
+// were never given.
+
+const resolveTest = async (user_id, test_id) => {
+  if (!test_id) return null;
+ 
+  const assignment = await testRepo.findAssignment(test_id, user_id);
+  if (!assignment) {
+    throw { status: 403, message: 'This test was not assigned to you.' };
+  }
+  if (assignment.status === 'submitted') {
+    throw { status: 400, message: 'You have already submitted this test.' };
+  }
+  assertNotOverdue(assignment);                     // ← add
+ 
+  return assignment;
+};
+
+// Called only after a result is saved, so a failed submission doesn't close the
+// assignment and lock the student out of retrying.
+const closeAssignment = async (user_id, test_id) => {
+  if (!test_id) return;
+  await testRepo.updateAssignmentStatus(test_id, user_id, 'submitted');
 };
 
 // ─── TYPING ───────────────────────────────────────────────────────────────────
@@ -42,10 +80,14 @@ const TYPING_TEXTS = {
 
 const submitTypingResult = async (user_id, {
   wpm, accuracy, time_seconds, difficulty = 'easy',
-  violation_count = 0, camera_violation_count = 0, session_id = null
+  violation_count = 0, camera_violation_count = 0, session_id = null,
+  test_id = null,
+  unproctored = false, unproctored_reason = null
 }) => {
   if (wpm === undefined || wpm === null || accuracy === undefined || accuracy === null)
     throw { status: 400, message: 'wpm and accuracy are required.' };
+
+  await resolveTest(user_id, test_id);
 
   const wpmScore = Math.min((wpm / 100) * 100, 100);
   const accScore = accuracy;
@@ -62,8 +104,16 @@ const submitTypingResult = async (user_id, {
     type: 'typing',
     score,
     session_id,
-    metadata: { wpm, accuracy, time_seconds, difficulty, violation_count, camera_violation_count, penalty_applied: penalty }
+    test_id,
+    metadata: {
+      wpm, accuracy, time_seconds, difficulty,
+      violation_count, camera_violation_count,
+      penalty_applied: penalty,
+      unproctored, unproctored_reason
+    }
   });
+
+  await closeAssignment(user_id, test_id);
 
   return result;
 };
@@ -102,9 +152,13 @@ Respond with JSON only, no markdown:
 
 const submitCodingResult = async (user_id, {
   language, difficulty, challenge_title, code,
-  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null
+  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null,
+  test_id = null,
+  unproctored = false, unproctored_reason = null
 }) => {
   if (!code) throw { status: 400, message: 'code is required.' };
+
+  await resolveTest(user_id, test_id);
 
   const prompt = `You are evaluating a coding assessment submission for a student portfolio platform.
 
@@ -138,15 +192,19 @@ Respond with JSON only, no markdown:
     type: 'programming',
     score: finalScore,
     session_id,
+    test_id,
     metadata: {
       language, difficulty, challenge_title, code,
       violation_count, camera_violation_count, time_taken_seconds,
       ai_score: aiResult.skill_score,
       penalty_applied: penalty,
       correctness: aiResult.correctness,
-      feedback: aiResult.feedback
+      feedback: aiResult.feedback,
+      unproctored, unproctored_reason
     }
   });
+
+  await closeAssignment(user_id, test_id);
 
   return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness };
 };
@@ -162,7 +220,6 @@ Difficulty guidelines:
 - easy: simple linear process, 3-5 steps, no nested decisions (e.g. making coffee, login process)
 - medium: 1-2 decision points, loops allowed, 5-8 steps (e.g. grading system, ATM withdrawal)
 - hard: multiple decisions, nested conditions, 8+ steps, complex logic (e.g. sorting algorithm flow, order processing system)
-
 Respond with JSON only, no markdown:
 {
   "title": "short title",
@@ -175,9 +232,13 @@ Respond with JSON only, no markdown:
 
 const submitFlowchartResult = async (user_id, {
   problem_title, difficulty = 'easy', image_base64, image_type,
-  camera_violation_count = 0, session_id = null
+  camera_violation_count = 0, session_id = null,
+  test_id = null,
+  unproctored = false, unproctored_reason = null
 }) => {
   if (!image_base64) throw { status: 400, message: 'image_base64 is required.' };
+
+  await resolveTest(user_id, test_id);
 
   const prompt = `This is a student-drawn flowchart for the problem: "${problem_title}" (Difficulty: ${difficulty}).
 
@@ -201,6 +262,7 @@ Evaluate the flowchart and respond with JSON only, no markdown:
     type: 'flowchart',
     score: finalScore,
     session_id,
+    test_id,
     metadata: {
       problem_title, difficulty,
       camera_violation_count,
@@ -208,9 +270,12 @@ Evaluate the flowchart and respond with JSON only, no markdown:
       feedback: aiResult.feedback,
       has_start_end: aiResult.has_start_end,
       has_decision_diamond: aiResult.has_decision_diamond,
-      logical_flow: aiResult.logical_flow
+      logical_flow: aiResult.logical_flow,
+      unproctored, unproctored_reason
     }
   });
+
+  await closeAssignment(user_id, test_id);
 
   return { ...result, feedback: aiResult.feedback, logical_flow: aiResult.logical_flow };
 };
@@ -248,9 +313,13 @@ Respond with JSON only, no markdown:
 
 const submitSQLResult = async (user_id, {
   difficulty, challenge_title, scenario, question, sql_code,
-  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null
+  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null,
+  test_id = null,
+  unproctored = false, unproctored_reason = null
 }) => {
   if (!sql_code) throw { status: 400, message: 'sql_code is required.' };
+
+  await resolveTest(user_id, test_id);
 
   const prompt = `You are evaluating a SQL assessment submission for a student portfolio platform.
 
@@ -285,6 +354,7 @@ Respond with JSON only, no markdown:
     type: 'sql',
     score: finalScore,
     session_id,
+    test_id,
     metadata: {
       difficulty, challenge_title, scenario, question, sql_code,
       violation_count, camera_violation_count, time_taken_seconds,
@@ -292,9 +362,12 @@ Respond with JSON only, no markdown:
       penalty_applied: penalty,
       correctness: aiResult.correctness,
       syntax_valid: aiResult.syntax_valid,
-      feedback: aiResult.feedback
+      feedback: aiResult.feedback,
+      unproctored, unproctored_reason
     }
   });
+
+  await closeAssignment(user_id, test_id);
 
   return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness };
 };
@@ -327,9 +400,13 @@ Respond with JSON only, no markdown:
 
 const submitBugFixResult = async (user_id, {
   language, difficulty, challenge_title, description, original_buggy_code, fixed_code,
-  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null
+  violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null,
+  test_id = null,
+  unproctored = false, unproctored_reason = null
 }) => {
   if (!fixed_code) throw { status: 400, message: 'fixed_code is required.' };
+
+  await resolveTest(user_id, test_id);
 
   const prompt = `You are evaluating a bug fixing assessment for a student portfolio platform.
 
@@ -369,6 +446,7 @@ Respond with JSON only, no markdown:
     type: 'bugfix',
     score: finalScore,
     session_id,
+    test_id,
     metadata: {
       language, difficulty, challenge_title, description,
       original_buggy_code, fixed_code,
@@ -377,9 +455,12 @@ Respond with JSON only, no markdown:
       penalty_applied: penalty,
       bugs_fixed: aiResult.bugs_fixed,
       correctness: aiResult.correctness,
-      feedback: aiResult.feedback
+      feedback: aiResult.feedback,
+      unproctored, unproctored_reason
     }
   });
+
+  await closeAssignment(user_id, test_id);
 
   return { ...result, feedback: aiResult.feedback, bugs_fixed: aiResult.bugs_fixed };
 };
@@ -411,6 +492,38 @@ const getAssessmentSummary = async (user_id) => {
   return summary;
 };
 
+const getMyResults = async (user_id) => {
+  const results = await assessmentRepo.getResultsByUser(user_id);
+
+  return (results || []).map((r) => ({
+    id: r.id,
+    type: r.type,
+    score: r.score,
+    test_id: r.test_id,
+    created_at: r.created_at,
+    metadata: {
+      // Shared
+      feedback: r.metadata?.overall_feedback || r.metadata?.feedback || null,
+      difficulty: r.metadata?.difficulty || null,
+      time_taken_seconds: r.metadata?.time_taken_seconds ?? r.metadata?.time_seconds ?? null,
+      violation_count: r.metadata?.violation_count ?? 0,
+      camera_violation_count: r.metadata?.camera_violation_count ?? 0,
+      penalty_applied: r.metadata?.penalty_applied ?? 0,
+      unproctored: r.metadata?.unproctored ?? false,
+ 
+      // Type-specific, so they can see what they actually did
+      wpm: r.metadata?.wpm ?? null,
+      accuracy: r.metadata?.accuracy ?? null,
+      correctness: r.metadata?.correctness || null,
+      bugs_fixed: r.metadata?.bugs_fixed || null,
+      logical_flow: r.metadata?.logical_flow || null,
+      strengths: r.metadata?.strengths || null,
+      improvements: r.metadata?.improvements || null,
+      challenge_title: r.metadata?.challenge_title || r.metadata?.prompt_title || r.metadata?.problem_title || null,
+    },
+  }));
+};
+
 module.exports = {
   submitTypingResult,
   getTypingText,
@@ -422,5 +535,7 @@ module.exports = {
   submitSQLResult,
   generateBugFixChallenge,
   submitBugFixResult,
+  resolveTest,
+  getMyResults,
   getAssessmentSummary
 };

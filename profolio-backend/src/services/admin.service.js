@@ -14,6 +14,10 @@ const toggleUserStatus = async (id, is_active) => {
   return await adminRepo.toggleUserStatus(id, is_active);
 };
 
+const approveUser = async  (id) => {
+  return await adminRepo.approveUser(id);
+}
+
 const assignEvaluator = async (portfolio_id, evaluator_id, assigned_by) => {
   return await adminRepo.assignEvaluator(portfolio_id, evaluator_id, assigned_by);
 };
@@ -26,4 +30,4 @@ const getAnalytics = async () => {
   return await adminRepo.getAnalytics();
 };
 
-module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics };
+module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics, approveUser };

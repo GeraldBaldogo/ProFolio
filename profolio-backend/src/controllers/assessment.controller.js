@@ -70,11 +70,29 @@ const submitBugFix = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const submitCommunication = async (req, res, next) => {
+  try {
+    const result = await assessmentService.submitCommunicationResult(req.user.id, req.body);
+    res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getSummary = async (req, res, next) => {
   try {
     const summary = await assessmentService.getAssessmentSummary(req.user.id);
     res.json({ success: true, data: summary });
   } catch (err) { next(err); }
+};
+
+const getMyResults = async (req, res, next) => {
+  try {
+    const results = await assessmentService.getMyResults(req.user.id);
+    res.json({ success: true, data: results });
+  } catch (err) {
+    next(err);
+  }
 };
 
 const resetScores = async (req, res, next) => {
@@ -91,5 +109,5 @@ module.exports = {
   generateFlowchartProblem, submitFlowchart,
   generateSQLChallenge, submitSQL,
   generateBugFixChallenge, submitBugFix,
-  getSummary, resetScores
+  getSummary, getMyResults, resetScores, submitCommunication
 };

@@ -3,10 +3,10 @@ const supabase = require('../config/db');
 /**
  * Insert a single proctoring event (tab_blur, camera_no_face, copy_paste, etc.)
  */
-async function createEvent({ session_id, assessment_type, event_type, event_data }) {
+async function createEvent({ session_id, user_id, assessment_type, event_type, event_data }) {
   const { data, error } = await supabase
     .from('proctoring_events')
-    .insert([{ session_id, assessment_type, event_type, event_data }])
+    .insert([{ session_id, user_id, assessment_type, event_type, event_data }])
     .select()
     .single();
 

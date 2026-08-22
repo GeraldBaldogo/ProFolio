@@ -1,204 +1,311 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const supabase = require('../config/db');
-const portfolioRepo = require('../repositories/portfolio.repo');
-const projectRepo = require('../repositories/project.repo');
-const skillRepo = require('../repositories/skill.repo');
-const certificationRepo = require('../repositories/certification.repo');
-const experienceRepo = require('../repositories/experience.repo');
-const achievementRepo = require('../repositories/achievement.repo');
 const assessmentRepo = require('../repositories/assessment.repo');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const generateCV = async (user_id) => {
-  // Bug fix: 'profiles' table doesn't exist. User data actually lives across
-  // 'users' (full_name, email) and 'student_profiles' (course, school,
-  // year_level, phone, location, linkedin, github).
-  const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('id, full_name, email')
-    .eq('id', user_id)
-    .single();
-  if (userError || !user) throw { status: 404, message: 'User not found.' };
+const ASSESSMENT_TYPES = ['typing', 'programming', 'flowchart', 'sql', 'bugfix', 'communication'];
 
-  const { data: studentProfile, error: profileError } = await supabase
+const TYPE_LABELS = {
+  typing: 'Typing speed and accuracy',
+  programming: 'Programming',
+  flowchart: 'Process and flowchart design',
+  sql: 'SQL and data querying',
+  bugfix: 'Debugging',
+  communication: 'Written communication',
+};
+
+// A score is a number the school understands. An employer reads prose. These
+// bands are what the AI is given instead of the raw number, so it can describe
+// a level of competence without ever printing a mark.
+const bandFor = (score) => {
+  if (score === null || score === undefined) return null;
+  if (score >= 85) return 'strong';
+  if (score >= 70) return 'solid';
+  if (score >= 55) return 'developing';
+  return 'early';
+};
+
+/**
+ * Generate a narrative CV for a student.
+ *
+ * Two rules drive everything here:
+ *
+ * 1. Only professor-set tests count. A practice run can be repeated until it
+ *    looks good, so it proves far less than one attempt under a deadline the
+ *    professor set. Practice is used only as a fallback when a student has
+ *    never been given a graded test of that type.
+ *
+ * 2. No numbers reach the CV. Employers don't read "SQL: 76". They read what
+ *    someone can do. The scores stay inside the system for the professor; the
+ *    CV gets the meaning of them.
+ */
+const generateCV = async (user_id) => {
+  // 1. Student profile
+  const { data: profile } = await supabase
     .from('student_profiles')
-    .select('*')
+    .select('*, users(full_name, email)')
     .eq('user_id', user_id)
     .single();
-  if (profileError || !studentProfile) {
-    throw { status: 404, message: 'Student profile not found. Please complete your profile first.' };
-  }
 
-  // Bug fix: 'portfolios' has no 'user_id' column - it's linked via
-  // student_profiles.id (student_id), not users.id directly.
-  const portfolios = await portfolioRepo.findByStudentId(studentProfile.id);
-  const portfolio = portfolios?.[0]; // most recent, findByStudentId already orders desc
-  if (!portfolio) throw { status: 404, message: 'No portfolio found. Please create a portfolio first.' };
+  if (!profile) throw { status: 404, message: 'Student profile not found.' };
 
-  // Bug fix: portfolioRepo.findById never returns nested projects/skills/etc -
-  // fetch each via its own repo, same fix as ai.service.js.
-  const [projects, skills, certifications, experiences, achievements] = await Promise.all([
-    projectRepo.findByPortfolioId(portfolio.id),
-    skillRepo.findByPortfolioId(portfolio.id),
-    certificationRepo.findByPortfolioId(portfolio.id),
-    experienceRepo.findByPortfolioId(portfolio.id),
-    achievementRepo.findByPortfolioId(portfolio.id),
-  ]);
-
-  const assessments = await assessmentRepo.getResultsByUser(user_id);
-
-  const { data: aiEval } = await supabase
-    .from('ai_evaluations')
+  // 2. Latest portfolio
+  const { data: portfolios } = await supabase
+    .from('portfolios')
     .select('*')
-    .eq('portfolio_id', portfolio.id)
+    .eq('student_id', profile.id)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+    .limit(1);
 
-  // Bug fix: column is 'type', not 'assessment_type'. And the coding
-  // assessment's type is 'programming', not 'coding' (matches
-  // assessment.service.js's actual saved value).
-  const typingResult = assessments?.find(a => a.type === 'typing');
-  const programmingResult = assessments?.find(a => a.type === 'programming');
-  const otherAssessments = assessments?.filter(a => !['typing', 'programming'].includes(a.type));
+  const portfolio = portfolios?.[0] || null;
 
-  const profileForPrompt = {
-    full_name: user.full_name,
-    email: user.email,
-    course: studentProfile.course,
-    school: studentProfile.school,
-    year_level: studentProfile.year_level,
-    phone: studentProfile.phone,
-    location: studentProfile.location,
-    linkedin: studentProfile.linkedin,
-    github: studentProfile.github,
-  };
+  // 3. Portfolio items
+  let projects = [];
+  let skills = [];
+  let certifications = [];
+  let achievements = [];
 
-  const prompt = `
-You are a professional CV writer specializing in tech students and fresh graduates in computer-related fields.
-
-Generate a comprehensive, professional CV based on the student's portfolio data, assessment scores, and AI evaluation.
-
-STUDENT PROFILE:
-${JSON.stringify(profileForPrompt, null, 2)}
-
-PORTFOLIO DATA:
-Projects: ${JSON.stringify(projects, null, 2)}
-Skills: ${JSON.stringify(skills, null, 2)}
-Certifications: ${JSON.stringify(certifications, null, 2)}
-Experiences: ${JSON.stringify(experiences, null, 2)}
-Achievements: ${JSON.stringify(achievements, null, 2)}
-
-ASSESSMENT RESULTS:
-- Typing Speed: ${typingResult?.score ?? 'Not yet taken'} WPM
-- Programming Assessment: ${programmingResult?.score ?? 'Not yet taken'}%
-- Other Assessments: ${JSON.stringify(otherAssessments, null, 2)}
-
-AI PORTFOLIO EVALUATION:
-${JSON.stringify(aiEval, null, 2)}
-
-Generate a structured CV in the following JSON format only, no other text:
-{
-  "personal_info": {
-    "full_name": "<from profile>",
-    "email": "<from profile>",
-    "phone": "<from profile or null>",
-    "location": "<from profile or null>",
-    "linkedin": "<from profile or null>",
-    "github": "<from profile or null>"
-  },
-  "professional_summary": "<2-3 sentence compelling summary tailored to their actual skills and experience>",
-  "performance_indicators": {
-    "typing_speed": "<X WPM or Not assessed>",
-    "programming_proficiency": "<percentage or Not assessed>",
-    "overall_portfolio_score": "<score from AI evaluation or Not assessed>",
-    "communication_score": "<score or Not assessed>"
-  },
-  "validated_skills": [
-    {
-      "skill": "<skill name>",
-      "level": "<'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'>",
-      "validated_by": "<'Assessment' | 'AI Evaluation' | 'Portfolio' | 'Certification'>"
-    }
-  ],
-  "projects": [
-    {
-      "title": "<project title>",
-      "description": "<brief impactful description>",
-      "technologies": ["<tech1>", "<tech2>"],
-      "role": "<role in the project>",
-      "highlights": "<key achievement or impact of this project>"
-    }
-  ],
-  "certifications": [
-    {
-      "name": "<cert name>",
-      "issuer": "<issuer>",
-      "date": "<date or null>"
-    }
-  ],
-  "experiences": [
-    {
-      "title": "<job/internship title>",
-      "company": "<company name>",
-      "duration": "<e.g. Jun 2024 - Aug 2024>",
-      "description": "<key responsibilities and achievements>"
-    }
-  ],
-  "achievements": ["<achievement 1>", "<achievement 2>"],
-  "education": {
-    "degree": "<from profile>",
-    "school": "<from profile>",
-    "year": "<from profile or null>"
+  if (portfolio) {
+    const [projRes, skillRes, certRes, achRes] = await Promise.all([
+      supabase.from('projects').select('*').eq('portfolio_id', portfolio.id),
+      supabase.from('skills').select('*').eq('portfolio_id', portfolio.id),
+      supabase.from('certifications').select('*').eq('portfolio_id', portfolio.id),
+      supabase.from('achievements').select('*').eq('portfolio_id', portfolio.id),
+    ]);
+    projects = projRes.data || [];
+    skills = skillRes.data || [];
+    certifications = certRes.data || [];
+    achievements = achRes.data || [];
   }
-}
-`;
+
+  // 4. Assessment evidence — graded tests first, practice only as a fallback
+  const assessments = {};
+  for (const type of ASSESSMENT_TYPES) {
+    assessments[type] = await assessmentRepo.getLatestGradedByType(user_id, type);
+  }
+
+  // 5. Human evaluation
+  let humanEval = null;
+  if (portfolio) {
+    const { data: evalData } = await supabase
+      .from('human_evaluations')
+      .select('*, users:evaluator_id(full_name)')
+      .eq('portfolio_id', portfolio.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    humanEval = evalData?.[0] || null;
+  }
+
+  // ── Evidence for the AI, described rather than scored ──
+  const evidenceLines = ASSESSMENT_TYPES
+    .map((type) => {
+      const r = assessments[type];
+      if (!r) return null;
+
+      const band = bandFor(r.score);
+      const m = r.metadata || {};
+      const source = r.is_graded
+        ? 'set and timed by their professor'
+        : 'self-directed practice';
+
+      const detail = [];
+      if (type === 'typing' && m.wpm) detail.push(`sustained around ${m.wpm} words per minute`);
+      if (m.correctness) detail.push(`solution judged ${m.correctness}`);
+      if (m.bugs_fixed) detail.push(`fixed ${m.bugs_fixed} of the planted defects`);
+      if (m.logical_flow) detail.push(`logical flow judged ${m.logical_flow}`);
+      if (m.clarity) detail.push(`clarity judged ${m.clarity}`);
+      if (m.strengths) detail.push(`noted strength: ${m.strengths}`);
+
+      return `- ${TYPE_LABELS[type]}: ${band} level, from an assessment ${source}.${detail.length ? ' ' + detail.join('; ') + '.' : ''}`;
+    })
+    .filter(Boolean);
+
+  const gradedCount = ASSESSMENT_TYPES.filter((t) => assessments[t]?.is_graded).length;
+
+  const prompt = `You are writing the narrative sections of a CV for a Computer Science student.
+
+STUDENT
+Name: ${profile.users?.full_name}
+Course: ${profile.course || 'BS Computer Science'}
+Year: ${profile.year_level || 'Not specified'}
+School: ${profile.school || 'Tomas Claudio Colleges'}
+Bio: ${profile.bio || 'None provided'}
+
+SELF-REPORTED SKILLS
+${skills.map((s) => `- ${s.skill_name} (${s.category || 'general'})`).join('\n') || '- None listed'}
+
+PROJECTS
+${projects.map((p) => `- ${p.title}: ${p.description || 'no description'} [${p.tech_stack || 'stack not stated'}]`).join('\n') || '- None listed'}
+
+CERTIFICATIONS
+${certifications.map((c) => `- ${c.title} (${c.issuer || 'issuer not stated'})`).join('\n') || '- None listed'}
+
+ACHIEVEMENTS
+${achievements.map((a) => `- ${a.title}${a.category ? ` (${a.category})` : ''}`).join('\n') || '- None listed'}
+
+ASSESSED EVIDENCE
+${evidenceLines.join('\n') || '- No assessments completed yet'}
+
+${humanEval ? `FACULTY REVIEW
+Career readiness: ${humanEval.career_readiness}
+Comments: ${humanEval.comments || 'None'}
+Recommendations: ${humanEval.recommendations || 'None'}` : 'FACULTY REVIEW\nNot yet reviewed by faculty.'}
+
+WRITING RULES — these matter more than anything else:
+
+1. NEVER write a number that came from an assessment. No scores, no marks, no
+   percentages, no "out of 100", no letter grades, no rankings. If the evidence
+   says "solid level", write about what that person can do — do not translate it
+   back into a figure. Typing words-per-minute is the single exception, and only
+   if it is genuinely impressive.
+
+2. Write in flowing prose paragraphs, not bullet points and not lists of
+   attributes. This should read like something a careers adviser wrote about a
+   person, not a scorecard.
+
+3. Be specific and grounded. "Writes correct SQL against unfamiliar schemas
+   under time pressure" is useful. "Excellent problem-solving skills" is not.
+
+4. Do not invent anything. If there is no evidence for a claim, leave it out.
+   A short honest CV is worth more than a padded one.
+
+5. Where something is weak, frame it as a direction of growth, never as a
+   failing, and never quantify it.
+
+6. Third person, no name repetition after the first sentence of the summary.
+
+Respond with JSON only, no markdown:
+{
+  "professional_summary": "3-5 sentences. Who this person is as a developer, what they are oriented toward, and what stage they are at. Written for a hiring manager skimming for 10 seconds.",
+  "technical_narrative": "2-4 sentences of prose describing demonstrated technical ability — what they have actually been observed doing, drawn from the assessed evidence and projects.",
+  "soft_skills_narrative": "2-3 sentences of prose on communication, working style, and how they handle being observed or timed. Draw from the communication assessment and any faculty comments.",
+  "verified_competencies": ["4-6 short phrases naming what has been demonstrated under supervision, e.g. 'Debugging unfamiliar code under time pressure'. No numbers."],
+  "growth_areas": ["2-3 short phrases naming honest next steps, framed forward. No numbers."],
+  "suggested_roles": ["2-4 job titles this person could realistically apply for now"]
+}`;
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: { responseMimeType: 'application/json' }
+    model: 'gemini-3.6-flash',
+    generationConfig: { responseMimeType: 'application/json' },
   });
 
   const geminiResult = await model.generateContent(prompt);
-  const cleanJson = geminiResult.response.text().replace(/```json|```/g, '').trim();
-  const result = JSON.parse(cleanJson);
+  const raw = geminiResult.response.text().replace(/```json|```/g, '').trim();
+  const aiContent = JSON.parse(raw);
 
-  const { data, error } = await supabase
-    .from('generated_cvs')
-    .insert([{
-      user_id,
-      cv_data: result,
-    }])
+  // A last line of defence. The model is told not to print scores, but a CV
+  // that leaks "SQL: 76" to an employer is worse than one that reads slightly
+  // oddly, so anything score-shaped is stripped before it is stored.
+  const stripScores = (text) =>
+    typeof text === 'string'
+      ? text
+        .replace(/\b\d{1,3}\s*\/\s*100\b/g, 'a strong level')
+        .replace(/\bscored?\s+\d{1,3}\b/gi, 'performed well')
+        .replace(/\b\d{1,3}\s*(?:%|percent)\b/g, 'a high proportion')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+      : text;
+
+  const cv_content = {
+    header: {
+      full_name: profile.users?.full_name,
+      email: profile.users?.email,
+      course: profile.course,
+      year_level: profile.year_level,
+      school: profile.school,
+      github_url: profile.github_url,
+      linkedin_url: profile.linkedin_url,
+    },
+    professional_summary: stripScores(aiContent.professional_summary),
+    technical_narrative: stripScores(aiContent.technical_narrative),
+    soft_skills_narrative: stripScores(aiContent.soft_skills_narrative),
+    verified_competencies: (aiContent.verified_competencies || []).map(stripScores),
+    growth_areas: (aiContent.growth_areas || []).map(stripScores),
+    suggested_roles: aiContent.suggested_roles || [],
+
+    // Skills the student listed themselves — kept separate from the assessed
+    // narrative above, because a self-rating and a supervised result are not
+    // the same kind of claim and shouldn't be presented as if they were.
+    self_reported_skills: skills.map((s) => ({
+      name: s.skill_name,
+      category: s.category,
+    })),
+
+    projects: projects.map((p) => ({
+      title: p.title,
+      description: p.description,
+      tech_stack: p.tech_stack,
+      github_url: p.github_url,
+      live_url: p.live_url,
+    })),
+    certifications: certifications.map((c) => ({
+      title: c.title,
+      issuer: c.issuer,
+      date_earned: c.date_earned,
+    })),
+    achievements: achievements.map((a) => ({
+      title: a.title,
+      category: a.category,
+      date_achieved: a.date_achieved,
+    })),
+
+    // Kept for the professor's and the student's own view — deliberately not
+    // rendered on the employer-facing CV.
+    internal_evidence: {
+      graded_assessments: gradedCount,
+      faculty_reviewed: !!humanEval,
+      career_readiness: humanEval?.career_readiness || null,
+      reviewed_by: humanEval?.users?.full_name || null,
+    },
+  };
+
+  // Save
+  const { data: saved, error } = await supabase
+    .from('cvs')
+    .insert([{ student_id: profile.id, cv_content, generated_at: new Date().toISOString() }])
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (error) throw { status: 500, message: error.message };
+  return saved;
 };
 
 const getLatestCV = async (user_id) => {
-  const { data, error } = await supabase
-    .from('generated_cvs')
-    .select('*')
+  const { data: profile } = await supabase
+    .from('student_profiles')
+    .select('id')
     .eq('user_id', user_id)
-    .order('created_at', { ascending: false })
-    .limit(1)
     .single();
 
-  if (error) throw { status: 404, message: 'No generated CV found for this user.' };
-  return data;
+  if (!profile) throw { status: 404, message: 'Student profile not found.' };
+
+  const { data } = await supabase
+    .from('cvs')
+    .select('*')
+    .eq('student_id', profile.id)
+    .order('generated_at', { ascending: false })
+    .limit(1);
+
+  return data?.[0] || null;
 };
 
 const getCVHistory = async (user_id) => {
-  const { data, error } = await supabase
-    .from('generated_cvs')
-    .select('id, created_at, cv_data->personal_info')
+  const { data: profile } = await supabase
+    .from('student_profiles')
+    .select('id')
     .eq('user_id', user_id)
-    .order('created_at', { ascending: false });
+    .single();
 
-  if (error) throw error;
-  return data;
+  if (!profile) throw { status: 404, message: 'Student profile not found.' };
+
+  const { data } = await supabase
+    .from('cvs')
+    .select('*')
+    .eq('student_id', profile.id)
+    .order('generated_at', { ascending: false });
+
+  return data || [];
 };
 
 module.exports = { generateCV, getLatestCV, getCVHistory };

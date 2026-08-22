@@ -1,9 +1,12 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const assessmentRepo = require('../repositories/assessment.repo');
-
+const testRepo = require('../repositories/test.repo');
+const { assertNotOverdue } = require('./test.service');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ─── PROMPTS ──────────────────────────────────────────────────────────────────
+// Used for free practice only. When a professor assigns a communication test,
+// their own prompt is sent from the page instead.
 
 const COMMUNICATION_PROMPTS = {
   easy: [
@@ -68,13 +71,34 @@ const submitCommunicationResult = async (
   user_id,
   {
     difficulty = 'easy', prompt_id, prompt_title, prompt_text, response_text, time_taken_seconds,
-    violation_count = 0, camera_violation_count = 0, session_id = null
+    violation_count = 0, camera_violation_count = 0, session_id = null,
+    test_id = null, rubric = [],
+    unproctored = false, unproctored_reason = null
   }
 ) => {
   if (!response_text || response_text.trim().length < 10)
     throw { status: 400, message: 'response_text is required and must be meaningful.' };
 
-  const criteria = COMMUNICATION_PROMPTS[difficulty]?.find((p) => p.id === prompt_id)?.criteria || 'clarity, professionalism, completeness';
+  // A student may only submit against a test that was actually assigned to
+  // them, and only once. Without this, anyone could post a test_id and attach
+  // a result to a test they were never given.
+  if (test_id) {
+    const assignment = await testRepo.findAssignment(test_id, user_id);
+    if (!assignment) {
+      throw { status: 403, message: 'This test was not assigned to you.' };
+    }
+    if (assignment.status === 'submitted') {
+      throw { status: 400, message: 'You have already submitted this test.' };
+    }
+    assertNotOverdue(assignment);
+  }
+
+  // A professor's own rubric wins over the built-in criteria — they wrote it
+  // for this specific piece of work.
+  const criteria = (Array.isArray(rubric) && rubric.length)
+    ? rubric.join(', ')
+    : (COMMUNICATION_PROMPTS[difficulty]?.find((p) => p.id === prompt_id)?.criteria
+      || 'clarity, professionalism, completeness');
 
   const prompt = `You are evaluating a student's written communication skill for a portfolio assessment platform.
 
@@ -99,7 +123,7 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
 }`;
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });
 
@@ -119,6 +143,7 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
     type: 'communication',
     score: finalScore,
     session_id,
+    test_id,
     metadata: {
       difficulty,
       prompt_id,
@@ -137,8 +162,17 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
       strengths: aiResult.strengths,
       improvements: aiResult.improvements,
       overall_feedback: aiResult.overall_feedback,
+      rubric,
+      unproctored,
+      unproctored_reason,
     },
   });
+
+  // Closed only after the result is saved, so a failed submission doesn't lock
+  // the student out of retrying.
+  if (test_id) {
+    await testRepo.updateAssignmentStatus(test_id, user_id, 'submitted');
+  }
 
   return {
     ...result,

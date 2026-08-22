@@ -3,7 +3,7 @@ const supabase = require('../config/db');
 const getAllUsers = async () => {
   const { data, error } = await supabase
     .from('users')
-    .select('id, full_name, email, role, is_active, created_at')
+    .select('id, full_name, email, role, is_active, is_approved, created_at')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data;
@@ -15,6 +15,17 @@ const updateUserRole = async (id, role) => {
     .update({ role })
     .eq('id', id)
     .select('id, full_name, email, role')
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const approveUser = async (id) => {
+  const { data, error } = await supabase
+    .from('users')
+    .update({ is_approved: true })
+    .eq('id', id)
+    .select()
     .single();
   if (error) throw error;
   return data;
@@ -140,4 +151,4 @@ const getAnalytics = async () => {
   };
 };
 
-module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics };
+module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics, approveUser };

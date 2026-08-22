@@ -1,95 +1,91 @@
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-const userRepo = require('../repositories/user.repo');
 const messagingRepo = require('../repositories/messaging.repo');
-const messagingService = require('../services/messaging.service');
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://pro-folio-lake.vercel.app'
-];
+// This file was at some point overwritten with the contents of sockets/socket.js,
+// which is why every messaging endpoint was throwing "is not a function".
+// Socket setup lives in src/sockets/socket.js — this is the REST side only.
 
-function initSocket(httpServer) {
-  const io = new Server(httpServer, {
-    cors: {
-      origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
-      credentials: true,
-    },
-  });
+// A conversation is always one student and one professor. Working out which is
+// which from the two users' roles means the caller doesn't have to care about
+// argument order, and a student can't accidentally be stored as the professor.
+const startConversation = async (user, other_user_id) => {
+  if (!other_user_id) {
+    throw { status: 400, message: 'other_user_id is required.' };
+  }
+  if (other_user_id === user.id) {
+    throw { status: 400, message: 'You cannot start a conversation with yourself.' };
+  }
 
-  // Authenticate every socket connection using the same JWT used by the
-  // REST API (sent by the frontend as `auth: { token }` in getSocket()).
-  io.use(async (socket, next) => {
-    try {
-      const token = socket.handshake.auth?.token;
-      if (!token) return next(new Error('No token provided'));
+  // messaging.repo has no user lookup, so resolve the pairing from the caller's
+  // own role instead. A student always opens a chat with a professor, and the
+  // other way round.
+  let student_id;
+  let professor_id;
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await userRepo.findById(decoded.id);
+  if (user.role === 'student') {
+    student_id = user.id;
+    professor_id = other_user_id;
+  } else if (user.role === 'evaluator') {
+    student_id = other_user_id;
+    professor_id = user.id;
+  } else {
+    throw { status: 403, message: 'Only students and professors can start conversations.' };
+  }
 
-      if (!user || !user.is_active) {
-        return next(new Error('Unauthorized'));
-      }
+  return messagingRepo.findOrCreateConversation(student_id, professor_id);
+};
 
-      socket.user = user;
-      next();
-    } catch (err) {
-      next(new Error('Invalid or expired token'));
-    }
-  });
+const listConversations = async (user) => {
+  if (user.role !== 'student' && user.role !== 'evaluator') {
+    throw { status: 403, message: 'Only students and professors have conversations.' };
+  }
+  return messagingRepo.getConversationsForUser(user.id, user.role);
+};
 
-  io.on('connection', (socket) => {
-    console.log('🔌 Client connected:', socket.id, '| user:', socket.user.id);
+// Both readers of a conversation are checked here rather than in the
+// controller, so the socket layer gets the same protection for free.
+const assertParticipant = (conversation, user) => {
+  if (!conversation) {
+    throw { status: 404, message: 'Conversation not found.' };
+  }
+  const isParticipant =
+    conversation.student_id === user.id || conversation.professor_id === user.id;
 
-    // Join a conversation room, after verifying the user actually belongs
-    // to it (either as the student or the professor/evaluator).
-    socket.on('join_conversation', async (conversationId, callback) => {
-      try {
-        const conversation = await messagingRepo.getConversationById(conversationId);
-        if (!conversation) {
-          return callback?.({ success: false, message: 'Conversation not found' });
-        }
+  if (!isParticipant) {
+    throw { status: 403, message: 'This conversation is not yours.' };
+  }
+};
 
-        await messagingService.assertParticipant(conversation, socket.user);
+const getConversationMessages = async (conversation_id, user) => {
+  const conversation = await messagingRepo.getConversationById(conversation_id);
+  assertParticipant(conversation, user);
 
-        socket.join(`conversation:${conversationId}`);
-        callback?.({ success: true });
-      } catch (err) {
-        console.error('join_conversation error:', err.message);
-        callback?.({ success: false, message: err.message || 'Failed to join conversation' });
-      }
-    });
+  const messages = await messagingRepo.getMessages(conversation_id);
 
-    socket.on('leave_conversation', (conversationId) => {
-      socket.leave(`conversation:${conversationId}`);
-    });
+  // Opening a conversation marks the other side's messages as read. Failing
+  // here shouldn't stop the messages being delivered.
+  try {
+    await messagingRepo.markMessagesRead(conversation_id, user.id);
+  } catch {
+    // read receipts are not worth failing the request over
+  }
 
-    // Save the message to the DB, then broadcast it to everyone in the room
-    // (including the sender, so all open tabs stay in sync).
-    socket.on('send_message', async ({ conversation_id, content }, callback) => {
-      try {
-        const message = await messagingService.sendMessage(conversation_id, socket.user, content);
+  return messages;
+};
 
-        io.to(`conversation:${conversation_id}`).emit('new_message', message);
-        callback?.({ success: true, data: message });
-      } catch (err) {
-        console.error('send_message error:', err.message);
-        callback?.({ success: false, message: err.message || 'Failed to send message' });
-      }
-    });
+const sendMessage = async (conversation_id, user, content) => {
+  if (!content || !content.trim()) {
+    throw { status: 400, message: 'Message content is required.' };
+  }
 
-    socket.on('disconnect', () => {
-      console.log('❌ Client disconnected:', socket.id);
-    });
-  });
+  const conversation = await messagingRepo.getConversationById(conversation_id);
+  assertParticipant(conversation, user);
 
-  return io;
-}
+  return messagingRepo.createMessage(conversation_id, user.id, content.trim());
+};
 
-module.exports = initSocket;
+module.exports = {
+  startConversation,
+  listConversations,
+  getConversationMessages,
+  sendMessage,
+};

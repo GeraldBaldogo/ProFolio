@@ -124,6 +124,17 @@ const updateAssignmentStatus = async (test_id, student_id, status) => {
   return data;
 };
 
+const findResultsByTest = async (test_id) => {
+  const { data, error } = await supabase
+    .from('assessment_results')
+    .select('*')
+    .eq('test_id', test_id)
+    .order('created_at', { ascending: false });
+ 
+  if (error) throw error;
+  return data || [];
+};
+
 module.exports = {
   createTest,
   findById,
@@ -134,5 +145,6 @@ module.exports = {
   findAssignmentsByTest,
   findAssignmentsForStudent,
   findAssignment,
+  findResultsByTest,
   updateAssignmentStatus,
 };

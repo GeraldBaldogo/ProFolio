@@ -18,6 +18,8 @@ router.get('/:id/assignments', authenticate, requireRole('evaluator'), testContr
 router.get('/assigned/mine', authenticate, requireRole('student'), testController.getMyAssignedTests);
 router.post('/:id/start', authenticate, requireRole('student'), testController.startAssignment);
 
+router.get('/students', authenticate, requireRole('evaluator'), testController.listStudents);
+
 // Shared: view a single test (ownership/assignment checked in service layer)
 router.get('/:id', authenticate, testController.getById);
 

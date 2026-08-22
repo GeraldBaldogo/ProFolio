@@ -20,10 +20,12 @@ const findById = async (id) => {
   return data;
 };
 
-const create = async ({ full_name, email, password_hash, role }) => {
+// is_approved has to be listed explicitly — anything not named here is
+// silently dropped, and the column's own default takes over instead.
+const create = async ({ full_name, email, password_hash, role, is_approved = true }) => {
   const { data, error } = await supabase
     .from('users')
-    .insert([{ full_name, email, password_hash, role }])
+    .insert([{ full_name, email, password_hash, role, is_approved }])
     .select()
     .single();
   if (error) throw error;

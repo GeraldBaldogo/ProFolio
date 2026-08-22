@@ -36,4 +36,32 @@ const getLatestByType = async (user_id, type) => {
   return data || null;
 };
 
-module.exports = { saveResult, getResultsByUser, getLatestByType };
+const getLatestGradedByType = async (user_id, type) => {
+  const { data: graded, error: gradedErr } = await supabase
+    .from('assessment_results')
+    .select('*')
+    .eq('user_id', user_id)
+    .eq('type', type)
+    .not('test_id', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1);
+ 
+  if (gradedErr) throw { status: 500, message: gradedErr.message };
+  if (graded?.length) return { ...graded[0], is_graded: true };
+ 
+  const { data: practice, error: practiceErr } = await supabase
+    .from('assessment_results')
+    .select('*')
+    .eq('user_id', user_id)
+    .eq('type', type)
+    .is('test_id', null)
+    .order('score', { ascending: false })
+    .limit(1);
+ 
+  if (practiceErr) throw { status: 500, message: practiceErr.message };
+  if (practice?.length) return { ...practice[0], is_graded: false };
+ 
+  return null;
+};
+
+module.exports = { saveResult, getResultsByUser, getLatestByType, getLatestGradedByType };
