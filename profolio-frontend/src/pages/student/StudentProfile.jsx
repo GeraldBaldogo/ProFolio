@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faRightFromBracket, faSpinner, faCircleCheck, faTriangleExclamation,
-  faPen, faSave, faGraduationCap, faBuilding, faLink, faTrophy,
+  faPen, faSave, faGraduationCap, faBuilding, faLink, faTrophy, faClipboardList, faChartLine, 
   faEnvelope, faBriefcase, faQuoteLeft, faComments, faFingerprint, faLightbulb, faFileAlt,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
@@ -17,10 +17,12 @@ const navItems = [
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
+  { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
   { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]

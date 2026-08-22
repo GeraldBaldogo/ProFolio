@@ -5,7 +5,7 @@ import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faPlus, faTrash, faPen, faCheck, faChevronRight, faChevronDown,
   faCode, faCertificate, faTrophy, faChartLine, faBriefcase,
-  faRightFromBracket, faSpinner, faArrowRight, faBell,
+  faRightFromBracket, faSpinner, faArrowRight, faBell, faClipboardList, 
   faCircleCheck, faTriangleExclamation, faXmark, faSave, faComments,
   faFileAlt, faFingerprint, faLightbulb,
 } from '@fortawesome/free-solid-svg-icons'
@@ -18,10 +18,12 @@ const navItems = [
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
   { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
+  { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
   { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
   { label: 'Messages', icon: faComments, path: '/student/messages' },
   { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]

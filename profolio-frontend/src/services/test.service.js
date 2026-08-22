@@ -46,7 +46,7 @@ export const deleteTest = async (id) => {
 export const assignTest = async (id, student_ids, due_date) => {
   const res = await fetch(`${API}/api/tests/${id}/assign`, {
     method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ student_ids, due_date })
+    body: JSON.stringify({ studentUserIds: student_ids, due_date })
   })
   const data = await res.json()
   if (!data.success) throw new Error(data.message)

@@ -19,8 +19,8 @@ import SQLAssessment from './pages/student/assessment/SQLAssessment'
 import BugFixAssessment from './pages/student/assessment/BugFixAssessment'
 import CVPage from './pages/student/CVPage'
 import OriginalityCheck from './pages/student/OriginalityCheck'
-import CreateTest from './pages/evaluator/CreateTest'
 import StudentAssignedTests from './pages/student/StudentAssignedTests'
+import StudentResults from './pages/student/StudentResults'
 
 // Assessment pages
 import AssessmentDashboard from './pages/student/assessment/AssessmentDashboard'
@@ -32,6 +32,8 @@ import CommunicationAssessment from './pages/student/assessment/CommunicationAss
 // Messaging pages (student <-> professor chat)
 import StudentMessagesPage from './pages/student/StudentMessagesPage'
 import EvaluatorMessagesPage from './pages/evaluator/EvaluatorMessagesPage'
+import ProfessorTests from './pages/evaluator/ProfessorTests'
+import TestSubmissions from './pages/evaluator/TestSubmission'
 
 function App() {
   return (
@@ -72,11 +74,11 @@ function App() {
       <Route path="/student/messages" element={
         <ProtectedRoutes role="student"><StudentMessagesPage /></ProtectedRoutes>
       } />
-      <Route path="/evaluator/create-test" element={
-        <ProtectedRoutes role="evaluator"><CreateTest /></ProtectedRoutes>
-      } />
       <Route path="/student/assigned-tests" element={
         <ProtectedRoutes role="student"><StudentAssignedTests /></ProtectedRoutes>
+      } />
+      <Route path="/student/results" element={
+        <ProtectedRoutes role="student"><StudentResults /></ProtectedRoutes>
       } />
 
       {/* Assessment routes */}
@@ -99,6 +101,9 @@ function App() {
       <Route path="/evaluator/dashboard" element={
         <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
       } />
+      <Route path="/evaluator/tests" element={
+        <ProtectedRoutes role="evaluator"><ProfessorTests /></ProtectedRoutes>
+      } />
       <Route path="/evaluator/assigned" element={
         <ProtectedRoutes role="evaluator"><EvaluatorAssigned /></ProtectedRoutes>
       } />
@@ -107,6 +112,9 @@ function App() {
       } />
       <Route path="/evaluator/messages" element={
         <ProtectedRoutes role="evaluator"><EvaluatorMessagesPage /></ProtectedRoutes>
+      } />
+      <Route path="/evaluator/tests/:id/submissions" element={
+        <ProtectedRoutes role="evaluator"><TestSubmissions /></ProtectedRoutes>
       } />
       <Route path="/admin/dashboard" element={
         <ProtectedRoutes role="admin"><AdminDashboard /></ProtectedRoutes>

@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faHouse, faClipboardCheck, faClockRotateLeft, faBars, faTimes,
   faRightFromBracket, faSpinner, faArrowRight, faCircleCheck,
-  faUserTie, faStar, faRobot, faChartLine, faFolder,
+  faUserTie, faStar, faRobot, faChartLine, faFolder, faFlaskVial, 
   faTriangleExclamation, faXmark, faSave, faUser, faBell,
   faEye,
 } from '@fortawesome/free-solid-svg-icons'
@@ -16,6 +16,7 @@ const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/evaluator/dashboard' },
   { label: 'Assigned Portfolios', icon: faClipboardCheck, path: '/evaluator/assigned' },
   { label: 'History', icon: faClockRotateLeft, path: '/evaluator/history' },
+  { label: 'My Tests', icon: faFlaskVial, path: '/evaluator/tests' },
 ]
 
 const statusConfig = {
