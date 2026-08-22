@@ -79,10 +79,27 @@ const generateCV = async (user_id) => {
     achievements = achRes.data || [];
   }
 
-  // 4. Assessment evidence — graded tests first, practice only as a fallback
+  // 4. Assessment evidence — professor-set tests only.
+  //
+  // Practice is rehearsal: unlimited attempts, no deadline, nobody watching.
+  // Letting it into the CV would mean a student could claim competence in five
+  // areas after five quiet retries, which is exactly what this system exists to
+  // stop being possible.
   const assessments = {};
   for (const type of ASSESSMENT_TYPES) {
-    assessments[type] = await assessmentRepo.getLatestGradedByType(user_id, type);
+    const result = await assessmentRepo.getLatestGradedByType(user_id, type);
+    assessments[type] = result?.is_graded ? result : null;
+  }
+
+  const gradedCount = ASSESSMENT_TYPES.filter((t) => assessments[t]).length;
+
+  // Nothing to write a CV from. Refusing here is kinder than generating a
+  // document full of invented competence and letting a student send it out.
+  if (gradedCount === 0) {
+    throw {
+      status: 400,
+      message: 'Your CV is built from tests your professor set. Complete at least one assigned test first — practice attempts don\u2019t count.',
+    };
   }
 
   // 5. Human evaluation
@@ -105,9 +122,7 @@ const generateCV = async (user_id) => {
 
       const band = bandFor(r.score);
       const m = r.metadata || {};
-      const source = r.is_graded
-        ? 'set and timed by their professor'
-        : 'self-directed practice';
+      const source = 'set and timed by their professor';
 
       const detail = [];
       if (type === 'typing' && m.wpm) detail.push(`sustained around ${m.wpm} words per minute`);
@@ -120,8 +135,6 @@ const generateCV = async (user_id) => {
       return `- ${TYPE_LABELS[type]}: ${band} level, from an assessment ${source}.${detail.length ? ' ' + detail.join('; ') + '.' : ''}`;
     })
     .filter(Boolean);
-
-  const gradedCount = ASSESSMENT_TYPES.filter((t) => assessments[t]?.is_graded).length;
 
   const prompt = `You are writing the narrative sections of a CV for a Computer Science student.
 
@@ -144,8 +157,11 @@ ${certifications.map((c) => `- ${c.title} (${c.issuer || 'issuer not stated'})`)
 ACHIEVEMENTS
 ${achievements.map((a) => `- ${a.title}${a.category ? ` (${a.category})` : ''}`).join('\n') || '- None listed'}
 
-ASSESSED EVIDENCE
-${evidenceLines.join('\n') || '- No assessments completed yet'}
+ASSESSED EVIDENCE — all of this was set and timed by a professor
+${evidenceLines.join('\n')}
+
+The student may also have practised on their own. That is deliberately not
+included here and must not be written about — only supervised work counts.
 
 ${humanEval ? `FACULTY REVIEW
 Career readiness: ${humanEval.career_readiness}

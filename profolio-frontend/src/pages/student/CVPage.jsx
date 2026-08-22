@@ -7,7 +7,7 @@ import {
   faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase,
   faGraduationCap, faCertificate, faCode, faComments, faClipboardList,
   faFingerprint, faLightbulb, faChartLine, faTriangleExclamation,
-  faSeedling, faShieldHalved,
+  faSeedling, faShieldHalved, faArrowRight,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
@@ -250,9 +250,26 @@ export default function CVPage() {
               <h2 className="text-white font-bold text-xl mb-2">No CV yet</h2>
               <p className="text-gray-500 text-sm mb-6 leading-relaxed">
                 Your CV is written from your portfolio and from the tests your professor
-                set — not from a form you fill in. Fill your portfolio and take a few
-                assessments first, then generate.
+                set for you. Fill in your portfolio, then generate.
               </p>
+
+              {/* Said up front, so a student learns the rule from the page rather
+                  than from an error after pressing the button. */}
+              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 mb-6 text-left flex items-start gap-3">
+                <FontAwesomeIcon icon={faShieldHalved} className="text-blue-400 text-sm mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-gray-300 text-xs font-semibold mb-1">You need at least one assigned test</p>
+                  <p className="text-gray-500 text-xs leading-relaxed">
+                    Practice attempts are for rehearsing — they don&apos;t appear on your CV.
+                    Only work your professor set and timed counts as evidence.
+                  </p>
+                  <Link to="/student/assigned-tests"
+                    className="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 text-xs font-semibold mt-2 transition-colors">
+                    See your assigned tests <FontAwesomeIcon icon={faArrowRight} className="text-[10px]" />
+                  </Link>
+                </div>
+              </div>
+
               <button
                 onClick={handleGenerate}
                 disabled={generating}
@@ -287,7 +304,7 @@ export default function CVPage() {
                       {readinessLabel[evidence.career_readiness] || evidence.career_readiness}
                     </span>
                   )}
-                  <span className="text-gray-600 text-xs ml-auto">Scores stay in the app — they aren&apos;t printed.</span>
+                  <span className="text-gray-600 text-xs ml-auto">Professor-set work only · scores aren&apos;t printed</span>
                 </div>
               )}
 
