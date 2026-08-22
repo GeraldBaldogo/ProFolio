@@ -384,7 +384,7 @@ const ProfessorTests = () => {
     try {
       await api.post(`/tests/${assignTo.id}/assign`, {
         studentUserIds: picked,
-        due_date: dueDate || null,
+        due_date: dueDate ? new Date(dueDate).toISOString() : null,
       })
       showToast(`Assigned to ${picked.length} ${picked.length === 1 ? 'student' : 'students'}.`)
       setAssignTo(null)
