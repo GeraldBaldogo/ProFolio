@@ -13,6 +13,7 @@ router.get('/mine', authenticate, requireRole('evaluator'), testController.listM
 router.get('/students', authenticate, requireRole('evaluator'), testController.listStudents);
 router.get('/my-students', authenticate, requireRole('evaluator'), testController.getMyStudents);
 router.get('/assigned/mine', authenticate, requireRole('student'), testController.getMyAssignedTests);
+router.get('/my-professors', authenticate, requireRole('student'), testController.getMyProfessors);
 
 // ── Professor: create and manage tests ──
 router.post('/', authenticate, requireRole('evaluator'), testController.createTest);

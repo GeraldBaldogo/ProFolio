@@ -7,11 +7,12 @@ const authHeader = () => ({
 
 export const startConversation = async (other_user_id) => {
   const res = await fetch(`${API}/api/messages/conversations`, {
-    method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ other_user_id })
+    method: 'POST',
+    headers: authHeader(),
+    body: JSON.stringify({ other_user_id }),
   })
   const data = await res.json()
-  if (!data.success) throw new Error(data.message)
+  if (!data.success) throw new Error(data.message || 'Couldn\u2019t start the conversation.')
   return data.data
 }
 

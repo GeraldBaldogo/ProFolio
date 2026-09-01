@@ -130,7 +130,7 @@ const findResultsByTest = async (test_id) => {
     .select('*')
     .eq('test_id', test_id)
     .order('created_at', { ascending: false });
- 
+
   if (error) throw error;
   return data || [];
 };
@@ -140,11 +140,11 @@ const findAssignmentsByProfessor = async (professor_id) => {
     .from('tests')
     .select('id')
     .eq('professor_id', professor_id);
- 
+
   if (testErr) throw testErr;
   const testIds = (tests || []).map(t => t.id);
   if (!testIds.length) return [];
- 
+
   const { data, error } = await supabase
     .from('test_assignments')
     .select(`
@@ -154,20 +154,49 @@ const findAssignmentsByProfessor = async (professor_id) => {
     `)
     .in('test_id', testIds)
     .order('assigned_at', { ascending: false });
- 
+
   if (error) throw error;
   return data || [];
 };
- 
+
+const findProfessorsForStudent = async (student_id) => {
+  const { data, error } = await supabase
+    .from('test_assignments')
+    .select(`
+      test_id,
+      tests (
+        id,
+        professor_id,
+        users:professor_id (id, full_name, email)
+      )
+    `)
+    .eq('student_id', student_id);
+
+  if (error) throw error;
+
+  const seen = new Map();
+  for (const row of data || []) {
+    const prof = row.tests?.users;
+    if (!prof?.id || seen.has(prof.id)) continue;
+    seen.set(prof.id, {
+      id: prof.id,
+      full_name: prof.full_name,
+      email: prof.email,
+    });
+  }
+
+  return [...seen.values()];
+};
+
 const findResultsByTestIds = async (testIds) => {
   if (!testIds?.length) return [];
- 
+
   const { data, error } = await supabase
     .from('assessment_results')
     .select('*')
     .in('test_id', testIds)
     .order('created_at', { ascending: false });
- 
+
   if (error) throw error;
   return data || [];
 };
@@ -185,5 +214,6 @@ module.exports = {
   findResultsByTest,
   findAssignmentsByProfessor,
   findResultsByTestIds,
+  findProfessorsForStudent,
   updateAssignmentStatus,
 };

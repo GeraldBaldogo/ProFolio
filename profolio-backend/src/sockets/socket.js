@@ -46,6 +46,8 @@ function initSocket(httpServer) {
   io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id, '| user:', socket.user.id);
 
+    socket.join(`user:${socket.user.id}`);
+
     // Join a conversation room, after verifying the user actually belongs
     // to it (either as the student or the professor/evaluator).
     socket.on('join_conversation', async (conversationId, callback) => {
@@ -103,6 +105,21 @@ function initSocket(httpServer) {
         );
 
         io.to(`conversation:${conversation_id}`).emit('new_message', message);
+        const recipientId = conversation.student_id === socket.user.id
+          ? conversation.professor_id
+          : conversation.student_id;
+ 
+        // Sent separately from new_message on purpose. A page showing the
+        // conversation already has the message; this is only for the badge and
+        // the sound, and carries just enough to render a toast.
+        io.to(`user:${recipientId}`).emit('message_notification', {
+          conversation_id,
+          message_id: message.id,
+          content: message.content,
+          sender_id: socket.user.id,
+          sender_name: socket.user.full_name || 'New message',
+          created_at: message.created_at,
+        });
         callback?.({ success: true, data: message });
       } catch (err) {
         console.error('send_message error:', err.message);

@@ -25,6 +25,7 @@ import TypingAssessment from './pages/student/assessment/TypingAssessment'
 import CodingAssessment from './pages/student/assessment/CodingAssessment'
 import FlowchartAssessment from './pages/student/assessment/FlowchartAssessment'
 import CommunicationAssessment from './pages/student/assessment/CommunicationAssessment'
+import MessageToast from './components/MessageToast'
 
 // Messaging pages (student <-> professor chat)
 import StudentMessagesPage from './pages/student/StudentMessagesPage'
@@ -35,7 +36,8 @@ import EvaluatorStudents from './pages/evaluator/EvaluatorStudents'
 
 function App() {
   return (
-    <Routes>
+    <>
+      <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -96,6 +98,7 @@ function App() {
       <Route path="/evaluator/dashboard" element={
         <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
       } />
+      
       <Route path="/evaluator/students" element={
         <ProtectedRoutes role="evaluator"><EvaluatorStudents /></ProtectedRoutes>
       } />
@@ -117,7 +120,10 @@ function App() {
       <Route path="/admin/analytics" element={
         <ProtectedRoutes role="admin"><AdminAnalytics /></ProtectedRoutes>
       } />
-    </Routes>
+      </Routes>
+
+      <MessageToast />
+    </>
   )
 }
 

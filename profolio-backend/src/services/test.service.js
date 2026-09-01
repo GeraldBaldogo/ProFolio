@@ -247,6 +247,10 @@ const getMyStudents = async (professor_id) => {
   }).sort((a, b) => a.full_name.localeCompare(b.full_name));
 };
 
+const getMyProfessors = async (student_id) => {
+  return testRepo.findProfessorsForStudent(student_id);
+};
+
 module.exports = {
   createTest,
   updateTest,
@@ -260,5 +264,6 @@ module.exports = {
   listStudents,
   assertNotOverdue,
   getMyStudents,
+  getMyProfessors,
   markAssignmentSubmitted,
 };

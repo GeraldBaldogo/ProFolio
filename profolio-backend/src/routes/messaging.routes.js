@@ -3,6 +3,8 @@ const router = express.Router();
 const c = require('../controllers/messaging.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
+// Everything below needs a signed-in user — the service works out which side
+// of a conversation you are from your own role, so req.user has to exist.
 router.use(authenticate);
 
 router.post('/conversations', c.startConversation);

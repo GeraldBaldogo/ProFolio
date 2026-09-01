@@ -1,86 +1,313 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft, faComments, faSpinner } from '@fortawesome/free-solid-svg-icons'
-import { listConversations } from '../../services/messaging.service'
+import {
+  faHouse, faFolder, faUser, faBars, faTimes, faTrophy, faChartLine,
+  faSpinner, faClipboardList, faFileAlt, faComments, faFingerprint,
+  faLightbulb, faRightFromBracket, faTriangleExclamation, faRotateRight,
+  faPlus, faDumbbell, faWandMagicSparkles, faUserTie, faArrowLeft,
+} from '@fortawesome/free-solid-svg-icons'
+import { useAuth } from '../../context/AuthContext'
+import { listConversations, startConversation } from '../../services/messaging.service'
 import ChatThread from '../../components/ChatThread'
-import { useAuth } from '../../context/AuthContext' // adjust if your hook/context is named differently
+import api from '../../services/api'
+import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+
+const navItems = [
+  { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
+  { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
+  { label: 'Practices', icon: faDumbbell, path: '/student/assessment' },
+  { label: 'My Results', icon: faChartLine, path: '/student/results' },
+  { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
+  { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
+  { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
+  { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
+  { label: 'Messages', icon: faComments, path: '/student/messages' },
+  { label: 'Profile', icon: faUser, path: '/student/profile' },
+]
 
 const StudentMessagesPage = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const location = useLocation()
+  const { user, logout } = useAuth()
 
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [conversations, setConversations] = useState([])
+  // Professors who have assigned this student work. That is the relationship
+  // messaging follows now — the old version waited for a portfolio assignment,
+  // which nothing creates any more, so the page could never fill.
+  const [professors, setProfessors] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [showPicker, setShowPicker] = useState(false)
+  const [starting, setStarting] = useState(null)
 
-  useEffect(() => {
-    listConversations()
-      .then((data) => {
-        setConversations(data)
-        if (data.length > 0) setSelectedId(data[0].id)
-      })
-      .catch((err) => console.error('Failed to load conversations:', err))
-      .finally(() => setLoading(false))
-  }, [])
+  useEffect(() => { fetchAll() }, [])
+
+  const fetchAll = async () => {
+    setLoading(true)
+    setLoadError('')
+
+    // allSettled: a student with no conversations yet is normal, and shouldn't
+    // stop the professor list from loading.
+    const [convRes, profRes] = await Promise.allSettled([
+      listConversations(),
+      api.get('/tests/my-professors'),
+    ])
+
+    if (convRes.status === 'fulfilled') {
+      const data = convRes.value || []
+      setConversations(data)
+      if (data.length > 0) setSelectedId(prev => prev ?? data[0].id)
+    }
+    if (profRes.status === 'fulfilled') {
+      setProfessors(profRes.value.data.data || [])
+    }
+
+    if (convRes.status === 'rejected' && profRes.status === 'rejected') {
+      setLoadError('Couldn\u2019t reach the server. Check your connection.')
+    }
+
+    setLoading(false)
+  }
+
+  const handleStart = async (professorId) => {
+    setStarting(professorId)
+    setLoadError('')
+    try {
+      const conversation = await startConversation(professorId)
+      setShowPicker(false)
+      // findOrCreate on the server means an existing thread comes back rather
+      // than a duplicate, so this is safe to press twice.
+      setConversations(prev =>
+        prev.some(c => c.id === conversation.id) ? prev : [conversation, ...prev]
+      )
+      setSelectedId(conversation.id)
+    } catch (err) {
+      setLoadError(err.message || 'Couldn\u2019t start that conversation.')
+    } finally {
+      setStarting(null)
+    }
+  }
+
+  const handleLogout = () => { logout(); navigate('/') }
 
   const selected = conversations.find((c) => c.id === selectedId)
-  const professorName = selected?.professor?.full_name || 'Your Professor'
+  const professorName = selected?.professor?.full_name || 'Your professor'
+
+  // Anyone already in a thread shouldn't appear in the "start a new one" list.
+  const available = useMemo(() => {
+    const existing = new Set(conversations.map(c => c.professor?.id).filter(Boolean))
+    return professors.filter(p => !existing.has(p.id))
+  }, [professors, conversations])
 
   return (
-    <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => navigate('/student/dashboard')} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
-        </button>
-        <div>
-          <h1 className="text-white font-bold text-lg flex items-center gap-2">
-            <FontAwesomeIcon icon={faComments} className="text-blue-400" /> Messages
-          </h1>
-          <p className="text-gray-500 text-xs">Chat with your assigned professor</p>
+    <div className="min-h-screen bg-[#060612] flex font-sans">
+
+      {/* Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/5">
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md" />
+            <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
+          </div>
+          <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
         </div>
+
+        <div className="px-5 py-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {user?.full_name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-gray-500 text-xs truncate">{user?.email}</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-blue-400' : ''}`} />
+                {item.label}
+                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/5">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+            <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+
+      {/* Main */}
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
+          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+            <FontAwesomeIcon icon={faBars} className="text-lg" />
+          </button>
+          <div>
+            <h1 className="text-white font-bold text-lg">Messages</h1>
+            <p className="text-gray-500 text-xs">Talk to the professors who set your work</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            {!loading && (
+              <button onClick={fetchAll} aria-label="Refresh"
+                className="w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                <FontAwesomeIcon icon={faRotateRight} className="text-sm" />
+              </button>
+            )}
+            {available.length > 0 && (
+              <button onClick={() => setShowPicker(true)}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
+                <FontAwesomeIcon icon={faPlus} className="text-xs" /> New message
+              </button>
+            )}
+          </div>
+        </header>
+
+        <main className="flex-1 px-6 py-8">
+          {loadError && (
+            <div className="max-w-2xl mx-auto mb-6 border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 flex items-center gap-3">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 flex-shrink-0" />
+              <p className="text-rose-400 text-sm">{loadError}</p>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-64 gap-3">
+              <FontAwesomeIcon icon={faSpinner} className="text-blue-400 text-2xl animate-spin" />
+              <p className="text-gray-500 text-sm">Loading...</p>
+            </div>
+
+          ) : conversations.length === 0 ? (
+            <div className="max-w-md mx-auto text-center py-16">
+              <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <FontAwesomeIcon icon={faComments} className="text-gray-600 text-xl" />
+              </div>
+
+              {/* Two different situations. The old page showed one message for
+                  both, which read as broken when it was simply empty. */}
+              {professors.length === 0 ? (
+                <>
+                  <p className="text-white font-bold text-lg mb-2">Nobody to message yet</p>
+                  <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                    You can message a professor once they have assigned you a test.
+                    Nothing has been set for you so far.
+                  </p>
+                  <Link to="/student/assigned-tests"
+                    className="inline-flex items-center gap-2 border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
+                    Check assigned tests
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-white font-bold text-lg mb-2">No conversations yet</p>
+                  <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                    You have {professors.length} professor{professors.length !== 1 ? 's' : ''} who
+                    set you work. Start a conversation whenever you need to ask something.
+                  </p>
+                  <button onClick={() => setShowPicker(true)}
+                    className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold px-5 py-3 rounded-xl transition-colors">
+                    <FontAwesomeIcon icon={faPlus} className="text-xs" /> Start a conversation
+                  </button>
+                </>
+              )}
+            </div>
+
+          ) : (
+            <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-4">
+              <div className="lg:w-64 flex-shrink-0 flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+                {conversations.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedId(c.id)}
+                    className={`text-left px-4 py-3 rounded-xl border transition-all flex-shrink-0 lg:w-full ${
+                      selectedId === c.id
+                        ? 'border-blue-500/30 bg-blue-500/10'
+                        : 'border-white/8 bg-white/[0.03] hover:border-white/20'
+                    }`}
+                  >
+                    <p className="text-white text-sm font-semibold truncate">
+                      {c.professor?.full_name || 'Professor'}
+                    </p>
+                    <p className="text-gray-500 text-xs truncate">{c.professor?.email}</p>
+                  </button>
+                ))}
+              </div>
+
+              <ChatThread
+                conversationId={selectedId}
+                currentUserId={user?.id}
+                otherUserName={professorName}
+              />
+            </div>
+          )}
+        </main>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <FontAwesomeIcon icon={faSpinner} className="text-gray-500 text-2xl animate-spin" />
-        </div>
-      ) : conversations.length === 0 ? (
-        <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-10 text-center">
-          <FontAwesomeIcon icon={faComments} className="text-gray-600 text-3xl mb-3" />
-          <p className="text-gray-400 text-sm font-medium mb-1">No messages yet</p>
-          <p className="text-gray-600 text-xs">
-            Once a professor is assigned to review your portfolio, they'll be able to message you here.
-          </p>
-        </div>
-      ) : (
-        <div className="flex gap-4">
-          {/* Conversation list */}
-          <div className="w-64 flex-shrink-0 flex flex-col gap-2">
-            {conversations.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setSelectedId(c.id)}
-                className={`text-left px-4 py-3 rounded-xl border transition-all ${
-                  selectedId === c.id
-                    ? 'border-blue-500/30 bg-blue-500/10'
-                    : 'border-white/8 bg-white/[0.03] hover:border-white/20'
-                }`}
-              >
-                <p className="text-white text-sm font-semibold truncate">
-                  {c.professor?.full_name || 'Professor'}
-                </p>
-                <p className="text-gray-500 text-xs truncate">{c.professor?.email}</p>
-              </button>
-            ))}
-          </div>
+      {/* Picker */}
+      {showPicker && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-6"
+          onClick={() => setShowPicker(false)}>
+          <div className="w-full max-w-sm bg-[#0a0a18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}>
 
-          {/* Thread */}
-          <ChatThread
-            conversationId={selectedId}
-            currentUserId={user?.id}
-            otherUserName={professorName}
-          />
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+              <div>
+                <p className="text-white font-bold text-sm">Start a conversation</p>
+                <p className="text-gray-500 text-xs mt-0.5">Professors who set you work</p>
+              </div>
+              <button onClick={() => setShowPicker(false)} aria-label="Close"
+                className="w-8 h-8 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center">
+                <FontAwesomeIcon icon={faTimes} className="text-sm" />
+              </button>
+            </div>
+
+            <div className="p-3 flex flex-col gap-1.5 max-h-72 overflow-y-auto">
+              {available.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-6">
+                  You already have a conversation with everyone.
+                </p>
+              ) : (
+                available.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleStart(p.id)}
+                    disabled={starting === p.id}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-all text-left disabled:opacity-50"
+                  >
+                    <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {p.full_name?.charAt(0)?.toUpperCase() || 'P'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white text-sm font-semibold truncate">{p.full_name}</p>
+                      <p className="text-gray-500 text-xs truncate">{p.email}</p>
+                    </div>
+                    <FontAwesomeIcon
+                      icon={starting === p.id ? faSpinner : faUserTie}
+                      className={`text-gray-600 text-xs flex-shrink-0 ${starting === p.id ? 'animate-spin' : ''}`}
+                    />
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
