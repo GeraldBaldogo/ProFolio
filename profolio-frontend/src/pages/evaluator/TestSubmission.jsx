@@ -1,12 +1,24 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft, faSpinner, faTriangleExclamation, faRotateRight,
   faCircleCheck, faClock, faHourglassHalf, faShield, faVideoSlash,
   faRobot, faChevronDown, faUsers, faChartSimple,
+  faHouse, faFlaskVial, faComments, faBars, faTimes, faRightFromBracket,
 } from '@fortawesome/free-solid-svg-icons'
+import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+
+// Must match the other evaluator pages exactly. This page had no sidebar at
+// all, so opening Results made the whole navigation vanish.
+const navItems = [
+  { label: 'Dashboard', icon: faHouse, path: '/evaluator/dashboard' },
+  { label: 'My Tests', icon: faFlaskVial, path: '/evaluator/tests' },
+  { label: 'Students', icon: faUsers, path: '/evaluator/students' },
+  { label: 'Messages', icon: faComments, path: '/evaluator/messages' },
+]
 
 const statusConfig = {
   pending: { label: 'Not started', color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/25', icon: faHourglassHalf },
@@ -49,6 +61,9 @@ const TestSubmissions = () => {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [expanded, setExpanded] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
+  const { user, logout } = useAuth()
   const mounted = useRef(true)
 
   useEffect(() => {
@@ -98,6 +113,8 @@ const TestSubmissions = () => {
     }
   }, [rows])
 
+  const handleLogout = () => { logout(); navigate('/') }
+
   const answerFor = (row) => {
     const type = row.result?.type
     const field = ANSWER_FIELD[type]
@@ -109,16 +126,111 @@ const TestSubmissions = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0d10] font-sans flex flex-col items-center justify-center gap-3">
-        <FontAwesomeIcon icon={faSpinner} className="text-amber-400 text-2xl animate-spin" />
-        <p className="text-gray-500 text-sm">Loading submissions...</p>
+      <div className="min-h-screen bg-[#060612] flex font-sans">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/5">
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md" />
+            <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
+          </div>
+          <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {user?.full_name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-amber-400 text-xs">Professor</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-amber-500/15 text-white border border-amber-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-amber-400' : ''}`} />
+                {item.label}
+                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-amber-400 rounded-full" />}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/5">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+            <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+        <div className="flex-1 lg:ml-64 flex flex-col items-center justify-center gap-3">
+          <FontAwesomeIcon icon={faSpinner} className="text-amber-400 text-2xl animate-spin" />
+          <p className="text-gray-500 text-sm">Loading submissions...</p>
+        </div>
       </div>
     )
   }
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#0a0d10] font-sans px-6 py-8 max-w-md mx-auto text-center">
+      <div className="min-h-screen bg-[#060612] flex font-sans">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/5">
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md" />
+            <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
+          </div>
+          <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {user?.full_name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-amber-400 text-xs">Professor</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-amber-500/15 text-white border border-amber-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-amber-400' : ''}`} />
+                {item.label}
+                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-amber-400 rounded-full" />}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/5">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+            <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+        <div className="flex-1 lg:ml-64 px-6 py-8 max-w-md mx-auto text-center">
         <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 text-3xl mb-4 mt-16" />
         <p className="text-white font-bold mb-1">{loadError}</p>
         <p className="text-gray-500 text-sm mb-6">This is a connection problem, not an empty class.</p>
@@ -132,16 +244,67 @@ const TestSubmissions = () => {
             Back to tests
           </Link>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0d10] font-sans px-6 py-8">
+    <div className="min-h-screen bg-[#060612] flex font-sans">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/5">
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md" />
+            <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
+          </div>
+          <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {user?.full_name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-amber-400 text-xs">Professor</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-amber-500/15 text-white border border-amber-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-amber-400' : ''}`} />
+                {item.label}
+                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-amber-400 rounded-full" />}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/5">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+            <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      <div className="flex-1 lg:ml-64 px-6 py-8">
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
+          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+            <FontAwesomeIcon icon={faBars} className="text-lg" />
+          </button>
           <button onClick={() => navigate('/evaluator/tests')}
             className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
             <FontAwesomeIcon icon={faArrowLeft} /> Back
@@ -164,7 +327,7 @@ const TestSubmissions = () => {
             { label: 'Average', value: stats.average ?? '—', icon: faChartSimple, color: scoreColor(stats.average) },
             { label: 'Flagged', value: stats.flagged, icon: faShield, color: stats.flagged ? 'text-rose-400' : 'text-gray-500' },
           ].map((s, i) => (
-            <div key={i} className="border border-white/8 bg-white/[0.03] rounded-3xl p-4">
+            <div key={i} className="border border-white/8 bg-white/[0.03] rounded-2xl p-4">
               <FontAwesomeIcon icon={s.icon} className={`${s.color} text-sm mb-2`} />
               <p className={`text-2xl font-black font-mono ${s.color}`}>{s.value}</p>
               <p className="text-gray-500 text-xs">{s.label}</p>
@@ -174,7 +337,7 @@ const TestSubmissions = () => {
 
         {/* Rows */}
         {rows.length === 0 ? (
-          <div className="border border-white/8 bg-white/[0.03] rounded-3xl py-14 text-center px-6">
+          <div className="border border-white/8 bg-white/[0.03] rounded-2xl py-14 text-center px-6">
             <FontAwesomeIcon icon={faUsers} className="text-gray-600 text-3xl mb-3" />
             <p className="text-gray-300 text-sm font-semibold">Nobody assigned yet</p>
             <p className="text-gray-600 text-xs mt-1">
@@ -193,7 +356,7 @@ const TestSubmissions = () => {
               const open = expanded === row.id
 
               return (
-                <div key={row.id} className="border border-white/8 bg-white/[0.03] rounded-3xl overflow-hidden">
+                <div key={row.id} className="border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden">
 
                   {/* Summary row */}
                   <div className="flex flex-wrap items-center gap-4 px-5 py-4">
@@ -247,13 +410,13 @@ const TestSubmissions = () => {
 
                   {/* Detail */}
                   {open && result && (
-                    <div className="border-t border-white/8 px-5 py-5 flex flex-col gap-4">
+                    <div className="border-t border-white/5 px-5 py-5 flex flex-col gap-4">
 
                       {/* Their actual answer */}
                       {answer ? (
                         <div>
                           <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">{answer.label}</p>
-                          <pre className={`bg-[#0d1218] border border-white/8 rounded-2xl p-4 text-gray-200 text-xs overflow-x-auto whitespace-pre-wrap ${answer.mono ? 'font-mono leading-relaxed' : 'leading-6'}`}>
+                          <pre className={`bg-[#0a0a18] border border-white/8 rounded-2xl p-4 text-gray-200 text-xs overflow-x-auto whitespace-pre-wrap ${answer.mono ? 'font-mono leading-relaxed' : 'leading-6'}`}>
                             {answer.value}
                           </pre>
                         </div>
@@ -335,6 +498,7 @@ const TestSubmissions = () => {
             })}
           </div>
         )}
+      </div>
       </div>
     </div>
   )

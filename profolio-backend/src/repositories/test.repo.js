@@ -135,6 +135,43 @@ const findResultsByTest = async (test_id) => {
   return data || [];
 };
 
+const findAssignmentsByProfessor = async (professor_id) => {
+  const { data: tests, error: testErr } = await supabase
+    .from('tests')
+    .select('id')
+    .eq('professor_id', professor_id);
+ 
+  if (testErr) throw testErr;
+  const testIds = (tests || []).map(t => t.id);
+  if (!testIds.length) return [];
+ 
+  const { data, error } = await supabase
+    .from('test_assignments')
+    .select(`
+      *,
+      users:student_id (id, full_name, email),
+      tests (id, title, type)
+    `)
+    .in('test_id', testIds)
+    .order('assigned_at', { ascending: false });
+ 
+  if (error) throw error;
+  return data || [];
+};
+ 
+const findResultsByTestIds = async (testIds) => {
+  if (!testIds?.length) return [];
+ 
+  const { data, error } = await supabase
+    .from('assessment_results')
+    .select('*')
+    .in('test_id', testIds)
+    .order('created_at', { ascending: false });
+ 
+  if (error) throw error;
+  return data || [];
+};
+
 module.exports = {
   createTest,
   findById,
@@ -146,5 +183,7 @@ module.exports = {
   findAssignmentsForStudent,
   findAssignment,
   findResultsByTest,
+  findAssignmentsByProfessor,
+  findResultsByTestIds,
   updateAssignmentStatus,
 };

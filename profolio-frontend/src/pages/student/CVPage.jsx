@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes, faShieldHalved, 
-  faTrophy, faRightFromBracket, faFileAlt, faSpinner, faDownload, faSeedling, 
-  faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase, 
-  faGraduationCap, faCertificate, faCode, faComments, faClipboardList,
-  faFingerprint, faLightbulb, faChartLine, faTriangleExclamation, 
+  faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
+  faTrophy, faRightFromBracket, faFileAlt, faSpinner, faDownload,
+  faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase,
+  faClipboardList, faFingerprint, faLightbulb, faChartLine, faComments,
+  faTriangleExclamation, faSeedling, faShieldHalved, faArrowRight, faDumbbell,
 } from '@fortawesome/free-solid-svg-icons'
-import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { generateCV, getLatestCV, getCVHistory } from '../../services/cv.service'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
@@ -16,12 +15,10 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
-  { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
+  { label: 'Practices', icon: faDumbbell, path: '/student/assessment' },
   { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
-  { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
-  { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
   { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
@@ -35,6 +32,34 @@ const readinessLabel = {
   ready: 'Ready',
   highly_ready: 'Highly ready',
 }
+
+// One shared row shape for every bullet section, so the page reads as a single
+// list rather than five differently-styled ones.
+const Bullet = ({ children }) => (
+  <li className="flex items-start gap-3 text-gray-300 text-[13px] leading-6">
+    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
+    <span>{children}</span>
+  </li>
+)
+
+// Skills and Suited to are tags, not things with names and dates — so they get
+// a shape of their own. Making them match each other matters more than making
+// them match the bulleted sections; two sections that differ on purpose read
+// better than one that looks forgotten.
+const Chip = ({ children }) => (
+  <span className="text-gray-300 text-[12px] border border-white/10 bg-white/[0.04] px-2.5 py-1 rounded-full">
+    {children}
+  </span>
+)
+
+const Section = ({ title, note, children }) => (
+  <div className="print-section mb-5">
+    <h2 className="text-white font-bold text-[11px] uppercase tracking-[0.14em] mb-0.5">{title}</h2>
+    {note && <p className="text-gray-600 text-[10px] mb-2">{note}</p>}
+    {!note && <div className="mb-2" />}
+    {children}
+  </div>
+)
 
 export default function CVPage() {
   const navigate = useNavigate()
@@ -59,8 +84,6 @@ export default function CVPage() {
       setCv(latest)
       setHistory(hist || [])
     } catch (err) {
-      // A student with no CV yet and a broken connection are different
-      // situations and shouldn't produce the same blank screen.
       setError(err.message || 'Couldn\u2019t load your CV.')
     } finally {
       setLoading(false)
@@ -85,28 +108,31 @@ export default function CVPage() {
   const handleLogout = () => { logout(); navigate('/') }
   const c = cv?.cv_content
   const evidence = c?.internal_evidence
+  const edu = c?.education
 
   return (
     <div className="min-h-screen bg-[#060612] flex font-sans">
 
       <style>{`
         @media print {
-          /* Only the document itself should reach paper — no sidebar, no
-             buttons, and none of the in-app evidence notes. */
+          /* One page means one page: nothing but the document reaches paper. */
+          @page { margin: 14mm; }
           body { background: white !important; }
           .no-print { display: none !important; }
           .print-area {
             position: static !important;
             margin: 0 !important;
             padding: 0 !important;
+            max-width: none !important;
             background: white !important;
             color: black !important;
             box-shadow: none !important;
             border: none !important;
+            font-size: 10.5pt;
           }
           .print-area * {
             color: black !important;
-            border-color: #ddd !important;
+            border-color: #ccc !important;
             background: transparent !important;
           }
           .print-section { break-inside: avoid; }
@@ -125,6 +151,7 @@ export default function CVPage() {
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
+
         <div className="px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
@@ -136,6 +163,7 @@ export default function CVPage() {
             </div>
           </div>
         </div>
+
         <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
@@ -149,6 +177,7 @@ export default function CVPage() {
             )
           })}
         </nav>
+
         <div className="px-3 py-4 border-t border-white/5">
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
@@ -167,7 +196,7 @@ export default function CVPage() {
           </button>
           <div>
             <h1 className="text-white font-bold text-lg">CV Builder</h1>
-            <p className="text-gray-500 text-xs">Written from what you&apos;ve actually been assessed on</p>
+            <p className="text-gray-500 text-xs">One page, written from what you&apos;ve been assessed on</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             {history.length > 0 && (
@@ -202,15 +231,14 @@ export default function CVPage() {
         <main className="flex-1 px-6 py-8">
 
           {error && (
-            <div className="no-print max-w-3xl mx-auto mb-6 border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 flex items-center gap-3">
+            <div className="no-print max-w-2xl mx-auto mb-6 border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 flex items-center gap-3">
               <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 flex-shrink-0" />
               <p className="text-rose-400 text-sm">{error}</p>
             </div>
           )}
 
-          {/* History dropdown */}
           {showHistory && history.length > 0 && (
-            <div className="no-print max-w-3xl mx-auto mb-6 border border-white/8 bg-white/[0.03] rounded-2xl p-4">
+            <div className="no-print max-w-2xl mx-auto mb-6 border border-white/8 bg-white/[0.03] rounded-2xl p-4">
               <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Previous versions</p>
               <div className="flex flex-col gap-2">
                 {history.map((h, i) => (
@@ -253,8 +281,6 @@ export default function CVPage() {
                 set for you. Fill in your portfolio, then generate.
               </p>
 
-              {/* Said up front, so a student learns the rule from the page rather
-                  than from an error after pressing the button. */}
               <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 mb-6 text-left flex items-start gap-3">
                 <FontAwesomeIcon icon={faShieldHalved} className="text-blue-400 text-sm mt-0.5 flex-shrink-0" />
                 <div>
@@ -282,21 +308,13 @@ export default function CVPage() {
 
           ) : (
             <>
-              {/* ── In-app note, never printed ──
-                  The student should know what their CV was built from. An
-                  employer shouldn't see the machinery. */}
+              {/* In-app note, never printed */}
               {evidence && (
-                <div className="no-print max-w-3xl mx-auto mb-6 border border-white/8 bg-white/[0.03] rounded-2xl p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div className="no-print max-w-2xl mx-auto mb-6 border border-white/8 bg-white/[0.03] rounded-2xl p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
                   <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Built from</p>
                   <span className="flex items-center gap-2 text-gray-400 text-xs">
                     <FontAwesomeIcon icon={faShieldHalved} className="text-blue-400" />
                     {evidence.graded_assessments} professor-set test{evidence.graded_assessments !== 1 ? 's' : ''}
-                  </span>
-                  <span className="flex items-center gap-2 text-gray-400 text-xs">
-                    <FontAwesomeIcon icon={faStar} className={evidence.faculty_reviewed ? 'text-emerald-400' : 'text-gray-600'} />
-                    {evidence.faculty_reviewed
-                      ? `Reviewed${evidence.reviewed_by ? ` by ${evidence.reviewed_by}` : ''}`
-                      : 'Not yet reviewed by faculty'}
                   </span>
                   {evidence.career_readiness && (
                     <span className="flex items-center gap-2 text-gray-400 text-xs">
@@ -308,182 +326,157 @@ export default function CVPage() {
                 </div>
               )}
 
-              {/* ── The document ── */}
-              <div className="print-area max-w-3xl mx-auto bg-[#0a0a18] border border-white/8 rounded-2xl p-8 sm:p-10">
+              {/* ── The document. Everything below fits one A4 page. ── */}
+              <div className="print-area max-w-2xl mx-auto bg-[#0a0a18] border border-white/8 rounded-2xl px-8 py-7 sm:px-10 sm:py-9">
 
                 {/* Header */}
-                <div className="print-section border-b border-white/10 pb-6 mb-6">
-                  <h1 className="text-white font-black text-3xl mb-1">{c?.header?.full_name}</h1>
-                  <p className="text-blue-400 text-sm mb-3">
-                    {c?.header?.course}{c?.header?.year_level ? ` · ${c.header.year_level}` : ''}
-                  </p>
-                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-gray-400 text-xs">
-                    {c?.header?.email && <span>{c.header.email}</span>}
-                    {c?.header?.school && (
-                      <span className="flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faGraduationCap} /> {c.header.school}
-                      </span>
-                    )}
-                    {c?.header?.github_url && (
-                      <span className="flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faGithub} /> {c.header.github_url}
-                      </span>
-                    )}
-                    {c?.header?.linkedin_url && (
-                      <span className="flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faLinkedin} /> {c.header.linkedin_url}
-                      </span>
-                    )}
+                <div className="print-section border-b border-white/10 pb-4 mb-5">
+                  <h1 className="text-white font-black text-2xl tracking-tight">{c?.header?.full_name}</h1>
+                  {c?.header?.professional_title && (
+                    <p className="text-blue-400 text-[13px] font-semibold mb-1.5">{c.header.professional_title}</p>
+                  )}
+                  {/* Contact details joined into one line — a stacked list of
+                      five items is most of an inch of a one-page CV. */}
+                  <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-gray-400 text-[11px]">
+                    {[
+                      c?.header?.email,
+                      c?.header?.phone,
+                      c?.header?.location,
+                      c?.header?.github_url,
+                      c?.header?.linkedin_url,
+                      c?.header?.portfolio_url,
+                    ].filter(Boolean).map((item, i) => (
+                      <span key={i}>{i > 0 && <span className="text-gray-600 mr-2.5">·</span>}{item}</span>
+                    ))}
                   </div>
                 </div>
 
-                {/* Professional summary */}
-                {c?.professional_summary && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-3">Profile</h2>
-                    <p className="text-gray-300 text-sm leading-7">{c.professional_summary}</p>
-                  </div>
+                {/* About me — the only prose on the page */}
+                {c?.about_me && (
+                  <Section title="About me">
+                    <p className="text-gray-300 text-[13px] leading-6">{c.about_me}</p>
+                  </Section>
                 )}
 
-                {/* Technical narrative */}
-                {c?.technical_narrative && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-3">Technical ability</h2>
-                    <p className="text-gray-300 text-sm leading-7">{c.technical_narrative}</p>
-                  </div>
-                )}
-
-                {/* Soft skills narrative */}
-                {c?.soft_skills_narrative && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-3">Working style and communication</h2>
-                    <p className="text-gray-300 text-sm leading-7">{c.soft_skills_narrative}</p>
-                  </div>
-                )}
-
-                {/* Verified competencies */}
+                {/* The part no other CV can claim */}
                 {c?.verified_competencies?.length > 0 && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-1">Demonstrated under supervision</h2>
-                    <p className="text-gray-500 text-xs mb-3">Observed during timed, monitored assessments</p>
-                    <ul className="flex flex-col gap-2">
-                      {c.verified_competencies.map((v, i) => (
-                        <li key={i} className="flex items-start gap-3 text-gray-300 text-sm leading-6">
-                          <FontAwesomeIcon icon={faCheck} className="text-emerald-400 text-xs mt-1.5 flex-shrink-0" />
-                          {v}
-                        </li>
+                  <Section title="Demonstrated under supervision" note="Observed during timed, monitored assessments set by faculty">
+                    <ul className="flex flex-col gap-1">
+                      {c.verified_competencies.map((v, i) => <Bullet key={i}>{v}</Bullet>)}
+                    </ul>
+                  </Section>
+                )}
+
+                {/* Education */}
+                {(edu?.course || edu?.school) && (
+                  <Section title="Education">
+                    <ul className="flex flex-col gap-1">
+                      <Bullet>
+                        <span className="text-white font-semibold">{edu.course}</span>
+                        {edu.specialization && <span className="text-gray-400"> — {edu.specialization}</span>}
+                        {edu.school && <span className="text-gray-400"> · {edu.school}</span>}
+                        {edu.year_level && <span className="text-gray-500"> · {edu.year_level}</span>}
+                        {edu.expected_graduation && <span className="text-gray-500"> · Graduating {edu.expected_graduation}</span>}
+                      </Bullet>
+                      {edu.academic_honors && <Bullet>{edu.academic_honors}</Bullet>}
+                    </ul>
+                  </Section>
+                )}
+
+                {/* Work experience — sits above Projects, because a real job
+                    outweighs coursework to anyone reading this. */}
+                {c?.work_experience?.length > 0 && (
+                  <Section title="Experience">
+                    <ul className="flex flex-col gap-1">
+                      {c.work_experience.map((e, i) => (
+                        <Bullet key={i}>
+                          <span className="text-white font-semibold">{e.role}</span>
+                          {e.organisation && <span className="text-gray-400"> — {e.organisation}</span>}
+                          {e.period && <span className="text-gray-500"> · {e.period}</span>}
+                          {e.summary && <span className="text-gray-400 block text-[12px]">{e.summary}</span>}
+                        </Bullet>
                       ))}
                     </ul>
-                  </div>
+                  </Section>
                 )}
 
-                {/* Projects */}
+                {/* Projects — title and stack only, so four of them still fit */}
                 {c?.projects?.length > 0 && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-3">Projects</h2>
-                    <div className="flex flex-col gap-4">
+                  <Section title="Projects">
+                    <ul className="flex flex-col gap-1">
                       {c.projects.map((p, i) => (
-                        <div key={i}>
-                          <div className="flex items-baseline gap-2 flex-wrap">
-                            <p className="text-white font-semibold text-sm">{p.title}</p>
-                            {p.tech_stack && <p className="text-blue-400 text-xs">{p.tech_stack}</p>}
-                          </div>
-                          {p.description && <p className="text-gray-400 text-sm leading-6 mt-1">{p.description}</p>}
-                          <div className="flex gap-4 mt-1">
-                            {p.github_url && <span className="text-gray-500 text-xs">{p.github_url}</span>}
-                            {p.live_url && <span className="text-gray-500 text-xs">{p.live_url}</span>}
-                          </div>
-                        </div>
+                        <Bullet key={i}>
+                          <span className="text-white font-semibold">{p.title}</span>
+                          {p.tech_stack && <span className="text-gray-400"> — {p.tech_stack}</span>}
+                          {p.github_url && <span className="text-gray-500 text-[11px]"> · {p.github_url}</span>}
+                        </Bullet>
                       ))}
-                    </div>
-                  </div>
+                    </ul>
+                  </Section>
                 )}
 
-                {/* Self-reported skills — labelled honestly, so a reader can tell
-                    these apart from the assessed claims above. */}
+                {/* Skills — inline, not one bullet each, or this alone eats a
+                    third of the page */}
                 {c?.self_reported_skills?.length > 0 && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-1">Additional skills</h2>
-                    <p className="text-gray-500 text-xs mb-3">Self-reported</p>
-                    <div className="flex flex-wrap gap-2">
-                      {c.self_reported_skills.map((s, i) => (
-                        <span key={i} className="text-gray-300 text-xs border border-white/10 px-3 py-1.5 rounded-full">
-                          {s.name}
-                        </span>
-                      ))}
+                  <Section title="Skills" note="Self-reported">
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.self_reported_skills.map((s, i) => <Chip key={i}>{s.name}</Chip>)}
                     </div>
-                  </div>
+                  </Section>
                 )}
 
                 {/* Certifications */}
                 {c?.certifications?.length > 0 && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-3">Certifications</h2>
-                    <div className="flex flex-col gap-2">
+                  <Section title="Certifications">
+                    <ul className="flex flex-col gap-1">
                       {c.certifications.map((cert, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faCertificate} className="text-amber-400 text-xs mt-1 flex-shrink-0" />
-                          <div>
-                            <p className="text-white text-sm">{cert.title}</p>
-                            <p className="text-gray-500 text-xs">
-                              {cert.issuer}
-                              {cert.date_earned ? ` · ${new Date(cert.date_earned).getFullYear()}` : ''}
-                            </p>
-                          </div>
-                        </div>
+                        <Bullet key={i}>
+                          <span className="text-white font-semibold">{cert.title}</span>
+                          {cert.issuer && <span className="text-gray-400"> — {cert.issuer}</span>}
+                          {cert.date_earned && <span className="text-gray-500"> · {new Date(cert.date_earned).getFullYear()}</span>}
+                        </Bullet>
                       ))}
-                    </div>
-                  </div>
+                    </ul>
+                  </Section>
                 )}
 
                 {/* Achievements */}
                 {c?.achievements?.length > 0 && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-3">Achievements</h2>
-                    <div className="flex flex-col gap-2">
+                  <Section title="Achievements">
+                    <ul className="flex flex-col gap-1">
                       {c.achievements.map((a, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <FontAwesomeIcon icon={faTrophy} className="text-amber-400 text-xs mt-1 flex-shrink-0" />
-                          <div>
-                            <p className="text-white text-sm">{a.title}</p>
-                            {a.category && <p className="text-gray-500 text-xs">{a.category}</p>}
-                          </div>
-                        </div>
+                        <Bullet key={i}>
+                          <span className="text-white font-semibold">{a.title}</span>
+                          {a.category && <span className="text-gray-400"> — {a.category}</span>}
+                        </Bullet>
                       ))}
-                    </div>
-                  </div>
+                    </ul>
+                  </Section>
                 )}
 
-                {/* Suggested roles */}
+                {/* Suited to */}
                 {c?.suggested_roles?.length > 0 && (
-                  <div className="print-section mb-7">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-3">Suited to</h2>
-                    <div className="flex flex-wrap gap-2">
+                  <Section title="Suited to">
+                    <div className="flex flex-wrap gap-1.5">
                       {c.suggested_roles.map((r, i) => (
-                        <span key={i} className="flex items-center gap-2 text-gray-300 text-xs border border-white/10 px-3 py-1.5 rounded-full">
-                          <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" /> {r}
+                        <span key={i} className="flex items-center gap-1.5 text-gray-300 text-[12px] border border-white/10 bg-white/[0.04] px-2.5 py-1 rounded-full">
+                          <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[9px]" /> {r}
                         </span>
                       ))}
                     </div>
-                  </div>
+                  </Section>
                 )}
 
-                {/* Growth areas — shown to the student, not printed. Honest with
-                    themselves is useful; handing an employer a list of your own
-                    weaknesses is not. */}
+                {/* Growth areas — for the student, not for the page.
+                    Handing an employer a list of your own weaknesses isn't a CV. */}
                 {c?.growth_areas?.length > 0 && (
-                  <div className="no-print border-t border-white/10 pt-6 mt-2">
-                    <h2 className="text-white font-bold text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
+                  <div className="no-print border-t border-white/10 pt-5 mt-2">
+                    <h2 className="text-white font-bold text-[11px] uppercase tracking-[0.14em] mb-0.5 flex items-center gap-2">
                       <FontAwesomeIcon icon={faSeedling} className="text-emerald-400" /> Where to grow next
                     </h2>
-                    <p className="text-gray-500 text-xs mb-3">For you — this section isn&apos;t printed</p>
-                    <ul className="flex flex-col gap-2">
-                      {c.growth_areas.map((g, i) => (
-                        <li key={i} className="flex items-start gap-3 text-gray-400 text-sm leading-6">
-                          <FontAwesomeIcon icon={faCode} className="text-gray-600 text-xs mt-1.5 flex-shrink-0" />
-                          {g}
-                        </li>
-                      ))}
+                    <p className="text-gray-600 text-[10px] mb-2">For you — this section isn&apos;t printed</p>
+                    <ul className="flex flex-col gap-1">
+                      {c.growth_areas.map((g, i) => <Bullet key={i}>{g}</Bullet>)}
                     </ul>
                   </div>
                 )}

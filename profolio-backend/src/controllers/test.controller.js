@@ -77,6 +77,13 @@ const listStudents = async (req, res, next) => {
   }
 };
 
+const getMyStudents = async (req, res, next) => {
+  try {
+    const students = await testService.getMyStudents(req.user.id);
+    res.json({ success: true, data: students });
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   createTest,
   updateTest,
@@ -87,5 +94,6 @@ module.exports = {
   getAssignmentsForTest,
   getMyAssignedTests,
   listStudents,
+  getMyStudents, 
   startAssignment,
 };

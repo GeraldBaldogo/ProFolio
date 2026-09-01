@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import ThemePicker from '../../components/ThemePicker'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faEnvelope, faLock, faEye, faEyeSlash,
@@ -113,15 +114,29 @@ const LoginPage = () => {
   }
 
   // shared input styling, so the two fields can't drift apart
-  const inputBase = 'w-full bg-white/[0.04] rounded-2xl px-4 py-3.5 pl-11 text-white text-sm placeholder-gray-600 outline-none transition-all border'
+  const inputBase = 'w-full bg-white/[0.04] rounded-xl px-4 py-3.5 pl-11 text-white text-[15px] placeholder-gray-600 outline-none transition-all border'
   const inputState = (name) => fieldErrors[name]
-    ? 'border-red-500/50 focus:border-red-400'
+    ? 'border-rose-500/50 focus:border-rose-400'
     : 'border-white/10 hover:border-white/20 focus:border-blue-400/60 focus:bg-blue-400/[0.06]'
 
   return (
-    <div className="min-h-screen bg-[#0a0d10] font-sans grid lg:grid-cols-2">
+    <div className="min-h-screen bg-[#060612] font-sans grid lg:grid-cols-2">
+
+      <div className="fixed top-5 right-5 z-40">
+        <ThemePicker />
+      </div>
 
       <style>{`
+        /* Matches the landing page. Uses the theme's accent variables so the
+           wordmark follows whichever colour is selected. */
+        .brand-gradient {
+          background: linear-gradient(100deg, var(--accent-300), var(--accent-500));
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+        }
+
         @keyframes drift {
           0%   { transform: translate(0, 0) scale(1); }
           33%  { transform: translate(40px, -30px) scale(1.08); }
@@ -172,23 +187,23 @@ const LoginPage = () => {
           <div className="flex justify-center mb-10">
             <Link to="/" className="inline-flex items-center gap-2.5 group">
               <img src={logo} alt="" className="h-9 w-auto" />
-              <span className="text-xl font-black text-white tracking-tight">
-                Pro<span className="text-blue-400">Folio</span>
+              <span className="text-[19px] font-bold text-white tracking-tight">
+                Pro<span className="brand-gradient">Folio</span>
               </span>
             </Link>
           </div>
 
-          <h1 className="text-4xl font-black text-white tracking-tight leading-tight mb-2">
-            Welcome back.
+          <h1 className="text-[34px] font-bold text-white tracking-[-0.025em] leading-tight mb-2">
+            Welcome back
           </h1>
-          <p className="text-gray-400 mb-8">
+          <p className="text-gray-400 text-[15px] mb-8">
             Sign in to pick up where you left off.
           </p>
 
           {/* Server-side error */}
           {error && (
             <div role="alert"
-              className="flex items-start gap-3 border border-red-500/30 bg-red-500/10 text-red-300 text-sm px-4 py-3 rounded-2xl mb-6">
+              className="flex items-start gap-3 border border-rose-500/20 bg-rose-500/5 text-rose-400 text-sm px-4 py-3 rounded-xl mb-6">
               <FontAwesomeIcon icon={faTriangleExclamation} className="flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -219,7 +234,7 @@ const LoginPage = () => {
                 />
               </div>
               {fieldErrors.email && (
-                <span id="email-error" className="text-red-400 text-xs">{fieldErrors.email}</span>
+                <span id="email-error" className="text-rose-400 text-[12px]">{fieldErrors.email}</span>
               )}
             </div>
 
@@ -254,7 +269,7 @@ const LoginPage = () => {
                 </button>
               </div>
               {fieldErrors.password && (
-                <span id="password-error" className="text-red-400 text-xs">{fieldErrors.password}</span>
+                <span id="password-error" className="text-rose-400 text-[12px]">{fieldErrors.password}</span>
               )}
             </div>
 
@@ -262,7 +277,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative overflow-hidden bg-blue-400 hover:bg-blue-300 text-black font-bold py-3.5 rounded-2xl text-sm mt-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="group relative overflow-hidden bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3.5 rounded-xl text-[15px] mt-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {!loading && (
                 <span className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"
@@ -297,7 +312,7 @@ const LoginPage = () => {
                 key={p.key}
                 href={p.href}
                 aria-label={`Continue with ${p.label}`}
-                className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white py-3 rounded-2xl text-sm font-semibold transition-all"
+                className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white py-3 rounded-xl text-[14px] font-semibold transition-all"
               >
                 <FontAwesomeIcon icon={p.icon} className="text-base" style={{ color: p.iconColor }} />
                 <span className="hidden sm:inline lg:hidden xl:inline">{p.label}</span>
@@ -322,7 +337,7 @@ const LoginPage = () => {
       </div>
 
       {/* ══ The reason to sign in — sits on the left ══ */}
-      <div className="relative hidden lg:block overflow-hidden lg:order-1">
+      <div className="photo-surface relative hidden lg:block overflow-hidden lg:order-1">
         {photoFailed ? (
           <div className="absolute inset-0 bg-gradient-to-br from-[#141d29] via-[#0d1218] to-[#0a0d10] flex items-center justify-center">
             <FontAwesomeIcon icon={faImage} className="text-white/10 text-3xl" />
@@ -335,16 +350,16 @@ const LoginPage = () => {
             className="absolute inset-0 w-full h-full object-cover"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-bl from-[#0a0d10] via-[#0a0d10]/85 to-[#0a0d10]/60" />
+        <div className="absolute inset-0 bg-gradient-to-bl from-black/90 via-black/75 to-black/50" />
         <div className="absolute inset-y-0 right-0 w-px bg-white/8" />
 
         <div className="relative h-full flex flex-col justify-center px-14 xl:px-20">
-          <h2 className="text-4xl xl:text-5xl font-black text-white leading-[1.05] tracking-tight mb-6">
+          <h2 className="text-4xl xl:text-[3rem] font-bold text-white leading-[1.08] tracking-[-0.03em] mb-6">
             Prove your <span className="text-blue-400">skills.</span><br />
             Launch your career.
           </h2>
           <p className="text-gray-400 text-lg max-w-md mb-10 leading-relaxed">
-            Six real challenges, scored against a fixed rubric, compiled into a portfolio you can hand to an employer.
+            Six kinds of assessment, written by your own lecturers, compiled into a CV you can hand to an employer.
           </p>
 
           <div className="flex flex-col gap-3 mb-12">
@@ -356,7 +371,7 @@ const LoginPage = () => {
           </div>
 
           {/* the same terminal panel from the landing hero, tying the two together */}
-          <div className="max-w-sm rounded-2xl overflow-hidden border border-white/10 bg-[#0d1218]/95 backdrop-blur-md shadow-2xl">
+          <div className="dark-surface max-w-sm rounded-2xl overflow-hidden border border-white/10 bg-[#0d1218]/95 backdrop-blur-md shadow-2xl">
             <div className="flex items-center gap-1.5 px-5 pt-4">
               <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
               <span className="w-2.5 h-2.5 rounded-full bg-white/15" />

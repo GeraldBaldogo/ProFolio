@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faHouse, faClipboardCheck, faClockRotateLeft, faBars, faTimes,
+  faHouse, faBars, faTimes,
   faRightFromBracket, faSpinner, faCircleCheck, faTriangleExclamation,
   faPlus, faXmark, faSave, faRotateRight, faPen, faTrash,
   faKeyboard, faCode, faDiagramProject, faDatabase, faBug, faComments,
@@ -13,11 +13,14 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
+// Must match EvaluatorDashboard, EvaluatorStudents and TestSubmission exactly.
+// Each page keeps its own copy, so a difference here makes the sidebar jump
+// as the professor moves between pages.
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/evaluator/dashboard' },
   { label: 'My Tests', icon: faFlaskVial, path: '/evaluator/tests' },
-  { label: 'Assigned Portfolios', icon: faClipboardCheck, path: '/evaluator/assigned' },
-  { label: 'History', icon: faClockRotateLeft, path: '/evaluator/history' },
+  { label: 'Students', icon: faUsers, path: '/evaluator/students' },
+  { label: 'Messages', icon: faComments, path: '/evaluator/messages' },
 ]
 
 // Mirrors VALID_TYPES and REQUIRED_CONFIG_FIELDS in test.service.js. If that
@@ -403,7 +406,7 @@ const ProfessorTests = () => {
   const currentType = typeOf(form.type)
 
   return (
-    <div className="min-h-screen bg-[#0a0d10] flex font-sans">
+    <div className="min-h-screen bg-[#060612] flex font-sans">
 
       <style>{`
         a:focus-visible, button:focus-visible, input:focus-visible,
@@ -423,8 +426,8 @@ const ProfessorTests = () => {
       `}</style>
 
       {/* ══ Sidebar ══ */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0d1218] border-r border-white/8 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/8">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/5">
           <img src={logo} alt="" className="w-8 h-8 object-contain" />
           <span className="text-lg font-black text-white tracking-tight">
             Pro<span className="text-blue-400">Folio</span>
@@ -435,7 +438,7 @@ const ProfessorTests = () => {
           </button>
         </div>
 
-        <div className="px-5 py-4 border-b border-white/8">
+        <div className="px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <Avatar name={user?.full_name} />
             <div className="min-w-0">
@@ -451,22 +454,22 @@ const ProfessorTests = () => {
             return (
               <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-amber-500/15 text-white border border-amber-500/25'
+                    ? 'bg-amber-500/15 text-white border border-amber-500/20'
                     : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
                 }`}>
                 <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-amber-400' : ''}`} />
                 {item.label}
-                {isActive && <span className="ml-auto w-1.5 h-1.5 bg-amber-400 rounded-full" />}
+                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-amber-400 rounded-full" />}
               </Link>
             )
           })}
         </nav>
 
-        <div className="px-3 py-4 border-t border-white/8">
+        <div className="px-3 py-4 border-t border-white/5">
           <button onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" />
             Sign out
           </button>
@@ -478,7 +481,7 @@ const ProfessorTests = () => {
       {/* ══ Main ══ */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
 
-        <header className="sticky top-0 z-30 bg-[#0a0d10]/90 backdrop-blur-xl border-b border-white/8 px-6 py-4 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
           <button aria-label="Open menu"
             className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
@@ -549,7 +552,7 @@ const ProfessorTests = () => {
                 const busy = busyId === t.id
                 return (
                   <div key={t.id}
-                    className="border border-white/8 bg-white/[0.03] rounded-3xl p-5 flex flex-col gap-4 hover:border-white/15 transition-all">
+                    className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 flex flex-col gap-4 hover:border-white/15 transition-all">
 
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
@@ -634,9 +637,9 @@ const ProfessorTests = () => {
           onClick={closeForm}>
           <div role="dialog" aria-modal="true" aria-label={editing ? 'Edit test' : 'New test'}
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl bg-[#0d1218] border border-white/10 rounded-3xl overflow-hidden shadow-2xl rise my-auto">
+            className="w-full max-w-2xl bg-[#0a0a18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl rise my-auto">
 
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/8 sticky top-0 bg-[#0d1218] z-10">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 sticky top-0 bg-[#0a0a18] z-10">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-amber-500/20 rounded-xl flex items-center justify-center">
                   <FontAwesomeIcon icon={currentType.icon} className="text-amber-400 text-sm" />
@@ -717,7 +720,7 @@ const ProfessorTests = () => {
               </div>
 
               {/* Type-specific fields */}
-              <div className="border-t border-white/8 pt-5 flex flex-col gap-4">
+              <div className="border-t border-white/5 pt-5 flex flex-col gap-4">
                 <p className="text-white font-bold text-sm">{currentType.label} details</p>
 
                 {currentType.fields.map(fd => (
@@ -801,9 +804,9 @@ const ProfessorTests = () => {
           onClick={() => setAssignTo(null)}>
           <div role="dialog" aria-modal="true" aria-label="Assign test"
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-lg bg-[#0d1218] border border-white/10 rounded-3xl overflow-hidden shadow-2xl rise flex flex-col max-h-[85vh]">
+            className="w-full max-w-lg bg-[#0a0a18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl rise flex flex-col max-h-[85vh]">
 
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
               <div className="min-w-0">
                 <p className="text-white font-bold truncate">Assign test</p>
                 <p className="text-gray-500 text-xs truncate">{assignTo.title}</p>
@@ -814,7 +817,7 @@ const ProfessorTests = () => {
               </button>
             </div>
 
-            <div className="px-6 py-4 border-b border-white/8 flex flex-col gap-3">
+            <div className="px-6 py-4 border-b border-white/5 flex flex-col gap-3">
               <div>
                 <label htmlFor="due_date" className={labelClass}>Due date</label>
                 <input id="due_date" type="datetime-local" className={inputClass}
@@ -844,7 +847,7 @@ const ProfessorTests = () => {
                   {studentSearch ? `No one matches "${studentSearch}".` : 'No students have signed up yet.'}
                 </p>
               ) : (
-                <div className="divide-y divide-white/8">
+                <div className="divide-y divide-white/5">
                   {visibleStudents.map(s => {
                     const on = picked.includes(s.id)
                     return (
@@ -869,7 +872,7 @@ const ProfessorTests = () => {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t border-white/8 flex flex-wrap items-center gap-3">
+            <div className="px-6 py-4 border-t border-white/5 flex flex-wrap items-center gap-3">
               <span className="text-gray-500 text-xs">
                 {picked.length} selected
               </span>
@@ -894,8 +897,8 @@ const ProfessorTests = () => {
         <div role="status" aria-live="polite"
           className={`fixed bottom-6 right-6 z-[60] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-semibold rise ${
             toast.type === 'error'
-              ? 'border-rose-500/30 bg-[#0d1218] text-rose-300'
-              : 'border-emerald-500/30 bg-[#0d1218] text-emerald-300'
+              ? 'border-rose-500/30 bg-[#0a0a18] text-rose-300'
+              : 'border-emerald-500/30 bg-[#0a0a18] text-emerald-300'
           }`}>
           <FontAwesomeIcon icon={toast.type === 'error' ? faTriangleExclamation : faCircleCheck} />
           {toast.message}

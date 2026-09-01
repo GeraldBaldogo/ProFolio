@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
+  faHouse, faFolder, faDumbbell, faUser, faBars, faTimes,
   faRightFromBracket, faSpinner, faCircleCheck, faTriangleExclamation, faWandMagicSparkles,
-  faPen, faSave, faGraduationCap, faBuilding, faLink, faTrophy, faClipboardList, faChartLine, 
+  faPen, faSave, faGraduationCap, faBuilding, faClipboardList, faChartLine, 
   faEnvelope, faBriefcase, faQuoteLeft, faComments, faFingerprint, faLightbulb, faFileAlt,
+  faPlus, faTrashCan, faPhone,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
@@ -15,12 +16,10 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
-  { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
+  { label: 'Practices', icon: faDumbbell, path: '/student/assessment' },
   { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
-  { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
-  { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
   { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
@@ -42,13 +41,21 @@ const StudentProfile = () => {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
   const [form, setForm] = useState({
+    professional_title: '',
+    phone: '',
+    location: '',
     course: '',
     school: '',
     year_level: '',
+    specialization: '',
+    expected_graduation: '',
+    academic_honors: '',
     bio: '',
+    career_goal: '',
     linkedin_url: '',
     github_url: '',
-    career_goal: '',
+    portfolio_url: '',
+    work_experience: [],
   })
 
   useEffect(() => { fetchProfile() }, [])
@@ -63,13 +70,22 @@ const StudentProfile = () => {
       const res = await api.get('/student/profile')
       const p = res.data.data
       setForm({
+        professional_title: p?.professional_title || '',
+        phone: p?.phone || '',
+        location: p?.location || '',
         course: p?.course || '',
         school: p?.school || '',
         year_level: p?.year_level || '',
+        specialization: p?.specialization || '',
+        expected_graduation: p?.expected_graduation || '',
+        academic_honors: p?.academic_honors || '',
         bio: p?.bio || '',
+        career_goal: p?.career_goal || '',
         linkedin_url: p?.linkedin_url || '',
         github_url: p?.github_url || '',
-        career_goal: p?.career_goal || '',
+        portfolio_url: p?.portfolio_url || '',
+        // Stored as a list so each job keeps its own dates.
+        work_experience: Array.isArray(p?.work_experience) ? p.work_experience : [],
       })
     } catch (err) {
       console.error(err)
@@ -81,7 +97,10 @@ const StudentProfile = () => {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await api.patch('/student/profile', form)
+      await api.patch('/student/profile', {
+        ...form,
+        work_experience: form.work_experience.filter(e => e.role?.trim() || e.organisation?.trim()),
+      })
       showToast('Profile updated successfully!')
       setEditing(false)
     } catch (err) {
@@ -90,6 +109,21 @@ const StudentProfile = () => {
       setSaving(false)
     }
   }
+
+  const addExperience = () => setForm(f => ({
+    ...f,
+    work_experience: [...f.work_experience, { role: '', organisation: '', period: '', summary: '' }],
+  }))
+
+  const updateExperience = (i, key, value) => setForm(f => ({
+    ...f,
+    work_experience: f.work_experience.map((e, idx) => idx === i ? { ...e, [key]: value } : e),
+  }))
+
+  const removeExperience = (i) => setForm(f => ({
+    ...f,
+    work_experience: f.work_experience.filter((_, idx) => idx !== i),
+  }))
 
   const handleLogout = () => { logout(); navigate('/') }
 
@@ -255,6 +289,26 @@ const StudentProfile = () => {
                   <h3 className="text-white font-bold text-sm">Edit Profile Information</h3>
 
                   {/* Single col on mobile, 2 cols on md+ */}
+                  <div>
+                    <label className={labelClass}>Professional Title</label>
+                    <input className={inputClass} placeholder="e.g. Aspiring Full-Stack Developer"
+                      value={form.professional_title} onChange={e => setForm({ ...form, professional_title: e.target.value })} />
+                    <p className="text-gray-600 text-xs mt-1">This sits under your name on your CV.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Contact Number</label>
+                      <input className={inputClass} placeholder="e.g. 0917 123 4567"
+                        value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>City / Province</label>
+                      <input className={inputClass} placeholder="e.g. Morong, Rizal"
+                        value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>Course / Program</label>
@@ -274,6 +328,25 @@ const StudentProfile = () => {
                     <label className={labelClass}>School / University</label>
                     <input className={inputClass} placeholder="e.g. Tomas Claudio Colleges"
                       value={form.school} onChange={e => setForm({ ...form, school: e.target.value })} />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Specialization</label>
+                      <input className={inputClass} placeholder="e.g. Web Development"
+                        value={form.specialization} onChange={e => setForm({ ...form, specialization: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Expected Graduation</label>
+                      <input className={inputClass} placeholder="e.g. June 2027"
+                        value={form.expected_graduation} onChange={e => setForm({ ...form, expected_graduation: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Academic Honors</label>
+                    <input className={inputClass} placeholder="e.g. Dean's Lister, 1st Semester 2025"
+                      value={form.academic_honors} onChange={e => setForm({ ...form, academic_honors: e.target.value })} />
                   </div>
 
                   <div>
@@ -300,9 +373,120 @@ const StudentProfile = () => {
                         value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} />
                     </div>
                   </div>
+
+                  <div>
+                    <label className={labelClass}>Portfolio Website</label>
+                    <input className={inputClass} placeholder="https://yourname.dev"
+                      value={form.portfolio_url} onChange={e => setForm({ ...form, portfolio_url: e.target.value })} />
+                  </div>
+
+                  {/* ── Work experience ──
+                      Nothing else in the system holds this. A student with an
+                      OJT or a part-time job had no way to put it on their CV. */}
+                  <div className="border-t border-white/5 pt-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-white font-bold text-sm">Work Experience</p>
+                        <p className="text-gray-500 text-xs mt-0.5">OJT, part-time, freelance, volunteer</p>
+                      </div>
+                      <button type="button" onClick={addExperience}
+                        className="flex items-center gap-2 border border-white/8 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all">
+                        <FontAwesomeIcon icon={faPlus} /> Add
+                      </button>
+                    </div>
+
+                    {form.work_experience.length === 0 ? (
+                      <p className="text-gray-600 text-xs">Nothing added yet. Leave this empty if you have none.</p>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        {form.work_experience.map((exp, i) => (
+                          <div key={i} className="border border-white/8 bg-white/[0.02] rounded-2xl p-4 flex flex-col gap-3">
+                            <div className="flex items-center gap-3">
+                              <p className="text-gray-500 text-xs font-semibold">Entry {i + 1}</p>
+                              <button type="button" onClick={() => removeExperience(i)}
+                                aria-label={`Remove entry ${i + 1}`}
+                                className="ml-auto w-7 h-7 rounded-lg border border-white/8 text-gray-500 hover:text-rose-400 hover:border-rose-500/30 transition-all flex items-center justify-center">
+                                <FontAwesomeIcon icon={faTrashCan} className="text-xs" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <input className={inputClass} placeholder="Role — e.g. Web Developer Intern"
+                                value={exp.role || ''} onChange={e => updateExperience(i, 'role', e.target.value)} />
+                              <input className={inputClass} placeholder="Company or organisation"
+                                value={exp.organisation || ''} onChange={e => updateExperience(i, 'organisation', e.target.value)} />
+                            </div>
+
+                            <input className={inputClass} placeholder="Period — e.g. Jun 2025 – Aug 2025"
+                              value={exp.period || ''} onChange={e => updateExperience(i, 'period', e.target.value)} />
+
+                            <input className={inputClass} placeholder="One line on what you did"
+                              value={exp.summary || ''} onChange={e => updateExperience(i, 'summary', e.target.value)} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                  {/* Contact — new fields need somewhere to show when not editing,
+                      or a student fills them in and thinks nothing saved. */}
+                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FontAwesomeIcon icon={faPhone} className="text-emerald-400 text-sm" />
+                      </div>
+                      <p className="text-white font-bold text-sm">Contact</p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <p className="text-gray-500 text-xs mb-0.5">Professional Title</p>
+                        <p className="text-white text-sm">{form.professional_title || <span className="text-gray-600 italic">Not set</span>}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs mb-0.5">Contact Number</p>
+                        <p className="text-white text-sm">{form.phone || <span className="text-gray-600 italic">Not set</span>}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs mb-0.5">City / Province</p>
+                        <p className="text-white text-sm">{form.location || <span className="text-gray-600 italic">Not set</span>}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs mb-0.5">Portfolio Website</p>
+                        <p className="text-white text-sm break-all">{form.portfolio_url || <span className="text-gray-600 italic">Not set</span>}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Work experience */}
+                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5 sm:col-span-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FontAwesomeIcon icon={faBriefcase} className="text-amber-400 text-sm" />
+                      </div>
+                      <p className="text-white font-bold text-sm">Work Experience</p>
+                      <span className="ml-auto text-gray-600 text-xs">{form.work_experience.length}</span>
+                    </div>
+
+                    {form.work_experience.length === 0 ? (
+                      <p className="text-gray-600 text-xs italic">Nothing added yet</p>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {form.work_experience.map((exp, i) => (
+                          <div key={i} className="border-l-2 border-amber-500/30 pl-3">
+                            <p className="text-white text-sm font-semibold">{exp.role}</p>
+                            <p className="text-gray-400 text-xs">
+                              {exp.organisation}
+                              {exp.period && ` · ${exp.period}`}
+                            </p>
+                            {exp.summary && <p className="text-gray-500 text-xs mt-1">{exp.summary}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Academic Info */}
                   <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">

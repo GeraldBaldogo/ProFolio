@@ -4,6 +4,220 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   THEME TOKENS
+
+   Two things happen here:
+
+   1. The whole app gets lighter. #060612 is very close to pure black, which is
+      what your adviser was reacting to — text at that contrast is tiring to
+      read for long stretches. The values below lift every surface a few steps
+      without turning it into a light theme.
+
+   2. The accent colour becomes something the student picks.
+
+   Both are applied by overriding the exact Tailwind classes the pages already
+   use, further down this file. That means no page has to be edited — one file
+   changes the whole system. It is a shim rather than a rebuild, and it's the
+   honest trade: a proper token refactor across ~30 pages is days of work and
+   a half-finished one looks worse than none.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* The background carries a hint of the accent, so picking green gives a
+     green-tinted app rather than the same grey with green buttons. Dark enough
+     that white text stays readable — a light background would mean rewriting
+     every text colour in the system. */
+  --tint-bg: #0d1220;
+  --tint-surface: #151c2e;
+
+  --app-bg: var(--tint-bg);
+  --app-surface: var(--tint-surface);
+  color-scheme: dark;
+  --app-card: rgba(255, 255, 255, 0.05);
+  --app-card-hover: rgba(255, 255, 255, 0.09);
+  --app-border: rgba(255, 255, 255, 0.10);
+  --app-border-strong: rgba(255, 255, 255, 0.18);
+
+  --app-text-muted: #8b93a7;
+  --app-text-faint: #6b7386;
+
+  --accent-300: #93c5fd;
+  --accent-400: #60a5fa;
+  --accent-500: #3b82f6;
+  --accent-600: #2563eb;
+  --accent-rgb: 96, 165, 250;
+}
+
+[data-accent="green"] {
+  --tint-bg: #0a1712;
+  --tint-surface: #12241d;
+  --accent-300: #6ee7b7;
+  --accent-400: #34d399;
+  --accent-500: #10b981;
+  --accent-600: #059669;
+  --accent-rgb: 52, 211, 153;
+}
+
+[data-accent="violet"] {
+  --tint-bg: #130f1f;
+  --tint-surface: #1e192e;
+  --accent-300: #c4b5fd;
+  --accent-400: #a78bfa;
+  --accent-500: #8b5cf6;
+  --accent-600: #7c3aed;
+  --accent-rgb: 167, 139, 250;
+}
+
+[data-accent="orange"] {
+  --tint-bg: #19120a;
+  --tint-surface: #271d12;
+  --accent-300: #fdba74;
+  --accent-400: #fb923c;
+  --accent-500: #f97316;
+  --accent-600: #ea580c;
+  --accent-rgb: 251, 146, 60;
+}
+
+[data-accent="rose"] {
+  --tint-bg: #180e13;
+  --tint-surface: #26181e;
+  --accent-300: #fda4af;
+  --accent-400: #fb7185;
+  --accent-500: #f43f5e;
+  --accent-600: #e11d48;
+  --accent-rgb: 251, 113, 133;
+}
+
+[data-accent="amber"] {
+  --tint-bg: #17130a;
+  --tint-surface: #241e12;
+  --accent-300: #fcd34d;
+  --accent-400: #fbbf24;
+  --accent-500: #f59e0b;
+  --accent-600: #d97706;
+  --accent-rgb: 251, 191, 36;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LIGHT THEME
+
+   This is a real inversion, not a lighter dark. The background becomes white,
+   and every text colour has to flip with it — the app writes almost everything
+   in white or light grey, which disappears the moment the page behind it is
+   pale.
+
+   Rather than editing thirty pages, the same override trick is used: the exact
+   Tailwind classes the pages already use are redefined here.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+[data-theme="light"] {
+  /* Tells the browser to render scrollbars, form controls and autofill in
+     light styling too — without it those stay dark and look broken. */
+  color-scheme: light;
+  --app-bg: #f6f7fb;
+  --app-surface: #ffffff;
+  --app-card: rgba(15, 23, 42, 0.028);
+  --app-card-hover: rgba(15, 23, 42, 0.06);
+  --app-border: rgba(15, 23, 42, 0.10);
+  --app-border-strong: rgba(15, 23, 42, 0.20);
+  --app-text-muted: #64748b;
+  --app-text-faint: #94a3b8;
+}
+
+/* Each accent gets a barely-tinted white, so choosing green still reads as
+   green without turning the page into a colour block. */
+[data-theme="light"][data-accent="green"]  { --app-bg: #f2faf6; }
+[data-theme="light"][data-accent="violet"] { --app-bg: #f8f5fd; }
+[data-theme="light"][data-accent="orange"] { --app-bg: #fdf7f2; }
+[data-theme="light"][data-accent="rose"]   { --app-bg: #fdf4f6; }
+[data-theme="light"][data-accent="amber"]  { --app-bg: #fdfaf0; }
+
+/* Text has to invert or nothing is readable. */
+[data-theme="light"] body { color: #0f172a; }
+
+[data-theme="light"] .text-white     { color: #0f172a !important; }
+[data-theme="light"] .text-gray-200  { color: #1e293b !important; }
+[data-theme="light"] .text-gray-300  { color: #334155 !important; }
+[data-theme="light"] .text-gray-400  { color: #475569 !important; }
+[data-theme="light"] .text-gray-500  { color: #64748b !important; }
+[data-theme="light"] .text-gray-600  { color: #94a3b8 !important; }
+[data-theme="light"] .text-gray-700  { color: #cbd5e1 !important; }
+[data-theme="light"] .hover\:text-white:hover { color: #0f172a !important; }
+
+/* Fills that were white-on-dark become dark-on-light, or they vanish. */
+[data-theme="light"] .bg-white\/\[0\.02\],
+[data-theme="light"] .bg-white\/\[0\.03\],
+[data-theme="light"] .bg-white\/\[0\.04\],
+[data-theme="light"] .bg-white\/5  { background-color: rgba(15, 23, 42, 0.035) !important; }
+
+[data-theme="light"] .hover\:bg-white\/\[0\.07\]:hover,
+[data-theme="light"] .hover\:bg-white\/\[0\.08\]:hover,
+[data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgba(15, 23, 42, 0.07) !important; }
+
+[data-theme="light"] .border-white\/5,
+[data-theme="light"] .border-white\/8,
+[data-theme="light"] .border-white\/10 { border-color: rgba(15, 23, 42, 0.11) !important; }
+[data-theme="light"] .divide-white\/5 > * + * { border-color: rgba(15, 23, 42, 0.11) !important; }
+
+/* The 400-weight accent is designed for dark backgrounds. On white it's too
+   pale to read, so text and borders step down to the 600. */
+[data-theme="light"] .text-blue-400 { color: var(--accent-600) !important; }
+[data-theme="light"] .text-blue-300 { color: var(--accent-600) !important; }
+
+/* ── Two kinds of surface stay dark whatever the theme ──
+
+   .photo-surface — anything written over a photograph. The photo has a dark
+   scrim behind the words; flipping that text to near-black in light mode makes
+   it vanish into the image.
+
+   .dark-surface — the code and terminal mockups. Editors everywhere keep the
+   code panel dark on a light UI, and the syntax colours are built for it.
+   ────────────────────────────────────────────────────────────────────────── */
+
+[data-theme="light"] .photo-surface .text-white,
+[data-theme="light"] .dark-surface  .text-white   { color: #ffffff !important; }
+[data-theme="light"] .photo-surface .text-gray-200,
+[data-theme="light"] .dark-surface  .text-gray-200 { color: #e5e7eb !important; }
+[data-theme="light"] .photo-surface .text-gray-300,
+[data-theme="light"] .dark-surface  .text-gray-300 { color: #d1d5db !important; }
+[data-theme="light"] .photo-surface .text-gray-400,
+[data-theme="light"] .dark-surface  .text-gray-400 { color: #9ca3af !important; }
+[data-theme="light"] .photo-surface .text-gray-500,
+[data-theme="light"] .dark-surface  .text-gray-500 { color: #6b7280 !important; }
+[data-theme="light"] .photo-surface .text-gray-600,
+[data-theme="light"] .dark-surface  .text-gray-600 { color: #4b5563 !important; }
+
+[data-theme="light"] .dark-surface,
+[data-theme="light"] .dark-surface .bg-\[\#0d1218\] { background-color: #0d1218 !important; }
+
+[data-theme="light"] .photo-surface .bg-white\/5,
+[data-theme="light"] .dark-surface  .bg-white\/5,
+[data-theme="light"] .photo-surface .bg-white\/\[0\.03\],
+[data-theme="light"] .dark-surface  .bg-white\/\[0\.03\] { background-color: rgba(255,255,255,0.05) !important; }
+
+[data-theme="light"] .photo-surface .border-white\/10,
+[data-theme="light"] .dark-surface  .border-white\/10,
+[data-theme="light"] .photo-surface .border-white\/8,
+[data-theme="light"] .dark-surface  .border-white\/8 { border-color: rgba(255,255,255,0.12) !important; }
+
+/* The glow and the floating orbs were drawn for a black page. On white they
+   read as smudges, so they're dialled right down rather than removed — the
+   layout still depends on the elements being there. */
+[data-theme="light"] .orb { opacity: 0.06; }
+[data-theme="light"] .glow-blue { box-shadow: 0 8px 30px rgba(var(--accent-rgb), 0.14); }
+[data-theme="light"] .glow-text { text-shadow: none; }
+[data-theme="light"] .animated-gradient {
+  background: linear-gradient(-45deg, #eef2ff, #f8fafc, #eff6ff, #f8fafc);
+  background-size: 400% 400%;
+}
+
+/* Code and terminal panels stay dark in both themes. Editors do this
+   everywhere — GitHub and VS Code both keep the code surface dark on a light
+   UI, and syntax colours are built for it. */
+[data-theme="light"] .bg-\[\#060610\] { background-color: #0d1117 !important; }
+[data-theme="light"] .bg-\[\#060610\] * { color: #e6edf3 !important; }
+
 * {
   margin: 0;
   padding: 0;
@@ -12,9 +226,90 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  color: #f8fafc;
-  background-color: #0f172a;
+  color: #f1f5f9;
+  background-color: var(--app-bg);
+  transition: background-color 0.3s ease;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SURFACE OVERRIDES
+
+   The pages hardcode these exact values. Tailwind generates a class for each
+   arbitrary value, and the escaped selectors below target those classes, so
+   changing a token here changes every page at once.
+
+   If you ever add a page with a different hex, it won't follow the theme —
+   use one of the classes below rather than inventing a new shade.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.bg-\[\#060612\]      { background-color: var(--app-bg) !important; }
+.bg-\[\#0a0d10\]      { background-color: var(--app-bg) !important; }
+.bg-\[\#0a0a18\]      { background-color: var(--app-surface) !important; }
+.bg-\[\#0d1218\]      { background-color: var(--app-surface) !important; }
+.bg-\[\#060610\]      { background-color: var(--app-surface) !important; }
+
+.bg-\[\#060612\]\/90  { background-color: color-mix(in srgb, var(--app-bg) 90%, transparent) !important; }
+.bg-\[\#0a0d10\]\/90  { background-color: color-mix(in srgb, var(--app-bg) 90%, transparent) !important; }
+.bg-\[\#0a0a18\]\/95  { background-color: color-mix(in srgb, var(--app-surface) 95%, transparent) !important; }
+.bg-\[\#0d1218\]\/95  { background-color: color-mix(in srgb, var(--app-surface) 95%, transparent) !important; }
+
+/* Card fills */
+.bg-white\/\[0\.03\]  { background-color: var(--app-card) !important; }
+.bg-white\/\[0\.02\]  { background-color: var(--app-card) !important; }
+.bg-white\/\[0\.04\]  { background-color: var(--app-card) !important; }
+.bg-white\/5          { background-color: var(--app-card) !important; }
+.hover\:bg-white\/\[0\.07\]:hover { background-color: var(--app-card-hover) !important; }
+.hover\:bg-white\/\[0\.08\]:hover { background-color: var(--app-card-hover) !important; }
+.hover\:bg-white\/10:hover       { background-color: var(--app-card-hover) !important; }
+
+/* Hairlines */
+.border-white\/5      { border-color: var(--app-border) !important; }
+.border-white\/8      { border-color: var(--app-border) !important; }
+.border-white\/10     { border-color: var(--app-border) !important; }
+.divide-white\/5 > * + * { border-color: var(--app-border) !important; }
+.hover\:border-white\/15:hover { border-color: var(--app-border-strong) !important; }
+.hover\:border-white\/20:hover { border-color: var(--app-border-strong) !important; }
+.hover\:border-white\/25:hover { border-color: var(--app-border-strong) !important; }
+
+/* Muted text — gray-500 and gray-600 on near-black was the least readable
+   part of the old palette, and it's used for most secondary copy. */
+.text-gray-500 { color: var(--app-text-muted) !important; }
+.text-gray-600 { color: var(--app-text-faint) !important; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ACCENT OVERRIDES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.text-blue-400 { color: var(--accent-400) !important; }
+.text-blue-300 { color: var(--accent-300) !important; }
+.hover\:text-blue-300:hover { color: var(--accent-300) !important; }
+
+.bg-blue-400  { background-color: var(--accent-400) !important; }
+.bg-blue-500  { background-color: var(--accent-500) !important; }
+.bg-blue-600  { background-color: var(--accent-600) !important; }
+.hover\:bg-blue-300:hover { background-color: var(--accent-300) !important; }
+.hover\:bg-blue-600:hover { background-color: var(--accent-600) !important; }
+
+.bg-blue-500\/5   { background-color: rgba(var(--accent-rgb), 0.05) !important; }
+.bg-blue-500\/10  { background-color: rgba(var(--accent-rgb), 0.10) !important; }
+.bg-blue-500\/15  { background-color: rgba(var(--accent-rgb), 0.15) !important; }
+.bg-blue-500\/20  { background-color: rgba(var(--accent-rgb), 0.20) !important; }
+.bg-blue-500\/30  { background-color: rgba(var(--accent-rgb), 0.30) !important; }
+
+.border-blue-500\/20 { border-color: rgba(var(--accent-rgb), 0.20) !important; }
+.border-blue-500\/25 { border-color: rgba(var(--accent-rgb), 0.25) !important; }
+.border-blue-500\/30 { border-color: rgba(var(--accent-rgb), 0.30) !important; }
+.border-blue-400\/60 { border-color: rgba(var(--accent-rgb), 0.60) !important; }
+.focus\:border-blue-500\/50:focus { border-color: rgba(var(--accent-rgb), 0.50) !important; }
+.focus\:border-blue-400\/60:focus { border-color: rgba(var(--accent-rgb), 0.60) !important; }
+
+.from-blue-500 { --tw-gradient-from: var(--accent-500) !important; }
+.to-blue-600   { --tw-gradient-to: var(--accent-600) !important; }
+.from-blue-400 { --tw-gradient-from: var(--accent-400) !important; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   EXISTING ANIMATIONS
+   ───────────────────────────────────────────────────────────────────────────── */
 
 @keyframes gradientMove {
   0% { background-position: 0% 50%; }
@@ -48,7 +343,7 @@ body {
 }
 
 .animated-gradient {
-  background: linear-gradient(-45deg, #0f172a, #1e1b4b, #0f172a, #1e3a5f, #0f172a);
+  background: linear-gradient(-45deg, var(--app-bg), #1e1b4b, var(--app-bg), #1e3a5f, var(--app-bg));
   background-size: 400% 400%;
   animation: gradientMove 10s ease infinite;
 }
@@ -60,7 +355,7 @@ body {
 .pulse-slow { animation: pulse-slow 4s ease-in-out infinite; }
 
 .shimmer-text {
-  background: linear-gradient(90deg, #60a5fa, #a78bfa, #38bdf8, #60a5fa);
+  background: linear-gradient(90deg, var(--accent-400), var(--accent-300), var(--accent-500), var(--accent-400));
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -71,31 +366,31 @@ body {
 .spin-slow { animation: spin-slow 20s linear infinite; }
 
 .glass {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--app-card);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--app-border);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--app-card);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--app-border);
   transition: all 0.3s ease;
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(59, 130, 246, 0.4);
+  background: var(--app-card-hover);
+  border-color: rgba(var(--accent-rgb), 0.4);
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 20px 40px rgba(var(--accent-rgb), 0.1);
 }
 
 .glow-blue {
-  box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 40px rgba(var(--accent-rgb), 0.3);
 }
 
 .glow-text {
-  text-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+  text-shadow: 0 0 30px rgba(var(--accent-rgb), 0.5);
 }
 
 .orb {
@@ -104,4 +399,13 @@ body {
   filter: blur(80px);
   opacity: 0.15;
   pointer-events: none;
+}
+
+/* Anyone who has asked their system for less motion gets none of the above. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

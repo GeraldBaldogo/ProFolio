@@ -178,6 +178,75 @@ const markAssignmentSubmitted = async (test_id, student_id) => {
   return testRepo.updateAssignmentStatus(test_id, student_id, 'submitted');
 };
 
+const getMyStudents = async (professor_id) => {
+  const assignments = await testRepo.findAssignmentsByProfessor(professor_id);
+  if (!assignments.length) return [];
+ 
+  const testIds = [...new Set(assignments.map(a => a.test_id))];
+  const results = await testRepo.findResultsByTestIds(testIds);
+ 
+  // Newest result per student per test — a student could in principle have
+  // more than one row, and the latest is the one that counts.
+  const resultKey = (user_id, test_id) => `${user_id}::${test_id}`;
+  const latest = new Map();
+  for (const r of results) {
+    const key = resultKey(r.user_id, r.test_id);
+    if (!latest.has(key)) latest.set(key, r);
+  }
+ 
+  const byStudent = new Map();
+ 
+  for (const a of assignments) {
+    const id = a.student_id;
+    if (!byStudent.has(id)) {
+      byStudent.set(id, {
+        id,
+        full_name: a.users?.full_name || 'Student',
+        email: a.users?.email || null,
+        assignments: [],
+      });
+    }
+ 
+    const result = latest.get(resultKey(id, a.test_id)) || null;
+ 
+    byStudent.get(id).assignments.push({
+      assignment_id: a.id,
+      test_id: a.test_id,
+      title: a.tests?.title || 'Test',
+      type: a.tests?.type || null,
+      status: a.status,
+      due_date: a.due_date,
+      assigned_at: a.assigned_at,
+      score: result?.score ?? null,
+      submitted_at: result?.created_at || null,
+      flags: (result?.metadata?.violation_count || 0)
+        + (result?.metadata?.camera_violation_count || 0),
+      unproctored: !!result?.metadata?.unproctored,
+      feedback: result?.metadata?.overall_feedback || result?.metadata?.feedback || null,
+    });
+  }
+ 
+  // Each student's own numbers, worked out here so the page doesn't have to.
+  return [...byStudent.values()].map((s) => {
+    const scored = s.assignments.filter(a => a.score !== null);
+    const submitted = s.assignments.filter(a => a.status === 'submitted');
+    const overdue = s.assignments.filter(a =>
+      a.status !== 'submitted' && a.due_date && new Date(a.due_date) < new Date()
+    );
+ 
+    return {
+      ...s,
+      assigned_count: s.assignments.length,
+      submitted_count: submitted.length,
+      overdue_count: overdue.length,
+      flagged_count: s.assignments.filter(a => a.flags > 0 || a.unproctored).length,
+      average: scored.length
+        ? Math.round(scored.reduce((sum, a) => sum + a.score, 0) / scored.length)
+        : null,
+    };
+  }).sort((a, b) => a.full_name.localeCompare(b.full_name));
+};
+
 module.exports = {
   createTest,
   updateTest,
@@ -190,5 +259,6 @@ module.exports = {
   startAssignment,
   listStudents,
   assertNotOverdue,
+  getMyStudents,
   markAssignmentSubmitted,
 };

@@ -6,11 +6,13 @@ import {
   faArrowRight, faCircleCheck, faClock, faRightFromBracket,
   faTrophy, faChartLine, faSpinner, faClipboardList, faFileAlt,
   faComments, faFingerprint, faLightbulb, faTriangleExclamation,
-  faRotateRight, faKeyboard, faCode, faDiagramProject, faDatabase,
+  faRotateRight, faKeyboard, faCode, faDiagramProject, faDatabase, faDumbbell, 
   faBug, faPlay, faWandMagicSparkles,
+  faSquare,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import ThemePicker from '../../components/ThemePicker'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 // Ordered to follow what a student actually does: work set for them, their own
@@ -18,12 +20,10 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
-  { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
+  { label: 'Practices', icon: faDumbbell, path: '/student/assessment' },
   { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
-  { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
-  { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
   { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
@@ -209,14 +209,18 @@ const StudentDashboard = () => {
             <h1 className="text-white font-bold text-lg">Welcome back, {user?.full_name?.split(' ')[0]}</h1>
             <p className="text-gray-500 text-xs">Here&apos;s where you stand</p>
           </div>
-          {!loading && (
-            <button
-              onClick={fetchData}
-              className="ml-auto w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
-            >
-              <FontAwesomeIcon icon={faRotateRight} className="text-sm" />
-            </button>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            <ThemePicker />
+            {!loading && (
+              <button
+                onClick={fetchData}
+                aria-label="Refresh"
+                className="w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
+              >
+                <FontAwesomeIcon icon={faRotateRight} className="text-sm" />
+              </button>
+            )}
+          </div>
         </header>
 
         <main className="flex-1 px-6 py-8">

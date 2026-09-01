@@ -140,10 +140,18 @@ const generateCV = async (user_id) => {
 
 STUDENT
 Name: ${profile.users?.full_name}
-Course: ${profile.course || 'BS Computer Science'}
+Title they use: ${profile.professional_title || profile.career_goal || 'Not stated'}
+Course: ${profile.course || 'BS Computer Science'}${profile.specialization ? ` (${profile.specialization})` : ''}
 Year: ${profile.year_level || 'Not specified'}
 School: ${profile.school || 'Tomas Claudio Colleges'}
-Bio: ${profile.bio || 'None provided'}
+Expected graduation: ${profile.expected_graduation || 'Not stated'}
+Academic honours: ${profile.academic_honors || 'None stated'}
+Bio in their own words: ${profile.bio || 'None provided'}
+
+WORK EXPERIENCE
+${(Array.isArray(profile.work_experience) ? profile.work_experience : [])
+  .map(e => `- ${e.role || 'Role not stated'} at ${e.organisation || 'unnamed organisation'}${e.period ? ` (${e.period})` : ''}${e.summary ? `: ${e.summary}` : ''}`)
+  .join('\n') || '- None'}
 
 SELF-REPORTED SKILLS
 ${skills.map((s) => `- ${s.skill_name} (${s.category || 'general'})`).join('\n') || '- None listed'}
@@ -176,9 +184,9 @@ WRITING RULES — these matter more than anything else:
    back into a figure. Typing words-per-minute is the single exception, and only
    if it is genuinely impressive.
 
-2. Write in flowing prose paragraphs, not bullet points and not lists of
-   attributes. This should read like something a careers adviser wrote about a
-   person, not a scorecard.
+2. The about_me paragraph is prose — flowing sentences, not a list of
+   attributes. Everything else on the page is a bullet, so keep those short
+   enough to scan: a phrase, not a sentence.
 
 3. Be specific and grounded. "Writes correct SQL against unfamiliar schemas
    under time pressure" is useful. "Excellent problem-solving skills" is not.
@@ -189,14 +197,15 @@ WRITING RULES — these matter more than anything else:
 5. Where something is weak, frame it as a direction of growth, never as a
    failing, and never quantify it.
 
-6. Third person, no name repetition after the first sentence of the summary.
+6. Third person, no name repetition after the first sentence.
+
+7. This CV must fit on one printed page. Be brief. A short honest paragraph
+   beats a long one that repeats itself.
 
 Respond with JSON only, no markdown:
 {
-  "professional_summary": "3-5 sentences. Who this person is as a developer, what they are oriented toward, and what stage they are at. Written for a hiring manager skimming for 10 seconds.",
-  "technical_narrative": "2-4 sentences of prose describing demonstrated technical ability — what they have actually been observed doing, drawn from the assessed evidence and projects.",
-  "soft_skills_narrative": "2-3 sentences of prose on communication, working style, and how they handle being observed or timed. Draw from the communication assessment and any faculty comments.",
-  "verified_competencies": ["4-6 short phrases naming what has been demonstrated under supervision, e.g. 'Debugging unfamiliar code under time pressure'. No numbers."],
+  "about_me": "ONE paragraph, 3-4 sentences. Who this person is as a developer, what they are oriented toward, and what stage they are at. This is the only prose on the page — everything else is a bullet list — so it has to carry the whole introduction. Written for a hiring manager skimming for ten seconds.",
+  "verified_competencies": ["4-6 short phrases naming what has been demonstrated under supervision, e.g. 'Debugging unfamiliar code under time pressure'. Each one under 10 words. No numbers."],
   "growth_areas": ["2-3 short phrases naming honest next steps, framed forward. No numbers."],
   "suggested_roles": ["2-4 job titles this person could realistically apply for now"]
 }`;
@@ -226,16 +235,17 @@ Respond with JSON only, no markdown:
   const cv_content = {
     header: {
       full_name: profile.users?.full_name,
+      // The title sits under the name and is the first thing a reader takes in,
+      // so it falls back to the career goal rather than showing nothing.
+      professional_title: profile.professional_title || profile.career_goal || null,
       email: profile.users?.email,
-      course: profile.course,
-      year_level: profile.year_level,
-      school: profile.school,
+      phone: profile.phone || null,
+      location: profile.location || null,
       github_url: profile.github_url,
       linkedin_url: profile.linkedin_url,
+      portfolio_url: profile.portfolio_url || null,
     },
-    professional_summary: stripScores(aiContent.professional_summary),
-    technical_narrative: stripScores(aiContent.technical_narrative),
-    soft_skills_narrative: stripScores(aiContent.soft_skills_narrative),
+    about_me: stripScores(aiContent.about_me),
     verified_competencies: (aiContent.verified_competencies || []).map(stripScores),
     growth_areas: (aiContent.growth_areas || []).map(stripScores),
     suggested_roles: aiContent.suggested_roles || [],
@@ -243,17 +253,31 @@ Respond with JSON only, no markdown:
     // Skills the student listed themselves — kept separate from the assessed
     // narrative above, because a self-rating and a supervised result are not
     // the same kind of claim and shouldn't be presented as if they were.
+    education: {
+      course: profile.course || null,
+      year_level: profile.year_level || null,
+      school: profile.school || null,
+      specialization: profile.specialization || null,
+      expected_graduation: profile.expected_graduation || null,
+      academic_honors: profile.academic_honors || null,
+    },
+
+    // Nothing else in the system holds a job history, so this comes straight
+    // from the profile rather than from the portfolio tables.
+    work_experience: Array.isArray(profile.work_experience) ? profile.work_experience : [],
+
     self_reported_skills: skills.map((s) => ({
       name: s.skill_name,
       category: s.category,
     })),
 
+    // Descriptions are dropped on purpose: two sentences per project is most
+    // of a page once a student has four of them. Title and stack is what a
+    // reader actually scans for.
     projects: projects.map((p) => ({
       title: p.title,
-      description: p.description,
       tech_stack: p.tech_stack,
       github_url: p.github_url,
-      live_url: p.live_url,
     })),
     certifications: certifications.map((c) => ({
       title: c.title,

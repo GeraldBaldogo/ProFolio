@@ -5,7 +5,7 @@ import {
   faHouse, faFolder, faRobot, faStar, faUser, faBars, faTimes,
   faTrophy, faRightFromBracket, faKeyboard, faCode, faDiagramProject,
   faDatabase, faBug, faComments, faSpinner, faClipboardList,
-  faCircleCheck, faFileAlt, faFingerprint, faLightbulb, faChartLine,
+  faDumbbell, faFileAlt, faFingerprint, faLightbulb, faChartLine,
   faTriangleExclamation, faRotateRight, faShield, faVideoSlash, faWandMagicSparkles, 
   faChevronDown, faArrowTrendUp, faArrowTrendDown, faUserTie,
 } from '@fortawesome/free-solid-svg-icons'
@@ -16,12 +16,10 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
-  { label: 'Assessment', icon: faTrophy, path: '/student/assessment' },
+  { label: 'Practices', icon: faDumbbell, path: '/student/assessment' },
   { label: 'My Results', icon: faChartLine, path: '/student/results' },
   { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
   { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
-  { label: 'AI Feedback', icon: faRobot, path: '/student/ai-feedback' },
-  { label: 'Evaluation', icon: faStar, path: '/student/evaluation' },
   { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
   { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
   { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },

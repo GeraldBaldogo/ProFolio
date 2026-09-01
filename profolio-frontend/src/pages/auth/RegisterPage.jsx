@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import ThemePicker from '../../components/ThemePicker'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faEnvelope, faLock, faEye, faEyeSlash,
@@ -126,21 +127,21 @@ const RegisterPage = () => {
   const strength = scorePassword(form.password)
   const matches = form.confirm_password && form.password === form.confirm_password
 
-  const inputBase = 'w-full bg-white/[0.04] rounded-2xl px-4 py-3 pl-11 text-white text-sm placeholder-gray-600 outline-none transition-all border'
+  const inputBase = 'w-full bg-white/[0.04] rounded-xl px-4 py-3 pl-11 text-white text-[15px] placeholder-gray-600 outline-none transition-all border'
   const inputState = (name) => fieldErrors[name]
-    ? 'border-red-500/50 focus:border-red-400'
+    ? 'border-rose-500/50 focus:border-rose-400'
     : 'border-white/10 hover:border-white/20 focus:border-blue-400/60 focus:bg-blue-400/[0.06]'
 
   // ── Waiting-for-approval screen ──
   if (pending) {
     return (
-      <div className="min-h-screen bg-[#0a0d10] font-sans flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#060612] font-sans flex items-center justify-center px-6">
         <div className="w-full max-w-md text-center">
           <div className="flex justify-center mb-8">
             <Link to="/" className="inline-flex items-center gap-2.5">
               <img src={logo} alt="" className="h-9 w-auto" />
               <span className="text-xl font-black text-white tracking-tight">
-                Pro<span className="text-blue-400">Folio</span>
+                Pro<span className="brand-gradient">Folio</span>
               </span>
             </Link>
           </div>
@@ -149,7 +150,7 @@ const RegisterPage = () => {
             <FontAwesomeIcon icon={faClock} className="text-amber-400 text-xl" />
           </div>
 
-          <h1 className="text-3xl font-black text-white tracking-tight mb-3">
+          <h1 className="text-[28px] font-bold text-white tracking-[-0.02em] mb-3">
             Account created.
           </h1>
           <p className="text-gray-400 leading-relaxed mb-2">
@@ -161,7 +162,7 @@ const RegisterPage = () => {
           </p>
 
           <Link to="/login"
-            className="inline-flex items-center justify-center gap-2 bg-blue-400 hover:bg-blue-300 text-black font-bold px-6 py-3 rounded-2xl text-sm transition-colors">
+            className="inline-flex items-center justify-center gap-2 bg-blue-400 hover:bg-blue-300 text-black font-bold px-6 py-3 rounded-xl text-sm transition-colors">
             Back to sign in
           </Link>
 
@@ -176,9 +177,23 @@ const RegisterPage = () => {
   }
 
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-[#0a0d10] font-sans grid lg:grid-cols-2">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-[#060612] font-sans grid lg:grid-cols-2">
+
+      <div className="fixed top-5 right-5 z-40">
+        <ThemePicker />
+      </div>
 
       <style>{`
+        /* Matches the landing page. Uses the theme's accent variables so the
+           wordmark follows whichever colour is selected. */
+        .brand-gradient {
+          background: linear-gradient(100deg, var(--accent-300), var(--accent-500));
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
+        }
+
         @keyframes drift {
           0%   { transform: translate(0, 0) scale(1); }
           33%  { transform: translate(40px, -30px) scale(1.08); }
@@ -226,12 +241,12 @@ const RegisterPage = () => {
             <Link to="/" className="inline-flex items-center gap-2.5 group">
               <img src={logo} alt="" className="h-9 w-auto" />
               <span className="text-xl font-black text-white tracking-tight">
-                Pro<span className="text-blue-400">Folio</span>
+                Pro<span className="brand-gradient">Folio</span>
               </span>
             </Link>
           </div>
 
-          <h1 className="text-3xl font-black text-white tracking-tight leading-tight mb-1.5">
+          <h1 className="text-[32px] font-bold text-white tracking-[-0.025em] leading-tight mb-1.5">
             Create your account.
           </h1>
           <p className="text-gray-400 text-sm mb-6">
@@ -240,7 +255,7 @@ const RegisterPage = () => {
 
           {error && (
             <div role="alert"
-              className="flex items-start gap-3 border border-red-500/30 bg-red-500/10 text-red-300 text-sm px-4 py-3 rounded-2xl mb-6">
+              className="flex items-start gap-3 border border-red-500/30 bg-red-500/10 text-red-300 text-sm px-4 py-3 rounded-xl mb-6">
               <FontAwesomeIcon icon={faTriangleExclamation} className="flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -384,7 +399,7 @@ const RegisterPage = () => {
                     placeholder="Type it once more"
                     className={`${inputBase} pr-20 ${
                       fieldErrors.confirm_password
-                        ? 'border-red-500/50 focus:border-red-400'
+                        ? 'border-rose-500/50 focus:border-rose-400'
                         : matches
                           ? 'border-emerald-500/50 bg-emerald-500/[0.06]'
                           : 'border-white/10 hover:border-white/20 focus:border-blue-400/60 focus:bg-blue-400/[0.06]'
@@ -408,7 +423,7 @@ const RegisterPage = () => {
 
             <button
               type="submit" disabled={loading}
-              className="group relative overflow-hidden bg-blue-400 hover:bg-blue-300 text-black font-bold py-3 rounded-2xl text-sm mt-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="group relative overflow-hidden bg-blue-400 hover:bg-blue-300 text-black font-bold py-3 rounded-xl text-sm mt-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {!loading && (
                 <span className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"
@@ -439,7 +454,7 @@ const RegisterPage = () => {
           <div className="grid grid-cols-3 gap-2.5">
             {SOCIAL_PROVIDERS.map((p) => (
               <a key={p.key} href={p.href} aria-label={`Continue with ${p.label}`}
-                className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white py-3 rounded-2xl text-sm font-semibold transition-all">
+                className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white py-3 rounded-xl text-sm font-semibold transition-all">
                 <FontAwesomeIcon icon={p.icon} className="text-base" style={{ color: p.iconColor }} />
                 <span className="hidden sm:inline lg:hidden xl:inline">{p.label}</span>
               </a>
@@ -461,7 +476,7 @@ const RegisterPage = () => {
         </div>
       </div>
 
-      <div className="relative hidden lg:block overflow-hidden lg:order-1">
+      <div className="photo-surface relative hidden lg:block overflow-hidden lg:order-1">
         {photoFailed ? (
           <div className="absolute inset-0 bg-gradient-to-br from-[#141d29] via-[#0d1218] to-[#0a0d10] flex items-center justify-center">
             <FontAwesomeIcon icon={faImage} className="text-white/10 text-3xl" />
@@ -470,16 +485,16 @@ const RegisterPage = () => {
           <img src={SIDE_PHOTO} alt="" onError={() => setPhotoFailed(true)}
             className="absolute inset-0 w-full h-full object-cover" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-bl from-[#0a0d10] via-[#0a0d10]/85 to-[#0a0d10]/60" />
+        <div className="absolute inset-0 bg-gradient-to-bl from-black/90 via-black/75 to-black/50" />
         <div className="absolute inset-y-0 right-0 w-px bg-white/8" />
 
         <div className="relative h-full flex flex-col justify-center px-14 xl:px-20">
-          <h2 className="text-4xl xl:text-5xl font-black text-white leading-[1.05] tracking-tight mb-6">
+          <h2 className="text-4xl xl:text-[3rem] font-bold text-white leading-[1.08] tracking-[-0.03em] mb-6">
             One account.<br />
             <span className="text-blue-400">Ready for your future.</span>
           </h2>
           <p className="text-gray-400 text-lg max-w-md mb-10 leading-relaxed">
-            Everything you finish feeds one profile — a portfolio and CV you can hand to an employer.
+            Everything your professor sets feeds one profile — a portfolio and CV you can hand to an employer.
           </p>
 
           <div className="flex flex-wrap gap-2 max-w-md mb-10">
@@ -492,7 +507,7 @@ const RegisterPage = () => {
           </div>
 
           <div className="flex flex-col gap-3">
-            {['Free for every student', 'Retake any assessment', 'Reviewed by CS faculty'].map((p, i) => (
+            {['Free for every student', 'Practise as often as you like', 'Assessments set by your lecturers'].map((p, i) => (
               <span key={i} className="flex items-center gap-3 text-sm text-gray-400">
                 <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-400" />{p}
               </span>
@@ -504,4 +519,4 @@ const RegisterPage = () => {
   )
 }
 
-export default RegisterPage   
+export default RegisterPage

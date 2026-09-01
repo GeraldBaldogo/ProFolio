@@ -4,14 +4,10 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import StudentDashboard from './pages/student/StudentDashboard'
 import PortfolioBuilder from './pages/student/PortfolioBuilder'
-import AIFeedbackPage from './pages/student/AIFeedbackPage'
-import EvaluationResultPage from './pages/student/EvaluationResultPage'
 import ProtectedRoutes from './routes/ProtectedRoutes'
 import EvaluatorDashboard from './pages/evaluator/EvaluatorDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import StudentProfile from './pages/student/StudentProfile'
-import EvaluatorHistory from './pages/evaluator/EvaluatorHistory'
-import EvaluatorAssigned from './pages/evaluator/EvaluatorAssigned'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminUsers from './pages/admin/AdminUsers'
 import RecommendationsPage from './pages/student/RecommendationsPage'
@@ -35,6 +31,7 @@ import StudentMessagesPage from './pages/student/StudentMessagesPage'
 import EvaluatorMessagesPage from './pages/evaluator/EvaluatorMessagesPage'
 import ProfessorTests from './pages/evaluator/ProfessorTests'
 import TestSubmissions from './pages/evaluator/TestSubmission'
+import EvaluatorStudents from './pages/evaluator/EvaluatorStudents'
 
 function App() {
   return (
@@ -47,12 +44,6 @@ function App() {
       } />
       <Route path="/student/portfolio" element={
         <ProtectedRoutes role="student"><PortfolioBuilder /></ProtectedRoutes>
-      } />
-      <Route path="/student/ai-feedback" element={
-        <ProtectedRoutes role="student"><AIFeedbackPage /></ProtectedRoutes>
-      } />
-      <Route path="/student/evaluation" element={
-        <ProtectedRoutes role="student"><EvaluationResultPage /></ProtectedRoutes>
       } />
       <Route path="/student/profile" element={
         <ProtectedRoutes role="student"><StudentProfile /></ProtectedRoutes>
@@ -105,14 +96,11 @@ function App() {
       <Route path="/evaluator/dashboard" element={
         <ProtectedRoutes role="evaluator"><EvaluatorDashboard /></ProtectedRoutes>
       } />
+      <Route path="/evaluator/students" element={
+        <ProtectedRoutes role="evaluator"><EvaluatorStudents /></ProtectedRoutes>
+      } />
       <Route path="/evaluator/tests" element={
         <ProtectedRoutes role="evaluator"><ProfessorTests /></ProtectedRoutes>
-      } />
-      <Route path="/evaluator/assigned" element={
-        <ProtectedRoutes role="evaluator"><EvaluatorAssigned /></ProtectedRoutes>
-      } />
-      <Route path="/evaluator/history" element={
-        <ProtectedRoutes role="evaluator"><EvaluatorHistory /></ProtectedRoutes>
       } />
       <Route path="/evaluator/messages" element={
         <ProtectedRoutes role="evaluator"><EvaluatorMessagesPage /></ProtectedRoutes>
