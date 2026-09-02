@@ -68,9 +68,17 @@ const loadFaceApi = () => {
         if (!window.faceapi) await loadScript(source.script)
         if (!window.faceapi) throw new Error('script loaded but faceapi missing')
 
-        await Promise.all([
-          window.faceapi.nets.tinyFaceDetector.loadFromUri(source.models),
-          window.faceapi.nets.faceLandmark68Net.loadFromUri(source.models),
+        // A hanging request never rejects — it just never finishes. Without a
+        // deadline the loader waits forever and the panel never resolves either
+        // way, which is worse than saying the models are unavailable.
+        await Promise.race([
+          Promise.all([
+            window.faceapi.nets.tinyFaceDetector.loadFromUri(source.models),
+            window.faceapi.nets.faceLandmark68Net.loadFromUri(source.models),
+          ]),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timed out after 15s')), 15000)
+          ),
         ])
         return source
       } catch (err) {
@@ -265,7 +273,12 @@ const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable,
   }, [status, active, runDetection])
 
   const stateConfig = {
-    checking: { icon: faSpinner, color: 'text-gray-400', spin: true, label: 'Checking...' },
+    // Detection is deliberately paused until the assessment starts. Saying
+    // "Checking..." there reads as something stuck rather than something
+    // waiting for you.
+    checking: active
+      ? { icon: faSpinner, color: 'text-gray-400', spin: true, label: 'Checking...' }
+      : { icon: faCircleCheck, color: 'text-emerald-400', spin: false, label: 'Ready' },
     ok: { icon: faCircleCheck, color: 'text-emerald-400', spin: false, label: 'Face detected' },
     no_face: { icon: faEyeSlash, color: 'text-rose-400', spin: false, label: 'No face detected' },
     multiple_faces: { icon: faUserGroup, color: 'text-rose-400', spin: false, label: 'Multiple faces' },
