@@ -29,17 +29,12 @@ import {
 // model files won't load. Tried in order, first one that works wins.
 const FACE_API_SOURCES = [
   {
-    name: 'jsdelivr / vladmandic',
-    script: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.min.js',
-    models: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model',
-  },
-  {
-    name: 'jsdelivr / original 0.22.2',
+    name: 'jsdelivr / face-api.js 0.22.2',
     script: 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js',
     models: 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights',
   },
   {
-    name: 'unpkg / original 0.22.2',
+    name: 'unpkg / face-api.js 0.22.2',
     script: 'https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js',
     models: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights',
   },
