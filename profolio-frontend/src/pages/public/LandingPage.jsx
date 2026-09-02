@@ -80,10 +80,10 @@ const Eyebrow = ({ children, className = '' }) => (
 const SectionHead = ({ eyebrow, title, children, className = '' }) => (
   <div className={`max-w-2xl ${className}`}>
     {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-    <h2 className="text-white font-bold text-3xl sm:text-[2.6rem] leading-[1.12] tracking-[-0.02em] mb-5">
+    <h2 className="text-white font-bold text-[1.65rem] sm:text-[2.6rem] leading-[1.2] sm:leading-[1.12] tracking-[-0.02em] mb-4 sm:mb-5">
       {title}
     </h2>
-    {children && <p className="text-gray-400 text-[17px] leading-[1.7]">{children}</p>}
+    {children && <p className="text-gray-400 text-[15px] sm:text-[17px] leading-[1.7]">{children}</p>}
   </div>
 )
 
@@ -153,7 +153,7 @@ const StudentEditor = () => (
         </div>
       </div>
 
-      <div className="flex-1 p-4 font-mono text-[11px] leading-6 min-w-0">
+      <div className="flex-1 p-4 font-mono text-[11.5px] sm:text-[11px] leading-6 min-w-0 overflow-x-auto">
         <p className="text-gray-600">def <span className="text-blue-400">merge_intervals</span>(intervals):</p>
         <p className="text-gray-600 pl-4">intervals.sort(key=<span className="text-amber-400">lambda</span> x: x[0])</p>
         <p className="text-gray-600 pl-4">merged = []</p>
@@ -276,7 +276,7 @@ const CvDocument = ({ className = '' }) => (
 
 const TypingPreview = () => (
   <Window file="passage.txt" right={<span className="text-[10px] text-blue-400 font-mono">62 wpm</span>} className="w-full h-full">
-    <div className="flex-1 p-4 font-mono text-[11px] leading-7">
+    <div className="flex-1 p-4 font-mono text-[11.5px] sm:text-[11px] leading-7">
       <p>
         <span className="text-gray-500">Asymptotic analysis describes the </span>
         <span className="text-white">limiting behavior of </span>
@@ -294,7 +294,7 @@ const TypingPreview = () => (
 
 const BugPreview = () => (
   <Window file="buggy_code.js" right={<span className="text-[10px] text-rose-400 font-mono">3 defects</span>} className="w-full h-full">
-    <div className="flex-1 p-4 font-mono text-[11px] leading-6">
+    <div className="flex-1 p-4 font-mono text-[11.5px] sm:text-[11px] leading-6 overflow-x-auto">
       <p className="text-gray-600">function <span className="text-blue-400">average</span>(nums) {'{'}</p>
       <p className="text-gray-600 pl-4">let sum = 0;</p>
       <p className="bg-rose-500/10 border-l-2 border-rose-500 pl-3 -ml-1 text-gray-400">
@@ -311,7 +311,7 @@ const BugPreview = () => (
 
 const SqlPreview = () => (
   <Window file="query.sql" right={<span className="text-[10px] text-emerald-400 font-mono">schema given</span>} className="w-full h-full">
-    <div className="flex-1 p-4 font-mono text-[11px] leading-6">
+    <div className="flex-1 p-4 font-mono text-[11.5px] sm:text-[11px] leading-6 overflow-x-auto">
       <p className="text-gray-600">-- students(id, name, year)</p>
       <p className="text-gray-600">-- scores(student_id, subject, mark)</p>
       <p className="mt-2"><span className="text-amber-400">SELECT</span> <span className="text-gray-400">s.name,</span> <span className="text-blue-400">AVG</span><span className="text-gray-400">(c.mark)</span></p>
@@ -365,7 +365,7 @@ const CommsPreview = () => (
 
 const CodeMini = () => (
   <Window file="solution.py" className="w-full h-full">
-    <div className="flex-1 p-4 font-mono text-[11px] leading-6">
+    <div className="flex-1 p-4 font-mono text-[11.5px] sm:text-[11px] leading-6 overflow-x-auto">
       <p className="text-gray-600">def <span className="text-blue-400">solve</span>(nums):</p>
       <p className="text-gray-600 pl-4">nums.sort()</p>
       <p className="text-gray-600 pl-4"><span className="text-amber-400">return</span> nums[0]
@@ -463,6 +463,11 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#060612] font-sans overflow-x-hidden">
 
       <style>{`
+        /* The picker scrolls sideways on a phone; the bar under it just adds
+           noise on a strip four items long. */
+        .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+
         .reveal {
           opacity: 0;
           transform: translateY(18px);
@@ -488,6 +493,13 @@ export default function LandingPage() {
           pointer-events: none;
           z-index: 0;
         }
+        @media (max-width: 640px) {
+          .ambient { filter: blur(70px); }
+          .ambient-a, .ambient-b, .ambient-c, .ambient-d {
+            width: 340px !important; height: 340px !important;
+          }
+        }
+
         .ambient-a {
           width: 620px; height: 620px;
           top: -160px; left: -140px;
@@ -539,7 +551,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 h-[62px] flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
             <img src={logo} alt="" className="w-7 h-7 object-contain" />
-            <span className="text-[17px] font-bold text-white tracking-tight">
+            <span className="text-[16px] sm:text-[17px] font-bold text-white tracking-tight">
               Pro<span className="text-blue-400">Folio</span>
             </span>
           </Link>
@@ -554,13 +566,13 @@ export default function LandingPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <div className="hidden sm:block mr-1"><ThemePicker /></div>
+            <div className="hidden lg:block mr-1"><ThemePicker /></div>
             <Link to="/login"
-              className="text-gray-400 hover:text-white text-[14px] font-medium px-3 py-2 transition-colors">
+              className="text-gray-400 hover:text-white text-[13px] sm:text-[14px] font-medium px-2 sm:px-3 py-2 transition-colors">
               Sign in
             </Link>
             <Link to="/register"
-              className="bg-blue-500 hover:bg-blue-600 text-white text-[14px] font-semibold px-4 py-2 rounded-lg transition-colors">
+              className="bg-blue-500 hover:bg-blue-600 text-white text-[13px] sm:text-[14px] font-semibold px-3 sm:px-4 py-2 rounded-lg transition-colors">
               Get started
             </Link>
             <button
@@ -590,7 +602,7 @@ export default function LandingPage() {
       {/* ══ Hero ══ */}
       {/* min-h-screen so the first thing anyone sees is the sentence, not a
           screenshot cut in half by the fold. */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-16 overflow-hidden">
+      <section className="relative min-h-[88vh] lg:min-h-screen flex flex-col items-center justify-center px-5 sm:px-6 pt-24 pb-20 overflow-hidden">
 
         {/* Ambient wash. Two soft pools of the accent colour behind the text,
             which is where the page gets its depth from now that nothing moves. */}
@@ -599,7 +611,7 @@ export default function LandingPage() {
 
         <div className="relative max-w-4xl mx-auto text-center">
           <Reveal>
-            <h1 className="text-white font-bold text-[2.3rem] sm:text-[3.4rem] lg:text-[3.9rem] leading-[1.06] tracking-[-0.03em] mb-7">
+            <h1 className="text-white font-bold text-[1.85rem] sm:text-[3.1rem] lg:text-[3.9rem] leading-[1.12] sm:leading-[1.06] tracking-[-0.02em] sm:tracking-[-0.03em] mb-6 sm:mb-7">
               <span className="brand-gradient">ProFolio</span> turns the work
               <br className="hidden sm:block" />
               {' '}your professor sets into a CV
@@ -609,7 +621,7 @@ export default function LandingPage() {
           </Reveal>
 
           <Reveal delay={80}>
-            <p className="text-gray-400 text-[18px] sm:text-[19px] leading-[1.65] max-w-2xl mx-auto mb-9">
+            <p className="text-gray-400 text-[15px] sm:text-[19px] leading-[1.7] sm:leading-[1.65] max-w-2xl mx-auto mb-7 sm:mb-9">
               Lecturers write the assessments themselves. Students sit them under
               supervision. What they were observed doing becomes a one-page CV — written
               as evidence rather than a scorecard.
@@ -617,13 +629,13 @@ export default function LandingPage() {
           </Reveal>
 
           <Reveal delay={180}>
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 mb-6">
               <Link to="/register"
-                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-[15px] px-6 py-3 rounded-xl transition-colors">
+                className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-[15px] px-6 py-3.5 sm:py-3 rounded-xl transition-colors">
                 Get started <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
               </Link>
               <a href="#product"
-                className="flex items-center gap-2 border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white font-semibold text-[15px] px-6 py-3 rounded-xl transition-all">
+                className="flex items-center justify-center gap-2 border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white font-semibold text-[15px] px-6 py-3.5 sm:py-3 rounded-xl transition-all">
                 See how it works
               </a>
             </div>
@@ -649,23 +661,23 @@ export default function LandingPage() {
       {/* The product itself, on its own. A serious page shows the thing rather
           than describing it — but it earns its own space rather than crowding
           the sentence above it. */}
-      <section className="px-6 pb-8">
+      <section className="px-5 sm:px-6 pb-8">
         <Reveal className="max-w-5xl mx-auto">
-          <div className="border border-white/8 rounded-2xl overflow-hidden shadow-2xl aspect-[16/10]">
+          <div className="border border-white/8 rounded-2xl overflow-hidden shadow-2xl aspect-[4/3] sm:aspect-[16/10] min-h-[300px]">
             <StudentEditor />
           </div>
         </Reveal>
       </section>
 
       {/* ══ Premise ══ */}
-      <section className="px-6 py-24">
+      <section className="px-5 sm:px-6 py-16 sm:py-24">
         <div className="max-w-3xl mx-auto text-center">
           <Reveal>
-            <p className="text-white text-[26px] sm:text-[32px] font-semibold leading-[1.35] tracking-[-0.02em] mb-6">
+            <p className="text-white text-[19px] sm:text-[32px] font-semibold leading-[1.45] sm:leading-[1.35] tracking-[-0.01em] sm:tracking-[-0.02em] mb-5 sm:mb-6">
               A transcript records that a subject was passed.
               It does not record <span className="brand-gradient">whether the code can be written</span>.
             </p>
-            <p className="text-gray-400 text-[17px] leading-[1.7]">
+            <p className="text-gray-400 text-[15px] sm:text-[17px] leading-[1.7]">
               Graduates list frameworks they touched once. Employers cannot tell the
               difference until the interview, and students cannot prove the difference
               before it. ProFolio closes that gap with work a lecturer set and watched.
@@ -675,7 +687,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ Product: three alternating rows ══ */}
-      <section id="product" className="px-6 py-24 scroll-mt-16">
+      <section id="product" className="px-5 sm:px-6 py-16 sm:py-24 scroll-mt-16">
         <div className="max-w-6xl mx-auto">
 
           <Reveal className="mb-20">
@@ -685,11 +697,11 @@ export default function LandingPage() {
             </SectionHead>
           </Reveal>
 
-          <div className="flex flex-col gap-24">
+          <div className="flex flex-col gap-14 sm:gap-24">
 
             {/* 01 */}
             <Reveal>
-              <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="grid lg:grid-cols-2 gap-7 sm:gap-12 items-center">
                 <div>
                   <span className="text-gray-600 font-mono text-sm">01</span>
                   <h3 className="text-white font-bold text-[26px] tracking-[-0.02em] mt-2 mb-4">
@@ -714,7 +726,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl aspect-[4/3] order-first lg:order-last">
+                <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl aspect-[4/3] min-h-[280px] order-first lg:order-last">
                   <Window file="new test — programming" className="w-full h-full">
                     <div className="flex-1 p-5 flex flex-col gap-3">
                       {[
@@ -751,8 +763,8 @@ export default function LandingPage() {
 
             {/* 02 */}
             <Reveal>
-              <div className="grid lg:grid-cols-2 gap-12 items-center">
-                <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl aspect-[4/3]">
+              <div className="grid lg:grid-cols-2 gap-7 sm:gap-12 items-center">
+                <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl aspect-[4/3] min-h-[280px]">
                   <ProfessorResults />
                 </div>
 
@@ -785,7 +797,7 @@ export default function LandingPage() {
 
             {/* 03 */}
             <Reveal>
-              <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="grid lg:grid-cols-2 gap-7 sm:gap-12 items-center">
                 <div>
                   <span className="text-gray-600 font-mono text-sm">03</span>
                   <h3 className="text-white font-bold text-[26px] tracking-[-0.02em] mt-2 mb-4">
@@ -811,7 +823,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl order-first lg:order-last">
-                  <CvDocument className="aspect-[4/3]" />
+                  <CvDocument className="aspect-auto min-h-[380px] sm:aspect-[4/3]" />
                 </div>
               </div>
             </Reveal>
@@ -820,7 +832,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ Assessments ══ */}
-      <section id="assessments" className="px-6 py-24 scroll-mt-16">
+      <section id="assessments" className="px-5 sm:px-6 py-16 sm:py-24 scroll-mt-16">
         <div className="max-w-6xl mx-auto">
           <Reveal className="mb-12">
             <SectionHead eyebrow="Assessment types" title={<>Six ways to <span className="brand-gradient">demonstrate competence</span></>}>
@@ -832,7 +844,7 @@ export default function LandingPage() {
           <Reveal delay={60}>
             <div className="grid lg:grid-cols-[280px_1fr] gap-5 items-start">
 
-              <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+              <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-5 px-5 sm:mx-0 sm:px-0 scrollbar-none">
                 {ASSESSMENTS.map((a) => {
                   const active = a.key === activeAssessment
                   return (
@@ -860,7 +872,7 @@ export default function LandingPage() {
 
               <div className="border border-white/8 bg-white/[0.02] rounded-2xl overflow-hidden">
                 <div className="grid md:grid-cols-2">
-                  <div className="p-7 flex flex-col justify-center">
+                  <div className="p-5 sm:p-7 flex flex-col justify-center">
                     <div className={`w-10 h-10 bg-gradient-to-br ${current.bg} rounded-xl flex items-center justify-center mb-4`}>
                       <FontAwesomeIcon icon={current.icon} className="text-white text-sm" />
                     </div>
@@ -879,7 +891,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ Integrity ══ */}
-      <section id="integrity" className="relative px-6 py-24 scroll-mt-16 overflow-hidden">
+      <section id="integrity" className="relative px-5 sm:px-6 py-16 sm:py-24 scroll-mt-16 overflow-hidden">
         <div aria-hidden="true" className="ambient ambient-c" />
         <div className="relative max-w-6xl mx-auto">
           <Reveal className="mb-12">
@@ -905,7 +917,7 @@ export default function LandingPage() {
               },
             ].map((c, i) => (
               <Reveal key={i} delay={i * 70}>
-                <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-6 h-full">
+                <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-6 h-full">
                   <FontAwesomeIcon icon={c.icon} className={`${c.accent} mb-4`} />
                   <p className="text-white font-semibold text-[16px] mb-3">{c.title}</p>
                   <div className="flex flex-col gap-2">
@@ -923,7 +935,7 @@ export default function LandingPage() {
 
           {/* Stating the limits is what makes the rest credible. */}
           <Reveal delay={140}>
-            <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-7 grid md:grid-cols-3 gap-7">
+            <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7 grid md:grid-cols-3 gap-7">
               {[
                 {
                   icon: faVideoSlash, colour: 'text-amber-400',
@@ -953,7 +965,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ No scores ══ */}
-      <section className="px-6 py-24">
+      <section className="px-5 sm:px-6 py-16 sm:py-24">
         <div className="max-w-5xl mx-auto">
           <Reveal className="mb-12">
             <SectionHead eyebrow="Design decision" title={<>The CV carries <span className="brand-gradient">no marks</span></>}>
@@ -964,7 +976,7 @@ export default function LandingPage() {
 
           <Reveal delay={60}>
             <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-7">
+              <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
                 <div className="flex items-center gap-2.5 mb-5">
                   <FontAwesomeIcon icon={faXmark} className="text-rose-400 text-sm" />
                   <p className="text-gray-400 font-semibold text-[14px]">A scorecard</p>
@@ -982,7 +994,7 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-7">
+              <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
                 <div className="flex items-center gap-2.5 mb-5">
                   <FontAwesomeIcon icon={faCheck} className="text-emerald-400 text-sm" />
                   <p className="text-gray-400 font-semibold text-[14px]">What ProFolio writes instead</p>
@@ -1010,7 +1022,7 @@ export default function LandingPage() {
           </Reveal>
 
           <Reveal delay={120}>
-            <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-7 flex items-start gap-4">
+            <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7 flex items-start gap-4">
               <FontAwesomeIcon icon={faChartSimple} className="text-blue-400 text-sm mt-1 flex-shrink-0" />
               <div>
                 <p className="text-white font-semibold text-[15px] mb-2">The numbers still exist</p>
@@ -1027,7 +1039,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ Two audiences ══ */}
-      <section id="faculty" className="px-6 py-24 scroll-mt-16">
+      <section id="faculty" className="px-5 sm:px-6 py-16 sm:py-24 scroll-mt-16">
         <div className="max-w-6xl mx-auto">
           <Reveal className="mb-12">
             <SectionHead eyebrow="Who it is for" title="Built for both sides of the desk" />
@@ -1044,7 +1056,7 @@ export default function LandingPage() {
                   </div>
                 </Photo>
 
-                <div className="p-7 flex-1 flex flex-col">
+                <div className="p-5 sm:p-7 flex-1 flex flex-col">
                   <p className="text-gray-400 text-[15px] leading-[1.7] mb-6">
                     Write an assessment once, assign it with a deadline, and read the results
                     the same day. The AI proposes a score against your rubric; you keep the
@@ -1079,7 +1091,7 @@ export default function LandingPage() {
                   </div>
                 </Photo>
 
-                <div className="p-7 flex-1 flex flex-col">
+                <div className="p-5 sm:p-7 flex-1 flex flex-col">
                   <p className="text-gray-400 text-[15px] leading-[1.7] mb-6">
                     Practise as often as you like, sit the assessments your lecturers set,
                     and leave with a document that describes what you can do rather than
@@ -1109,7 +1121,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ Everything else ══ */}
-      <section className="px-6 py-24">
+      <section className="px-5 sm:px-6 py-16 sm:py-24">
         <div className="max-w-6xl mx-auto">
           <Reveal className="mb-12">
             <SectionHead eyebrow="Also included" title="The rest of the system">
@@ -1127,7 +1139,7 @@ export default function LandingPage() {
               [faDownload, 'PDF export', 'The CV prints to a single page, with in-app notes and growth areas left off.'],
             ].map(([icon, title, body], i) => (
               <Reveal key={i} delay={(i % 3) * 60}>
-                <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-6 h-full">
+                <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-6 h-full">
                   <FontAwesomeIcon icon={icon} className="text-blue-400 text-sm mb-4" />
                   <p className="text-white font-semibold text-[16px] mb-2">{title}</p>
                   <p className="text-gray-400 text-[14px] leading-[1.65]">{body}</p>
@@ -1139,7 +1151,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ FAQ ══ */}
-      <section id="faq" className="px-6 py-24 scroll-mt-16">
+      <section id="faq" className="px-5 sm:px-6 py-16 sm:py-24 scroll-mt-16">
         <div className="max-w-3xl mx-auto">
           <Reveal className="mb-10">
             <SectionHead eyebrow="Questions" title="Frequently asked" />
@@ -1154,16 +1166,16 @@ export default function LandingPage() {
                     <button
                       onClick={() => setOpenFaq(open ? null : i)}
                       aria-expanded={open}
-                      className="w-full flex items-center gap-5 py-5 text-left"
+                      className="w-full flex items-center gap-4 py-4 sm:py-5 text-left"
                     >
-                      <span className="text-white font-medium text-[16px] flex-1">{f.q}</span>
+                      <span className="text-white font-medium text-[15px] sm:text-[16px] flex-1">{f.q}</span>
                       <FontAwesomeIcon
                         icon={faChevronDown}
                         className={`text-gray-500 text-xs flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
                       />
                     </button>
                     {open && (
-                      <p className="pb-6 pr-10 text-gray-400 text-[15px] leading-[1.75]">{f.a}</p>
+                      <p className="pb-5 sm:pb-6 pr-6 sm:pr-10 text-gray-400 text-[14px] sm:text-[15px] leading-[1.75]">{f.a}</p>
                     )}
                   </div>
                 </Reveal>
@@ -1174,23 +1186,23 @@ export default function LandingPage() {
       </section>
 
       {/* ══ Close ══ */}
-      <section className="relative px-6 py-28 overflow-hidden">
+      <section className="relative px-5 sm:px-6 py-20 sm:py-28 overflow-hidden">
         <div aria-hidden="true" className="ambient ambient-d" />
         <div className="relative max-w-3xl mx-auto text-center">
           <Reveal>
-            <h2 className="text-white font-bold text-[2.2rem] sm:text-[2.8rem] leading-[1.1] tracking-[-0.03em] mb-5">
+            <h2 className="text-white font-bold text-[1.7rem] sm:text-[2.8rem] leading-[1.15] sm:leading-[1.1] tracking-[-0.02em] sm:tracking-[-0.03em] mb-4 sm:mb-5">
               <span className="brand-gradient">Evidence</span>, not description
             </h2>
             <p className="text-gray-400 text-[18px] leading-[1.65] mb-9 max-w-xl mx-auto">
               Set the work, run it properly, and let the results speak for themselves.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3">
               <Link to="/register"
-                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-[15px] px-7 py-3.5 rounded-xl transition-colors">
+                className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-[15px] px-7 py-3.5 rounded-xl transition-colors">
                 Get started <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
               </Link>
               <Link to="/login"
-                className="border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white font-semibold text-[15px] px-7 py-3.5 rounded-xl transition-all">
+                className="flex items-center justify-center border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white font-semibold text-[15px] px-7 py-3.5 rounded-xl transition-all">
                 Sign in
               </Link>
             </div>
