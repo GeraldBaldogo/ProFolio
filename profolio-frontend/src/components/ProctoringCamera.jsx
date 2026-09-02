@@ -263,6 +263,18 @@ const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable,
     }
   }, [])
 
+  // The loading state and the ready state render different <video> elements,
+  // so the stream set during init belongs to an element React has already
+  // thrown away. Re-attach whenever the element behind the ref changes.
+  useEffect(() => {
+    if (videoRef.current && streamRef.current && videoRef.current.srcObject !== streamRef.current) {
+      videoRef.current.srcObject = streamRef.current
+      // Autoplay can be refused after a re-attach; play() is a no-op if it
+      // isn't needed, and a rejected promise here is not worth surfacing.
+      videoRef.current.play?.().catch(() => {})
+    }
+  })
+
   useEffect(() => {
     if (status !== 'ready' || !active) {
       clearInterval(intervalRef.current)
