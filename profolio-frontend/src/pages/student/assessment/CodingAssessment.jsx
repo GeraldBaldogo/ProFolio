@@ -59,7 +59,8 @@ const CodingAssessment = () => {
   const [secsLeft, setSecsLeft] = useState(600)
   const [violations, setViolations] = useState(0)
   const [showWarning, setShowWarning] = useState(false)
-  const [warningType, setWarningType] = useState('tab') // 'tab' | 'camera'
+  // One of: tab | no_face | multiple_faces | looking_away | screen_share_stopped
+  const [warningType, setWarningType] = useState('tab')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [result, setResult] = useState(null)
@@ -133,11 +134,38 @@ const CodingAssessment = () => {
     return () => { cancelled = true }
   }, [testId])
 
-  const handleCameraViolation = () => {
+  const handleCameraViolation = (type) => {
     cameraViolationsRef.current += 1
     setCameraViolations(cameraViolationsRef.current)
-    setWarningType('camera')
+    setWarningType(type || 'camera')
     setShowWarning(true)
+  }
+
+  const WARNINGS = {
+    tab: {
+      title: 'Tab switch detected',
+      body: 'Leaving this page during an assessment is a violation. Stay on this tab until you submit.',
+    },
+    no_face: {
+      title: 'Face not visible',
+      body: 'Your face could not be detected. Sit within view of the camera and make sure the room is well lit.',
+    },
+    multiple_faces: {
+      title: 'Another person detected',
+      body: 'More than one face was visible in the camera. Only you may be present while taking this assessment.',
+    },
+    looking_away: {
+      title: 'Looking away from the screen',
+      body: 'You have been looking away from the screen for several seconds. Keep your eyes on the assessment.',
+    },
+    screen_share_stopped: {
+      title: 'Screen sharing stopped',
+      body: 'You stopped sharing your screen. It must remain active for the whole assessment — start sharing again to continue.',
+    },
+    camera: {
+      title: 'Proctoring violation',
+      body: 'A proctoring violation was detected. Keep your face visible and centered in the camera.',
+    },
   }
 
   const beginTimer = (limitSeconds) => {
@@ -505,13 +533,13 @@ const CodingAssessment = () => {
         <div className="fixed inset-0 z-50 bg-rose-950/95 flex items-center justify-center flex-col gap-4 text-center px-6">
           <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 text-5xl" />
           <h2 className="text-white font-black text-2xl">
-            {warningType === 'camera' ? 'Proctoring Violation!' : 'Tab Switch Detected!'}
+            {(WARNINGS[warningType] || WARNINGS.camera).title}
           </h2>
-          <p className="text-rose-300 text-sm max-w-sm">
-            {warningType === 'camera'
-              ? 'A proctoring violation was detected — ensure your face is visible and centered in the camera at all times.'
-              : 'Leaving the page is a violation. This has been recorded.'}
-            {' '}{totalViolations} flag{totalViolations > 1 ? 's' : ''} total so far.
+          <p className="text-rose-300 text-sm max-w-sm leading-relaxed">
+            {(WARNINGS[warningType] || WARNINGS.camera).body}
+          </p>
+          <p className="text-rose-400/70 text-xs">
+            {totalViolations} flag{totalViolations !== 1 ? 's' : ''} recorded so far.
           </p>
           <button
             onClick={() => setShowWarning(false)}
