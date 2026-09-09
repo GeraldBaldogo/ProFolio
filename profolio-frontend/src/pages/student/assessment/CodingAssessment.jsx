@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faCode, faShield, faTriangleExclamation,
+  faArrowLeft, faCode, faShield, faTriangleExclamation, faDisplay,
   faCircleCheck, faSpinner, faPlay, faUserTie, faRotateRight,
 } from '@fortawesome/free-solid-svg-icons'
 import { generateChallenge, submitCodingResult } from '../../../services/assessment.service'
@@ -63,6 +63,10 @@ const CodingAssessment = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [result, setResult] = useState(null)
+
+  // Handed up by ProctoringCamera once it mounts: { request, stop, state, note }
+  const [screenShare, setScreenShare] = useState(null)
+  const [screenError, setScreenError] = useState('')
 
   const [cameraReady, setCameraReady] = useState(false)
   const [cameraViolations, setCameraViolations] = useState(0)
@@ -171,7 +175,29 @@ const CodingAssessment = () => {
   }
 
   // Graded test: the problem already exists, so go straight in.
-  const startAssignedTest = () => {
+  const startAssignedTest = async () => {
+    setScreenError('')
+
+    // Screen sharing is required for graded work only. A practice attempt has
+    // nothing at stake, and the browser prompt would only be in the way.
+    if (!screenShare) {
+      setScreenError('Proctoring is still starting up. Please wait a moment and try again.')
+      return
+    }
+
+    if (screenShare.state === 'unsupported') {
+      setScreenError('Screen sharing is not available on this device. Please take this assessment on a laptop or desktop computer.')
+      return
+    }
+
+    if (screenShare.state !== 'sharing') {
+      const granted = await screenShare.request()
+      if (!granted) {
+        setScreenError(screenShare.note || 'Screen sharing is required before this assessment can begin.')
+        return
+      }
+    }
+
     const limit = test?.time_limit_minutes
       ? test.time_limit_minutes * 60
       : TIME_LIMITS.medium
@@ -203,11 +229,13 @@ const CodingAssessment = () => {
       })
       setResult(data)
       setPhase('result')
+      screenShare?.stop()
     } catch (err) {
       // On a graded test this is the student's only attempt — losing the work
       // to a dismissed alert box would be unrecoverable.
       setSubmitError(err.message || 'Couldn\u2019t submit. Your code is still here — try again.')
       setPhase('challenge')
+      // Sharing stays on — the attempt isn't over, they're trying again.
     } finally {
       setSubmitting(false)
     }
@@ -247,6 +275,7 @@ const CodingAssessment = () => {
         active={false}
         onReady={() => setCameraReady(true)}
         onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
+        onScreenShareReady={setScreenShare}
       />
 
       <div className="flex items-center gap-4 mb-8">
@@ -351,7 +380,7 @@ const CodingAssessment = () => {
       )}
 
       {/* Anti-cheat notice */}
-      <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-6 flex items-start gap-3">
+      <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
         <FontAwesomeIcon icon={faShield} className="text-amber-400 mt-0.5" />
         <div>
           <p className="text-amber-400 text-sm font-semibold mb-1">Anti-cheat is active</p>
@@ -360,6 +389,33 @@ const CodingAssessment = () => {
           </p>
         </div>
       </div>
+
+      {/* Said before Start is pressed, so the browser's sharing prompt isn't a
+          surprise — and so the "Entire Screen" requirement is known in advance
+          rather than discovered by having a choice rejected. */}
+      {testId && (
+        <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <FontAwesomeIcon icon={faDisplay} className="text-amber-400 mt-0.5" />
+          <div>
+            <p className="text-amber-400 text-sm font-semibold mb-1">Screen sharing is required</p>
+            <p className="text-gray-500 text-xs leading-relaxed">
+              When you press Start, your browser will ask you to share your screen. Choose{' '}
+              <span className="text-gray-400 font-semibold">Entire Screen</span> — a single
+              window or tab will not be accepted. Nothing is recorded; only whether sharing
+              stays active is monitored.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {screenError && (
+        <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 mt-0.5 flex-shrink-0" />
+          <p className="text-rose-400 text-xs leading-relaxed">{screenError}</p>
+        </div>
+      )}
+
+      <div className="mb-6" />
 
       <button
         onClick={testId ? startAssignedTest : startChallenge}
@@ -441,6 +497,7 @@ const CodingAssessment = () => {
         onViolation={handleCameraViolation}
         onReady={() => setCameraReady(true)}
         onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
+        onScreenShareReady={setScreenShare}
       />
 
       {/* Warning overlay */}

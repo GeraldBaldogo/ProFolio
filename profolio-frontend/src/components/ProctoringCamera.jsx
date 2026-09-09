@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faVideo, faVideoSlash, faTriangleExclamation, faSpinner,
+  faVideo, faVideoSlash, faDisplay, faTriangleExclamation, faSpinner,
   faUserGroup, faEyeSlash, faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -115,20 +115,36 @@ const describeCameraError = (err) => {
 
 const DETECTION_INTERVAL_MS = 2000
 const VIOLATION_COOLDOWN_MS = 4000 // avoid spamming repeated violations for the same continuous issue
-const LOOK_AWAY_YAW_THRESHOLD = 25 // degrees, approximate
+const LOOK_AWAY_YAW_THRESHOLD = 25 // degrees, approximate — sideways
+const LOOK_DOWN_RATIO_THRESHOLD = 0.62 // nose sitting low in the face box — head tilted down
+// Two consecutive frames (~4s) before flagging. Glancing at the keyboard is
+// normal; sustained looking away is not.
+const LOOK_AWAY_STREAK = 2
 
-const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable, active = true }) => {
+const ProctoringCamera = ({
+  onViolation,
+  onReady,
+  onDenied,
+  onCameraUnavailable,
+  onScreenShareReady,
+  active = true,
+}) => {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const intervalRef = useRef(null)
-  const lastViolationRef = useRef({ no_face: 0, multiple_faces: 0, looking_away: 0 })
+  const lastViolationRef = useRef({ no_face: 0, multiple_faces: 0, looking_away: 0, screen_share_stopped: 0 })
   const noFaceStreakRef = useRef(0)
+  const lookAwayStreakRef = useRef(0)
+  const screenStreamRef = useRef(null)
 
   // initializing | loading_models | ready | degraded | no_camera
   const [status, setStatus] = useState('initializing')
   const [faceState, setFaceState] = useState('checking')
   const [minimized, setMinimized] = useState(false)
   const [cameraNote, setCameraNote] = useState('')
+  // idle | requesting | sharing | stopped | unsupported
+  const [screenState, setScreenState] = useState('idle')
+  const [screenNote, setScreenNote] = useState('')
 
   const reportViolation = useCallback((type) => {
     const now = Date.now()
@@ -136,6 +152,63 @@ const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable,
     lastViolationRef.current[type] = now
     onViolation?.(type)
   }, [onViolation])
+
+  const stopScreenShare = useCallback(() => {
+    screenStreamRef.current?.getTracks().forEach(t => t.stop())
+    screenStreamRef.current = null
+  }, [])
+
+  const requestScreenShare = useCallback(async () => {
+    // getDisplayMedia doesn't exist on mobile browsers at all. Saying so is
+    // better than a permission prompt that never appears.
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setScreenState('unsupported')
+      setScreenNote('Screen sharing is not available on this device. Use a laptop or desktop computer.')
+      return false
+    }
+
+    setScreenState('requesting')
+    setScreenNote('')
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: 'monitor' },
+        audio: false,
+      })
+
+      // The browser lets the person choose a single tab or window instead of
+      // the whole screen, which would leave everything else unobserved. The
+      // choice can only be checked after the fact, so reject and ask again.
+      const surface = stream.getVideoTracks()[0]?.getSettings?.().displaySurface
+      if (surface && surface !== 'monitor') {
+        stream.getTracks().forEach(t => t.stop())
+        setScreenState('idle')
+        setScreenNote('Please share your entire screen, not a single window or tab.')
+        return false
+      }
+
+      screenStreamRef.current = stream
+      setScreenState('sharing')
+
+      // Fires when they press the browser's own "Stop sharing" button, which
+      // sits outside the page and can't be intercepted any other way.
+      stream.getVideoTracks()[0].addEventListener('ended', () => {
+        screenStreamRef.current = null
+        setScreenState('stopped')
+        reportViolation('screen_share_stopped')
+      })
+
+      return true
+    } catch (err) {
+      setScreenState('idle')
+      setScreenNote(
+        err?.name === 'NotAllowedError'
+          ? 'Screen sharing was declined. It is required before this assessment can begin.'
+          : 'Screen sharing could not be started. Please try again.'
+      )
+      return false
+    }
+  }, [reportViolation])
 
   const runDetection = useCallback(async () => {
     if (!videoRef.current || !window.faceapi || videoRef.current.readyState < 2) return
@@ -147,6 +220,7 @@ const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable,
 
       if (detections.length === 0) {
         noFaceStreakRef.current += 1
+        lookAwayStreakRef.current = 0
         setFaceState('no_face')
         // require 2 consecutive misses (~4s) before flagging, to avoid false positives on blinks/lag
         if (noFaceStreakRef.current >= 2) {
@@ -175,12 +249,29 @@ const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable,
       const noseOffsetRatio = ((noseTip.x - leftJaw.x) / faceWidth - 0.5) * 2 // -1 (left) to 1 (right)
       const estimatedYaw = noseOffsetRatio * 45 // rough degrees estimate
 
-      if (Math.abs(estimatedYaw) > LOOK_AWAY_YAW_THRESHOLD) {
+      // Looking down at notes or a phone on the desk is the most common way to
+      // cheat in a supervised room, and a sideways-only check misses it
+      // entirely. The nose sitting low within the detection box means the head
+      // is tilted forward.
+      const box = detections[0].detection.box
+      const noseVerticalRatio = (noseTip.y - box.y) / box.height
+
+      const lookingAway =
+        Math.abs(estimatedYaw) > LOOK_AWAY_YAW_THRESHOLD ||
+        noseVerticalRatio > LOOK_DOWN_RATIO_THRESHOLD
+
+      if (lookingAway) {
+        lookAwayStreakRef.current += 1
         setFaceState('looking_away')
-        reportViolation('looking_away')
+        // A single glance shouldn't cost marks. Two consecutive frames means
+        // the head has been turned or lowered for roughly four seconds.
+        if (lookAwayStreakRef.current >= LOOK_AWAY_STREAK) {
+          reportViolation('looking_away')
+        }
         return
       }
 
+      lookAwayStreakRef.current = 0
       setFaceState('ok')
     } catch (err) {
       console.error('Detection error:', err)
@@ -284,6 +375,17 @@ const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable,
     return () => clearInterval(intervalRef.current)
   }, [status, active, runDetection])
 
+  // Hand the screen-share controls up to the assessment page, which owns the
+  // Start button and decides whether to require sharing before beginning.
+  useEffect(() => {
+    onScreenShareReady?.({
+      request: requestScreenShare,
+      stop: stopScreenShare,
+      state: screenState,
+      note: screenNote,
+    })
+  }, [onScreenShareReady, requestScreenShare, stopScreenShare, screenState, screenNote])
+
   const stateConfig = {
     // Detection is deliberately paused until the assessment starts. Saying
     // "Checking..." there reads as something stuck rather than something
@@ -386,6 +488,28 @@ const ProctoringCamera = ({ onViolation, onReady, onDenied, onCameraUnavailable,
               <FontAwesomeIcon icon={sc.icon} className={`${sc.color} text-xs ${sc.spin ? 'animate-spin' : ''}`} />
               <span className="text-gray-300 text-[10px] font-medium truncate">{sc.label}</span>
             </div>
+
+            {/* Screen state sits below the face state. A student who stops
+                sharing mid-attempt should see that something changed without
+                having to look for the browser's own bar. */}
+            {screenState !== 'idle' && (
+              <div className="flex items-center gap-1.5 px-2.5 py-2 border-t border-white/5">
+                <FontAwesomeIcon
+                  icon={screenState === 'sharing' ? faDisplay : faTriangleExclamation}
+                  className={`text-xs ${
+                    screenState === 'sharing' ? 'text-emerald-400'
+                      : screenState === 'requesting' ? 'text-gray-400'
+                      : 'text-rose-400'
+                  }`}
+                />
+                <span className="text-gray-300 text-[10px] font-medium truncate">
+                  {screenState === 'sharing' ? 'Screen shared'
+                    : screenState === 'requesting' ? 'Waiting...'
+                    : screenState === 'unsupported' ? 'Not supported'
+                    : 'Sharing stopped'}
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>
