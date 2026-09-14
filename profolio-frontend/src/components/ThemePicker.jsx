@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPalette, faCheck, faSun, faMoon } from '@fortawesome/free-solid-svg-icons'
+import { faPalette, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { Sun, Moon } from 'lucide-react'
 import { useTheme, ACCENTS, MODES } from '../context/ThemeContext'
 
 /**
@@ -40,7 +41,9 @@ const ThemePicker = () => {
         title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         className="w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all"
       >
-        <FontAwesomeIcon icon={mode === 'dark' ? faSun : faMoon} className="text-sm" />
+        {mode === 'dark'
+          ? <Sun size={17} strokeWidth={2} />
+          : <Moon size={17} strokeWidth={2} />}
       </button>
 
       <div className="relative">
@@ -71,7 +74,9 @@ const ThemePicker = () => {
                         : 'border-white/8 text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <FontAwesomeIcon icon={m.key === 'light' ? faSun : faMoon} className="text-[11px]" />
+                    {m.key === 'light'
+                      ? <Sun size={13} strokeWidth={2} />
+                      : <Moon size={13} strokeWidth={2} />}
                     {m.label}
                   </button>
                 ))}

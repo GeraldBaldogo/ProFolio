@@ -12,6 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import { useNotifications } from '../../context/NotificationContext'
 import ThemePicker from '../../components/ThemePicker'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
@@ -69,6 +70,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { totalUnread } = useNotifications()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [assignments, setAssignments] = useState([])
@@ -171,6 +173,7 @@ const StudentDashboard = () => {
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             const badge = item.path === '/student/assigned-tests' ? openTests.length : 0
+            const unread = item.path === '/student/messages' ? totalUnread : 0
             return (
               <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
@@ -183,7 +186,12 @@ const StudentDashboard = () => {
                     {badge}
                   </span>
                 )}
-                {isActive && badge === 0 && <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />}
+                {unread > 0 && (
+                  <span className="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+                {isActive && badge === 0 && unread === 0 && <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />}
               </Link>
             )
           })}

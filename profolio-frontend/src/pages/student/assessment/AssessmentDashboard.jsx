@@ -5,9 +5,10 @@ import {
   faHouse, faFolder, faUser, faBars, faTimes,
   faTrophy, faRightFromBracket, faKeyboard, faCode, faDiagramProject, faWandMagicSparkles, 
   faDatabase, faBug, faComments, faChevronRight, faSpinner, faClipboardList, 
-  faCircleCheck, faDumbbell, faBell, faChartLine, faCertificate, faFileAlt, faFingerprint, faLightbulb,
+  faCircleCheck, faDumbbell, faChartLine, faCertificate, faFileAlt, faFingerprint, faLightbulb,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../../context/AuthContext'
+import { useNotifications } from '../../../context/NotificationContext'
 import api from '../../../services/api'
 import logo from '../../../assets/ProFolio_-_Logo-removebg-preview.png'
 
@@ -94,6 +95,7 @@ export default function AssessmentDashboard() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { totalUnread } = useNotifications()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -151,7 +153,13 @@ export default function AssessmentDashboard() {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
                 <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-blue-400' : ''}`} />
                 {item.label}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />}
+                {item.path === '/student/messages' && totalUnread > 0 ? (
+                  <span className="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                ) : isActive ? (
+                  <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                ) : null}
               </Link>
             )
           })}
@@ -178,9 +186,6 @@ export default function AssessmentDashboard() {
             <p className="text-gray-500 text-xs">Prove your skills, earn your score</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <button className="w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
-              <FontAwesomeIcon icon={faBell} className="text-sm" />
-            </button>
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
               {user?.full_name?.charAt(0).toUpperCase()}
             </div>

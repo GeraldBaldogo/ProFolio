@@ -1,11 +1,33 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faClipboardList, faSpinner, faPlay, faCircleCheck,
+  faClipboardList, faSpinner, faPlay, faCircleCheck,
   faClock, faTriangleExclamation, faLock, faRotateRight,
+  faHouse, faFolder, faUser, faBars, faTimes, faTrophy, faChartLine,
+  faFileAlt, faComments, faFingerprint, faLightbulb, faRightFromBracket,
+  faDumbbell, faWandMagicSparkles,
 } from '@fortawesome/free-solid-svg-icons'
 import { getMyAssignedTests, startAssignment } from '../../services/test.service'
+import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
+import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+
+// Must match the other student pages exactly, or the sidebar reorders itself
+// as the student moves between pages.
+const navItems = [
+  { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
+  { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
+  { label: 'Practices', icon: faDumbbell, path: '/student/assessment' },
+  { label: 'My Results', icon: faChartLine, path: '/student/results' },
+  { label: 'My Portfolio', icon: faFolder, path: '/student/portfolio' },
+  { label: 'CV Builder', icon: faFileAlt, path: '/student/cv' },
+  { label: 'Recommendations', icon: faLightbulb, path: '/student/recommendations' },
+  { label: 'Originality Check', icon: faFingerprint, path: '/student/originality' },
+  { label: 'Assistant', icon: faWandMagicSparkles, path: '/student/assistant' },
+  { label: 'Messages', icon: faComments, path: '/student/messages' },
+  { label: 'Profile', icon: faUser, path: '/student/profile' },
+]
 
 // Maps a test's DB `type` to the route segment for its assessment page.
 // Note: 'programming' (DB/type value) -> 'coding' (route segment)
@@ -53,6 +75,10 @@ const timeUntil = (due) => {
 
 const StudentAssignedTests = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user, logout } = useAuth()
+  const { totalUnread } = useNotifications()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(null)
@@ -107,25 +133,90 @@ const StudentAssignedTests = () => {
     }
   }
 
+  const handleLogout = () => { logout(); navigate('/') }
+
   return (
-    <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => navigate('/student/dashboard')} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
-        </button>
-        <div>
-          <h1 className="text-white font-bold text-lg flex items-center gap-2">
-            <FontAwesomeIcon icon={faClipboardList} className="text-blue-400" /> Assigned Tests
-          </h1>
-          <p className="text-gray-500 text-xs">Tests your professor has assigned to you</p>
-        </div>
-        {!loading && (
-          <button onClick={fetchAssignments} aria-label="Refresh"
-            className="ml-auto w-9 h-9 rounded-xl border border-white/8 text-gray-500 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center flex-shrink-0">
-            <FontAwesomeIcon icon={faRotateRight} className="text-sm" />
+    <div className="min-h-screen bg-[#060612] flex font-sans">
+
+      {/* This page had no sidebar at all, so opening it made the whole
+          navigation disappear — and this is the page students visit most. */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a18] border-r border-white/5 flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/5">
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md" />
+            <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
+          </div>
+          <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+            <FontAwesomeIcon icon={faTimes} />
           </button>
-        )}
-      </div>
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {user?.full_name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-gray-500 text-xs truncate">{user?.email}</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path
+            return (
+              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-blue-400' : ''}`} />
+                {item.label}
+                {item.path === '/student/messages' && totalUnread > 0 ? (
+                  <span className="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                ) : isActive ? (
+                  <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                ) : null}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/5">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
+            <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+
+        {/* The sticky header the other student pages use. Back is gone — the
+            sidebar carries Dashboard now, and two routes to one place is a
+            question nobody needs to answer. */}
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
+          <button onClick={() => setSidebarOpen(true)} aria-label="Open menu"
+            className="lg:hidden text-gray-400 hover:text-white">
+            <FontAwesomeIcon icon={faBars} className="text-lg" />
+          </button>
+          <div>
+            <h1 className="text-white font-bold text-lg">Assigned Tests</h1>
+            <p className="text-gray-500 text-xs">Tests your professor has assigned to you</p>
+          </div>
+          {!loading && (
+            <button onClick={fetchAssignments} aria-label="Refresh"
+              className="ml-auto w-9 h-9 rounded-xl border border-white/8 bg-white/[0.03] text-gray-400 hover:text-white transition-all flex items-center justify-center flex-shrink-0">
+              <FontAwesomeIcon icon={faRotateRight} className="text-sm" />
+            </button>
+          )}
+        </header>
+
+        <main className="flex-1 px-6 py-8">
+        <div className="max-w-3xl mx-auto">
 
       {error && (
         <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
@@ -228,6 +319,9 @@ const StudentAssignedTests = () => {
           })}
         </div>
       )}
+        </div>
+        </main>
+      </div>
     </div>
   )
 }

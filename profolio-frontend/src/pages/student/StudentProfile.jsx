@@ -10,6 +10,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
@@ -34,6 +35,7 @@ const StudentProfile = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { totalUnread } = useNotifications()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -163,7 +165,13 @@ const StudentProfile = () => {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
                 <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-blue-400' : ''}`} />
                 {item.label}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />}
+                {item.path === '/student/messages' && totalUnread > 0 ? (
+                  <span className="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                ) : isActive ? (
+                  <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                ) : null}
               </Link>
             )
           })}
@@ -433,14 +441,14 @@ const StudentProfile = () => {
 
                   {/* Contact — new fields need somewhere to show when not editing,
                       or a student fills them in and thinks nothing saved. */}
-                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
+                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5 sm:col-span-2">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <FontAwesomeIcon icon={faPhone} className="text-emerald-400 text-sm" />
                       </div>
                       <p className="text-white font-bold text-sm">Contact</p>
                     </div>
-                    <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">Professional Title</p>
                         <p className="text-white text-sm">{form.professional_title || <span className="text-gray-600 italic">Not set</span>}</p>

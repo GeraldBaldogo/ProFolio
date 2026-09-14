@@ -248,9 +248,19 @@ body {
 .bg-\[\#0d1218\]      { background-color: var(--app-surface) !important; }
 .bg-\[\#060610\]      { background-color: var(--app-surface) !important; }
 
+/* Every opacity variant in use needs its own rule — Tailwind generates one
+   class per value, so overriding /90 leaves /85 untouched. A sticky navbar
+   that stays dark in light mode while its text flips to near-black makes the
+   wordmark disappear entirely. */
+.bg-\[\#060612\]\/85  { background-color: color-mix(in srgb, var(--app-bg) 85%, transparent) !important; }
 .bg-\[\#060612\]\/90  { background-color: color-mix(in srgb, var(--app-bg) 90%, transparent) !important; }
+.bg-\[\#060612\]\/95  { background-color: color-mix(in srgb, var(--app-bg) 95%, transparent) !important; }
 .bg-\[\#0a0d10\]\/90  { background-color: color-mix(in srgb, var(--app-bg) 90%, transparent) !important; }
+.bg-\[\#0a0a18\]\/85  { background-color: color-mix(in srgb, var(--app-surface) 85%, transparent) !important; }
+.bg-\[\#0a0a18\]\/90  { background-color: color-mix(in srgb, var(--app-surface) 90%, transparent) !important; }
 .bg-\[\#0a0a18\]\/95  { background-color: color-mix(in srgb, var(--app-surface) 95%, transparent) !important; }
+.bg-\[\#0d1218\]\/85  { background-color: color-mix(in srgb, var(--app-surface) 85%, transparent) !important; }
+.bg-\[\#0d1218\]\/90  { background-color: color-mix(in srgb, var(--app-surface) 90%, transparent) !important; }
 .bg-\[\#0d1218\]\/95  { background-color: color-mix(in srgb, var(--app-surface) 95%, transparent) !important; }
 
 /* Card fills */

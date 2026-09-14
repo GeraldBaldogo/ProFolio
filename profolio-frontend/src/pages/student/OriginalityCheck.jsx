@@ -9,6 +9,7 @@ import {
   faLightbulb, faFileAlt, faClipboardList, 
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
@@ -59,6 +60,7 @@ const OriginalityCheck = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { totalUnread } = useNotifications()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const [view, setView] = useState('check') // check | history
@@ -148,7 +150,13 @@ const OriginalityCheck = () => {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
                 <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-blue-400' : ''}`} />
                 {item.label}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />}
+                {item.path === '/student/messages' && totalUnread > 0 ? (
+                  <span className="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                ) : isActive ? (
+                  <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                ) : null}
               </Link>
             )
           })}
@@ -167,46 +175,74 @@ const OriginalityCheck = () => {
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
 
         {/* Topbar */}
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
-            <FontAwesomeIcon icon={faBars} className="text-lg" />
-          </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">Originality Check</h1>
-            <p className="text-gray-500 text-xs">Verify your work reflects your own knowledge and effort</p>
+        {/* Five things in one 375px row forced the title to wrap and squeezed
+            the description into a narrow column. The tabs drop to their own row
+            below sm, where there is space for them. */}
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-5 sm:px-6 py-4">
+          <div className="flex items-center gap-4">
+            <button className="lg:hidden text-gray-400 hover:text-white flex-shrink-0" onClick={() => setSidebarOpen(true)}>
+              <FontAwesomeIcon icon={faBars} className="text-lg" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-white font-bold text-lg truncate">Originality Check</h1>
+              <p className="text-gray-500 text-xs hidden sm:block">Verify your work reflects your own knowledge and effort</p>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  onClick={() => setView('check')}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${view === 'check' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'text-gray-500 hover:text-white'}`}
+                >
+                  Check
+                </button>
+                <button
+                  onClick={() => setView('history')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${view === 'history' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <FontAwesomeIcon icon={faClockRotateLeft} className="text-xs" /> History
+                  {history.length > 0 && (
+                    <span className="text-xs bg-white/10 px-1.5 py-0.5 rounded-full">{history.length}</span>
+                  )}
+                </button>
+              </div>
+              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                {user?.full_name?.charAt(0).toUpperCase()}
+              </div>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+
+          {/* Full-width tabs on a phone — easier to hit than two small buttons
+              crammed beside a title. */}
+          <div className="flex sm:hidden gap-2 mt-3">
             <button
               onClick={() => setView('check')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${view === 'check' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'text-gray-500 hover:text-white'}`}
+              className={`flex-1 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${view === 'check' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'text-gray-500 border border-white/8'}`}
             >
               Check
             </button>
             <button
               onClick={() => setView('history')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${view === 'history' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'text-gray-500 hover:text-white'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${view === 'history' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20' : 'text-gray-500 border border-white/8'}`}
             >
               <FontAwesomeIcon icon={faClockRotateLeft} className="text-xs" /> History
               {history.length > 0 && (
                 <span className="text-xs bg-white/10 px-1.5 py-0.5 rounded-full">{history.length}</span>
               )}
             </button>
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
-              {user?.full_name?.charAt(0).toUpperCase()}
-            </div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-5 sm:px-6 py-6 sm:py-8">
 
           {view === 'check' ? (
-            <div className="flex flex-col gap-5 max-w-3xl">
+            <div className="flex flex-col gap-5 max-w-3xl mx-auto">
 
               {!result ? (
                 <>
                   {/* Intro */}
-                  <div className="border border-violet-500/20 bg-violet-500/5 rounded-2xl p-5 flex items-start gap-4">
+                  <div className="border border-violet-500/20 bg-violet-500/5 rounded-2xl p-4 sm:p-5 flex items-start gap-3 sm:gap-4">
                     <div className="w-10 h-10 bg-violet-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
                       <FontAwesomeIcon icon={faFingerprint} className="text-violet-400" />
                     </div>
@@ -219,9 +255,9 @@ const OriginalityCheck = () => {
                   </div>
 
                   {/* Content type selector */}
-                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5">
+                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                     <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Content Type</p>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
                       {CONTENT_TYPES.map(ct => (
                         <button
                           key={ct.value}
@@ -255,7 +291,7 @@ const OriginalityCheck = () => {
                       placeholder={contentType === 'code'
                         ? 'Paste your code here...'
                         : 'Paste your project description, documentation, or writeup here...'}
-                      className={`w-full bg-transparent text-gray-200 ${contentType === 'code' ? 'font-mono' : ''} text-sm p-4 resize-none outline-none leading-7 min-h-[280px]`}
+                      className={`w-full bg-transparent text-gray-200 ${contentType === 'code' ? 'font-mono' : ''} text-sm p-3.5 sm:p-4 resize-none outline-none leading-7 min-h-[200px] sm:min-h-[280px]`}
                       spellCheck={false}
                     />
                   </div>
@@ -305,7 +341,7 @@ const OriginalityCheck = () => {
 
                   {/* Explanation */}
                   {result.explanation && (
-                    <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5">
+                    <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                       <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Analysis</p>
                       <p className="text-gray-300 text-sm leading-relaxed">{result.explanation}</p>
                     </div>
@@ -314,13 +350,13 @@ const OriginalityCheck = () => {
                   {/* Human / AI signals */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {result.human_signals && (
-                      <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-5">
+                      <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-4 sm:p-5">
                         <p className="text-emerald-400 text-xs font-semibold mb-2">✓ Human Signals</p>
                         <p className="text-gray-300 text-xs leading-relaxed">{result.human_signals}</p>
                       </div>
                     )}
                     {result.ai_signals && (
-                      <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-5">
+                      <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 sm:p-5">
                         <p className="text-rose-400 text-xs font-semibold mb-2">⚠ AI Signals</p>
                         <p className="text-gray-300 text-xs leading-relaxed">{result.ai_signals}</p>
                       </div>
@@ -329,7 +365,7 @@ const OriginalityCheck = () => {
 
                   {/* Recommendations */}
                   {result.recommendations && (
-                    <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-5">
+                    <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 sm:p-5">
                       <p className="text-amber-400 text-xs font-semibold mb-2">Recommendations</p>
                       <p className="text-gray-300 text-sm leading-relaxed">{result.recommendations}</p>
                     </div>
@@ -339,7 +375,7 @@ const OriginalityCheck = () => {
             </div>
           ) : (
             /* ── HISTORY ── */
-            <div className="max-w-3xl">
+            <div className="max-w-3xl mx-auto">
               {loadingHistory ? (
                 <div className="flex items-center justify-center h-64">
                   <FontAwesomeIcon icon={faSpinner} className="text-violet-400 text-3xl animate-spin" />

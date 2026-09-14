@@ -7,6 +7,7 @@ import {
   faPlus, faUserGraduate, faMagnifyingGlass,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 import { listConversations, startConversation } from '../../services/messaging.service'
 import ChatThread from '../../components/ChatThread'
 import api from '../../services/api'
@@ -23,6 +24,7 @@ const EvaluatorMessagesPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { totalUnread, setOpenConversation } = useNotifications()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [conversations, setConversations] = useState([])
@@ -86,6 +88,13 @@ const EvaluatorMessagesPage = () => {
 
   const handleLogout = () => { logout(); navigate('/') }
 
+  // Tell the notification context which thread is on screen, so a message
+  // arriving in it doesn't raise a badge — and so opening it clears one.
+  useEffect(() => {
+    setOpenConversation(selectedId)
+    return () => setOpenConversation(null)
+  }, [selectedId, setOpenConversation])
+
   const selected = conversations.find((c) => c.id === selectedId)
   const studentName = selected?.student?.full_name || 'Student'
 
@@ -134,7 +143,13 @@ const EvaluatorMessagesPage = () => {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-amber-500/15 text-white border border-amber-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
                 <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-amber-400' : ''}`} />
                 {item.label}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-amber-400 rounded-full" />}
+                {item.path === '/evaluator/messages' && totalUnread > 0 ? (
+                  <span className="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                ) : isActive ? (
+                  <div className="ml-auto w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                ) : null}
               </Link>
             )
           })}

@@ -10,6 +10,7 @@ import {
   faChevronDown, faArrowTrendUp, faArrowTrendDown, faUserTie,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
@@ -51,6 +52,7 @@ const StudentResults = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { totalUnread } = useNotifications()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [results, setResults] = useState([])
@@ -152,7 +154,13 @@ const StudentResults = () => {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
                 <FontAwesomeIcon icon={item.icon} className={`text-sm ${isActive ? 'text-blue-400' : ''}`} />
                 {item.label}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />}
+                {item.path === '/student/messages' && totalUnread > 0 ? (
+                  <span className="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                ) : isActive ? (
+                  <div className="ml-auto w-1.5 h-1.5 bg-blue-400 rounded-full" />
+                ) : null}
               </Link>
             )
           })}
