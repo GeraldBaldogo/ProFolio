@@ -8,6 +8,7 @@ import {
   faDumbbell, faFileAlt, faFingerprint, faLightbulb, faChartLine,
   faTriangleExclamation, faRotateRight, faShield, faVideoSlash, faWandMagicSparkles, 
   faChevronDown, faArrowTrendUp, faArrowTrendDown, faUserTie,
+  faGavel,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
@@ -132,7 +133,7 @@ const StudentResults = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -176,15 +177,15 @@ const StudentResults = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
+          <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">My results</h1>
-            <p className="text-gray-500 text-xs">Every attempt you&apos;ve made, and how you did</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg truncate">My results</h1>
+            <p className="text-gray-500 text-xs truncate">Every attempt you&apos;ve made, and how you did</p>
           </div>
           {!loading && (
             <button onClick={fetchResults} aria-label="Refresh"
@@ -194,7 +195,7 @@ const StudentResults = () => {
           )}
         </header>
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-3">
               <FontAwesomeIcon icon={faSpinner} className="text-blue-400 text-3xl animate-spin" />
@@ -401,6 +402,22 @@ const StudentResults = () => {
                             <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4">
                               <p className="text-amber-400 text-xs font-semibold mb-1.5">What to work on</p>
                               <p className="text-gray-300 text-sm leading-relaxed">{m.improvements}</p>
+                            </div>
+                          )}
+
+                          {/* The professor's review of a test they set: the score shown is
+                              their decision, and here is why it differs, if it does */}
+                          {m.review && (
+                            <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4">
+                              <p className="text-amber-400 text-xs font-semibold mb-1.5 flex items-center gap-2">
+                                <FontAwesomeIcon icon={faGavel} /> Reviewed by your professor
+                              </p>
+                              <p className="text-gray-300 text-sm leading-relaxed">
+                                {m.review.status === 'adjusted'
+                                  ? <>Your score was changed from <span className="font-mono">{m.review.system_score}</span> to <span className="font-mono font-bold">{m.review.final_score}</span>.</>
+                                  : <>Your professor confirmed the score of <span className="font-mono font-bold">{m.review.final_score}</span>.</>}
+                              </p>
+                              {m.review.note && <p className="text-gray-400 text-xs mt-1.5 italic">&ldquo;{m.review.note}&rdquo;</p>}
                             </div>
                           )}
 

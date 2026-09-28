@@ -24,6 +24,9 @@ router.delete('/:id', authenticate, requireRole('evaluator'), testController.del
 router.post('/:id/assign', authenticate, requireRole('evaluator'), testController.assignTest);
 router.get('/:id/assignments', authenticate, requireRole('evaluator'), testController.getAssignmentsForTest);
 
+// The professor's final word on an AI-scored submission: confirm or adjust
+router.patch('/results/:resultId/review', authenticate, requireRole('evaluator'), testController.reviewResult);
+
 // ── Student: start an attempt ──
 router.post('/:id/start', authenticate, requireRole('student'), testController.startAssignment);
 

@@ -3,6 +3,8 @@ import AmbientBackdrop from './components/AmbientBackdrop'
 import LandingPage from './pages/public/LandingPage'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
+import ShowcasePage from './pages/public/ShowcasePage'
+import ScoringPage from './pages/public/ScoringPage'
 import StudentDashboard from './pages/student/StudentDashboard'
 import PortfolioBuilder from './pages/student/PortfolioBuilder'
 import ProtectedRoutes from './routes/ProtectedRoutes'
@@ -53,6 +55,10 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      {/* A student's public portfolio, for employers. No sign-in. */}
+      <Route path="/p/:slug" element={<ShowcasePage />} />
+      {/* How every assessment is scored. Public, read from the backend rubric. */}
+      <Route path="/scoring" element={<ScoringPage />} />
       <Route path="/student/dashboard" element={
         <ProtectedRoutes role="student"><StudentDashboard /></ProtectedRoutes>
       } />

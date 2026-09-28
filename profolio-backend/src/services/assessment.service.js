@@ -1,3 +1,4 @@
+const { rubricPrompt, rubricJson, scoreFromCriteria, normalizeCriteria } = require('../utils/rubrics');
 const { getModel } = require('../utils/gemini');
 const assessmentRepo = require('../repositories/assessment.repo');
 const testRepo = require('../repositories/test.repo');
@@ -229,8 +230,11 @@ Student code:
 ${code}
 \`\`\`
 
+${rubricPrompt('programming')}
+
 Respond with JSON only, no markdown:
 {
+  ${rubricJson('programming')}
   "skill_score": number from 0-100,
   "correctness": "correct" | "partial" | "incorrect",
   "feedback": "2-3 sentence evaluation: correctness, code quality, one improvement tip",
@@ -239,9 +243,13 @@ Respond with JSON only, no markdown:
 
   const aiResult = await generateJSON(prompt);
 
+  // Weighted by utils/rubrics.js, not left to the model
+
+  const rubricScore = scoreFromCriteria('programming', aiResult.criteria, aiResult.skill_score);
+
   const totalViolations = violation_count + camera_violation_count;
   const penalty = Math.min(totalViolations * 5, 25);
-  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+  const finalScore = Math.max(0, rubricScore - penalty);
 
   const result = await assessmentRepo.saveResult({
     user_id,
@@ -250,9 +258,10 @@ Respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
+      criteria: normalizeCriteria('programming', aiResult.criteria),
       language, difficulty: level, topic: practice.topic, challenge_title: title, code,
       violation_count, camera_violation_count, time_taken_seconds,
-      ai_score: aiResult.skill_score,
+      ai_score: rubricScore,
       penalty_applied: penalty,
       correctness: aiResult.correctness,
       feedback: aiResult.feedback,
@@ -337,8 +346,12 @@ something is wrong, name the shape or arrow by its text.`
 
   const prompt = `This is a student-drawn flowchart for the problem: "${title}" (Difficulty: ${level}).${statement ? `\nThe process to diagram: ${statement}` : ''}${structure}
 
-Evaluate the flowchart and respond with JSON only, no markdown:
+Evaluate the flowchart.
+${rubricPrompt('flowchart')}
+
+Respond with JSON only, no markdown:
 {
+  ${rubricJson('flowchart')}
   "skill_score": number from 0-100,
   "has_start_end": boolean,
   "has_decision_diamond": boolean,
@@ -348,9 +361,11 @@ Evaluate the flowchart and respond with JSON only, no markdown:
 
   const imagePart = { inlineData: { mimeType: image_type || 'image/jpeg', data: image_base64 } };
   const aiResult = await generateJSON(prompt, [imagePart]);
+  // Weighted by utils/rubrics.js, not left to the model
+  const rubricScore = scoreFromCriteria('flowchart', aiResult.criteria, aiResult.skill_score);
 
   const penalty = Math.min(camera_violation_count * 5, 25);
-  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+  const finalScore = Math.max(0, rubricScore - penalty);
 
   const result = await assessmentRepo.saveResult({
     user_id,
@@ -359,6 +374,7 @@ Evaluate the flowchart and respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
+      criteria: normalizeCriteria('flowchart', aiResult.criteria),
       problem_title: title, difficulty: level, topic: practice.topic,
       drawn_in_app: !!diagram?.nodes?.length,
       diagram,
@@ -595,8 +611,11 @@ Explain WHY the result is right or wrong in terms the student can act on. If it
 is wrong, point to the specific clause at fault without writing the full
 corrected query.
 
+${rubricPrompt('sql')}
+
 Respond with JSON only, no markdown:
 {
+  ${rubricJson('sql')}
   "skill_score": number from 0-100,
   "correctness": "correct" | "partial" | "incorrect",
   "syntax_valid": boolean,
@@ -605,7 +624,11 @@ Respond with JSON only, no markdown:
 
   const aiResult = await generateJSON(prompt);
 
-  let skill = Number(aiResult.skill_score) || 0;
+  // Weighted by utils/rubrics.js, not left to the model
+
+  const rubricScore = scoreFromCriteria('sql', aiResult.criteria, aiResult.skill_score);
+
+  let skill = rubricScore;
   let correctness = aiResult.correctness;
   let syntaxValid = aiResult.syntax_valid;
   if (decided) {
@@ -627,6 +650,7 @@ Respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
+      criteria: normalizeCriteria('sql', aiResult.criteria),
       difficulty: level, topic: practice.topic, challenge_title, scenario, question: officialQuestion, sql_code,
       violation_count, camera_violation_count, time_taken_seconds,
       ai_score: skill,
@@ -737,8 +761,11 @@ Student's fixed code:
 ${fixed_code}
 \`\`\`
 
+${rubricPrompt('bugfix')}
+
 Respond with JSON only, no markdown:
 {
+  ${rubricJson('bugfix')}
   "skill_score": number from 0-100,
   "bugs_fixed": "all" | "most" | "some" | "none",
   "correctness": "correct" | "partial" | "incorrect",
@@ -747,9 +774,13 @@ Respond with JSON only, no markdown:
 
   const aiResult = await generateJSON(prompt);
 
+  // Weighted by utils/rubrics.js, not left to the model
+
+  const rubricScore = scoreFromCriteria('bugfix', aiResult.criteria, aiResult.skill_score);
+
   const totalViolations = violation_count + camera_violation_count;
   const penalty = Math.min(totalViolations * 5, 25);
-  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+  const finalScore = Math.max(0, rubricScore - penalty);
 
   const result = await assessmentRepo.saveResult({
     user_id,
@@ -758,10 +789,11 @@ Respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
+      criteria: normalizeCriteria('bugfix', aiResult.criteria),
       language, difficulty, topic: practice.topic, challenge_title, description,
       original_buggy_code, fixed_code,
       violation_count, camera_violation_count, time_taken_seconds,
-      ai_score: aiResult.skill_score,
+      ai_score: rubricScore,
       penalty_applied: penalty,
       bugs_fixed: aiResult.bugs_fixed,
       correctness: aiResult.correctness,

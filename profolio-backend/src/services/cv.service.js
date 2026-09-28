@@ -15,6 +15,53 @@ const TYPE_LABELS = {
   communication: 'Written communication',
 };
 
+// ── Verified performance ────────────────────────────────────────────────────
+// The panel asked for the CV to show performance indicators — typing speed,
+// programming proficiency — not only prose. Each professor-set test becomes
+// one line: the measurable facts (speed, accuracy, language, level) and a
+// proficiency on one scale shared by every assessment type, so "Proficient"
+// means the same thing in Typing as it does in SQL.
+const PROFICIENCY = [
+  { min: 85, label: 'Advanced' },
+  { min: 70, label: 'Proficient' },
+  { min: 55, label: 'Developing' },
+  { min: 0, label: 'Beginning' },
+];
+const proficiencyFor = (score) => {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return null;
+  return PROFICIENCY.find((p) => n >= p.min).label;
+};
+
+const PERFORMANCE_LABELS = {
+  typing: 'Typing',
+  programming: 'Programming',
+  flowchart: 'Flowcharting',
+  sql: 'SQL',
+  bugfix: 'Debugging',
+  communication: 'Communication',
+};
+
+const cap = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : s);
+
+// One line of facts per type, from what that assessment actually records.
+const performanceDetail = (type, m = {}, level) => {
+  const parts = [];
+  if (type === 'typing') {
+    if (m.wpm != null) parts.push(`${Math.round(m.wpm)} WPM`);
+    if (m.accuracy != null) parts.push(`${Math.round(m.accuracy)}% accuracy`);
+  }
+  if ((type === 'programming' || type === 'bugfix') && m.language) parts.push(m.language);
+  if (type === 'communication' && m.topic) parts.push(cap(m.topic));
+  if (level) parts.push(`${cap(level)} test`);
+  if (type === 'bugfix' && m.bugs_fixed) parts.push(`bugs fixed: ${m.bugs_fixed}`);
+  if (type === 'sql' && (m.verified === true || m.matches === true)) parts.push('output verified');
+  if (m.unproctored) parts.push('taken without camera');
+  // The professor confirmed or adjusted the AI's score (tests/:id review)
+  if (m.review) parts.push('reviewed by faculty');
+  return parts.join(' · ');
+};
+
 // A score is a number the school understands. An employer reads prose. These
 // bands are what the AI is given instead of the raw number, so it can describe
 // a level of competence without ever printing a mark.
@@ -354,6 +401,29 @@ Respond with JSON only, no markdown:
         .trim()
       : text;
 
+  // Level of each professor's test, for "Medium test" etc. Falls back to the
+  // difficulty the result itself recorded.
+  const testIds = ASSESSMENT_TYPES.map((t) => assessments[t]?.test_id).filter(Boolean);
+  const testLevels = {};
+  if (testIds.length) {
+    const { data: tests } = await supabase.from('tests').select('id, level').in('id', testIds);
+    for (const t of tests || []) testLevels[t.id] = t.level;
+  }
+  const verifiedPerformance = ASSESSMENT_TYPES
+    .filter((type) => assessments[type])
+    .map((type) => {
+      const r = assessments[type];
+      const m = r.metadata || {};
+      const level = testLevels[r.test_id] || m.difficulty || null;
+      return {
+        type,
+        area: PERFORMANCE_LABELS[type] || type,
+        detail: performanceDetail(type, m, level),
+        proficiency: proficiencyFor(r.score),
+        taken_at: r.created_at,
+      };
+    });
+
   const cv_content = {
     header: {
       full_name: profile.users?.full_name,
@@ -370,6 +440,9 @@ Respond with JSON only, no markdown:
     // Placed here rather than generated: a title is a fact about what a
     // professor's test awarded, not a phrase for the model to improve on.
     verified_titles: verifiedTitles,
+
+    // Measured, not written: numbers straight from the professor-set tests.
+    verified_performance: verifiedPerformance,
 
     about_me: stripScores(aiContent.about_me),
     verified_competencies: (aiContent.verified_competencies || []).map(stripScores),
@@ -479,4 +552,4 @@ const getCVHistory = async (user_id) => {
   return data || [];
 };
 
-module.exports = { generateCV, getCVSources, getLatestCV, getCVHistory };
+module.exports = { generateCV, getCVSources, getLatestCV, getCVHistory, loadSources };

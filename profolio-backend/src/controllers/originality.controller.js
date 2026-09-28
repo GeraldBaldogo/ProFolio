@@ -1,6 +1,6 @@
 const originalityService = require('../services/originality.service');
 
-const checkOriginality = async (req, res) => {
+const checkOriginality = async (req, res, next) => {
   try {
     const user_id = req.user.id;
     const { content, content_type } = req.body;
@@ -16,27 +16,27 @@ const checkOriginality = async (req, res) => {
     const result = await originalityService.checkOriginality(user_id, content, content_type);
     res.status(201).json(result);
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || 'Failed to check originality.' });
+    next(err);
   }
 };
 
-const getHistory = async (req, res) => {
+const getHistory = async (req, res, next) => {
   try {
     const user_id = req.user.id;
     const data = await originalityService.getOriginalityHistory(user_id);
     res.status(200).json(data);
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || 'Failed to retrieve originality history.' });
+    next(err);
   }
 };
 
-const getById = async (req, res) => {
+const getById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const data = await originalityService.getOriginalityById(id, req.user);
     res.status(200).json(data);
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || 'Originality check not found.' });
+    next(err);
   }
 };
 

@@ -3,9 +3,11 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
 
-dotenv.config();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+dotenv.config();
 
-const supabase = require('./src/config/db');
+// Loaded first so a wrong SUPABASE_URL or key fails at startup, not on the
+// first request.
+require('./src/config/db');
 const initSocket = require('./src/sockets/socket');
 
 const app = express();
@@ -14,36 +16,43 @@ const originalityRoutes = require('./src/routes/originality.routes');
 const recommendationRoutes = require('./src/routes/recommendation.routes');
 const cvRoutes = require('./src/routes/cv.routes');
 
-// Middleware
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// Sites allowed to call this API. Add more without touching code by setting
+// CORS_ORIGINS on Render (and in .env), comma-separated — for example a
+// Vercel preview link:
+//   CORS_ORIGINS=https://pro-folio-development-git-feature-x.vercel.app
 const allowedOrigins = [
   'http://localhost:5173',
   'https://pro-folio-development.vercel.app',
-  'http://192.168.100.11:5173'
-]
+  'http://192.168.100.11:5173',
+  ...(process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
+];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-    } else {
-      callback(new Error('Not allowed by CORS'))
-    }
+  origin(origin, callback) {
+    // No Origin header: server-to-server calls, curl, health checks
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    // A refused site is a 403, not a crash — so it doesn't show up as a
+    // ❌ 500 in the logs
+    const err = new Error(`Origin not allowed by CORS: ${origin}`);
+    err.status = 403;
+    callback(err);
   },
-  credentials: true
-}))
+  credentials: true,
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'ProFolio API is running!',
-    status: 'ok'
+    status: 'ok',
   });
 });
 
-// Routes
+// ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', require('./src/routes/auth.routes'));
 app.use('/api/portfolios', require('./src/routes/portfolio.routes'));
 app.use('/api/projects', require('./src/routes/project.routes'));
@@ -57,35 +66,23 @@ app.use('/api/originality', originalityRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/cv', cvRoutes);
 app.use('/api/communication', require('./src/routes/communication.routes'));
-
-// Previously missing - built earlier in this session but never mounted
 app.use('/api/chatbot', require('./src/routes/chatbot.routes'));
 app.use('/api/proctoring', require('./src/routes/proctoring.routes'));
 
-// New: student <-> professor real-time chat
+// Student <-> professor real-time chat
 app.use('/api/messages', require('./src/routes/messaging.routes'));
 
-// New: professor-authored custom tests
+// Professor-authored custom tests
 app.use('/api/tests', require('./src/routes/test.routes'));
 
-// Global error handler
-app.use((err, req, res, next) => {
-  const status = err.status || 500;
-
-  // Only log full errors for actual server problems (5xx).
-  // 4xx (not found, forbidden, bad request) are expected/normal — just log briefly.
-  if (status >= 500) {
-    console.error('❌ ERROR:', err.message);
-    console.error(err.stack);
-  } else {
-    console.warn(`⚠️  ${status}:`, err.message);
-  }
-
-  res.status(status).json({
-    success: false,
-    message: err.message || 'Internal Server Error'
-  });
+// An /api address that doesn't exist — usually a typo in the frontend —
+// gets a JSON 404 naming the address, instead of Express's HTML page.
+app.use('/api', (req, res, next) => {
+  next({ status: 404, message: `No such endpoint: ${req.method} ${req.originalUrl}` });
 });
+
+// Global error handler — logs the route, the user and database details
+app.use(require('./src/middleware/error.middleware'));
 
 const PORT = process.env.PORT || 5000;
 

@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
+import ShareShowcaseCard from '../../components/ShareShowcaseCard'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 const navItems = [
@@ -455,6 +456,9 @@ const PortfolioBuilder = () => {
                   <FontAwesomeIcon icon={faFileAlt} className="text-blue-400" /> Go to CV Builder
                 </Link>
               </div>
+
+              {/* The public page for employers — off until the student turns it on */}
+              <ShareShowcaseCard />
 
               {/* Section tabs — scrollable on mobile */}
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">

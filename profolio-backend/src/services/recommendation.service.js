@@ -132,11 +132,13 @@ const getLatestRecommendations = async (user_id) => {
     .select('*')
     .eq('user_id', user_id)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+    .limit(1);
 
-  if (error) throw { status: 404, message: 'No recommendations found for this user.' };
-  return data;
+  if (error) throw error;
+  // None yet is a normal state, not an error: the page shows its "Generate"
+  // button for null. (It used to be a 404, which painted every first visit
+  // red in the browser console.)
+  return data?.[0] || null;
 };
 
 const getAllRecommendations = async (user_id) => {

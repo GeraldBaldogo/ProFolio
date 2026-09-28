@@ -201,7 +201,30 @@ const findResultsByTestIds = async (testIds) => {
   return data || [];
 };
 
+const findResultById = async (id) => {
+  const { data, error } = await supabase
+    .from('assessment_results')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+};
+
+const updateResultReview = async (id, { score, metadata }) => {
+  const { data, error } = await supabase
+    .from('assessment_results')
+    .update({ score, metadata })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
 module.exports = {
+  findResultById,
+  updateResultReview,
   createTest,
   findById,
   findByProfessorId,

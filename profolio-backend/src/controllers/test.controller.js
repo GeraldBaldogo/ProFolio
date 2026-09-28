@@ -91,7 +91,17 @@ const getMyProfessors = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const reviewResult = async (req, res, next) => {
+  try {
+    const data = await testService.reviewResult(req.params.resultId, req.user.id, req.body || {});
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
+  reviewResult,
   createTest,
   updateTest,
   deleteTest,

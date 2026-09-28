@@ -199,6 +199,14 @@ export default function AssessmentDashboard() {
             </div>
           ) : (
             <>
+              {/* Where the rubric lives — every criterion and weight */}
+              <Link to="/scoring"
+                className="flex items-center gap-3 border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-4 py-3 mb-4 transition-colors">
+                <span className="text-blue-400 text-sm font-semibold">How scoring works</span>
+                <span className="text-gray-500 text-xs hidden sm:inline">The rubric, weights and proficiency levels every assessment uses</span>
+                <span className="ml-auto text-gray-500 text-xs">&rarr;</span>
+              </Link>
+
               {/* Overview cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5">
@@ -308,12 +316,24 @@ export default function AssessmentDashboard() {
                 <div className="w-9 h-9 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
                   <FontAwesomeIcon icon={faCertificate} className="text-amber-400 text-sm" />
                 </div>
+                {/* Practice never reaches the CV: cv.service only reads results with a
+                    test_id, i.e. tests a professor set. This banner used to say the
+                    opposite. */}
                 <div>
-                  <p className="text-white font-bold text-sm mb-1">Assessment scores are added to your CV</p>
+                  <p className="text-white font-bold text-sm mb-1">Practice stays off your CV</p>
                   <p className="text-gray-500 text-xs leading-relaxed">
-                    Your typing speed, coding score, SQL proficiency, and communication scores are automatically reflected
-                    in your generated CV and portfolio profile. Complete all assessments to maximize your career readiness score.
+                    Practise as often as you like — it unlocks harder levels and gets you ready, but it never appears
+                    on your CV. Only tests your professor assigns count as verified results, shown there as a
+                    proficiency level.
                   </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                    <Link to="/student/assigned-tests" className="text-amber-400 hover:text-amber-300 text-xs font-semibold">
+                      See your assigned tests &rarr;
+                    </Link>
+                    <Link to="/scoring" className="text-gray-400 hover:text-white text-xs font-semibold">
+                      How scoring works &rarr;
+                    </Link>
+                  </div>
                 </div>
               </div>
             </>

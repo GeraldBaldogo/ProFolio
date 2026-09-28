@@ -261,6 +261,10 @@ const CvDocument = ({ className = '' }) => (
         <li>Isolated defects in code she did not write</li>
       </ul>
 
+      <p className="lpcv-h">Verified Performance <i>Timed, camera-proctored tests set by faculty</i></p>
+      <div className="lpcv-row"><p><b>Typing</b> — 64 WPM · 97% accuracy · Medium test</p><p className="lpcv-date">Proficient</p></div>
+      <div className="lpcv-row"><p><b>SQL</b> — Hard test · output verified</p><p className="lpcv-date">Advanced</p></div>
+
       <p className="lpcv-h">Skills</p>
       <p className="lpcv-p">Python, PostgreSQL, Node.js, Express, Git, Docker</p>
 
@@ -268,7 +272,7 @@ const CvDocument = ({ className = '' }) => (
       <div className="lpcv-row"><p><b>Inventory System</b> — PHP, MySQL</p></div>
       <div className="lpcv-row"><p><b>Campus Event App</b> — React, Firebase</p></div>
     </div>
-    <p className="lpcv-caption">No scores printed — what she did, not what she scored.</p>
+    <p className="lpcv-caption">Measured results with their conditions — never a bare mark.</p>
   </div>
 )
 
@@ -783,8 +787,8 @@ export default function LandingPage() {
           <Reveal delay={700}>
             <p className="text-gray-400 text-[15px] sm:text-[19px] leading-[1.7] sm:leading-[1.65] max-w-2xl mx-auto mb-7 sm:mb-9">
               Lecturers write the assessments themselves. Students sit them under
-              supervision. What they were observed doing becomes a one-page CV — written
-              as evidence rather than a scorecard.
+              supervision. What they were observed doing becomes a one-page CV — measured
+              results with the context an employer needs, not a bare scorecard.
             </p>
           </Reveal>
 
@@ -801,6 +805,11 @@ export default function LandingPage() {
             </div>
           </Reveal>
 
+          <Reveal delay={1000}>
+            <p className="text-gray-600 text-[13px]">
+              Free for students · Faculty accounts approved by an administrator
+            </p>
+          </Reveal>
         </div>
 
         {/* Outside the centred block, so it anchors to the section rather than
@@ -969,7 +978,7 @@ export default function LandingPage() {
                       'Written from assessed evidence and portfolio content',
                       'The student picks which projects, skills and certificates go on each version',
                       'Always exactly one A4 page, with an optional 2x2 photo',
-                      'No marks printed anywhere on the document',
+                      'Verified performance: typing speed, accuracy and a proficiency level per skill',
                       'Saves as a PDF, kept after graduation',
                     ].map((t, i) => (
                       <span key={i} className="flex items-start gap-3 text-gray-400 text-[15px]">
@@ -1122,13 +1131,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══ No scores ══ */}
+      {/* ══ Numbers with context ══ */}
       <section className="px-5 sm:px-6 py-16 sm:py-24">
         <div className="max-w-5xl mx-auto">
           <Reveal className="mb-12">
-            <SectionHead eyebrow="Design decision" title={<>The CV carries <span className="brand-gradient">no marks</span></>}>
-              Every score is visible inside the application. None of them are printed on the
-              document a student sends out. That is deliberate.
+            <SectionHead eyebrow="Design decision" title={<>Numbers, <span className="brand-gradient">with their context</span></>}>
+              The CV shows how a student performed — but never as a bare mark. Every number
+              arrives with what was measured, how hard the test was, and who set it.
             </SectionHead>
           </Reveal>
 
@@ -1137,7 +1146,7 @@ export default function LandingPage() {
               <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
                 <div className="flex items-center gap-2.5 mb-5">
                   <FontAwesomeIcon icon={faXmark} className="text-rose-400 text-sm" />
-                  <p className="text-gray-400 font-semibold text-[14px]">A scorecard</p>
+                  <p className="text-gray-400 font-semibold text-[14px]">A bare scorecard</p>
                 </div>
                 <div className="dark-surface bg-[#0d1218] rounded-xl p-4 mb-5 font-mono">
                   <p className="text-gray-500 text-[10px] mb-2">TECHNICAL SKILLS</p>
@@ -1155,25 +1164,28 @@ export default function LandingPage() {
               <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
                 <div className="flex items-center gap-2.5 mb-5">
                   <FontAwesomeIcon icon={faCheck} className="text-emerald-400 text-sm" />
-                  <p className="text-gray-400 font-semibold text-[14px]">What ProFolio writes instead</p>
+                  <p className="text-gray-400 font-semibold text-[14px]">What ProFolio prints instead</p>
                 </div>
                 <div className="dark-surface bg-[#0d1218] rounded-xl p-4 mb-5">
                   <p className="text-gray-500 text-[9px] font-bold uppercase tracking-[0.15em] mb-2.5">
-                    Demonstrated under supervision
+                    Verified performance · proctored tests set by faculty
                   </p>
                   {[
-                    'Writing correct SQL against an unfamiliar schema',
-                    'Isolating defects in code she did not write',
-                  ].map((t, i) => (
-                    <p key={i} className="flex items-start gap-2 text-gray-300 text-[11px] leading-snug mb-1.5">
-                      <span className="w-1 h-1 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
-                      {t}
+                    ['Typing', '64 WPM · 97% accuracy · Medium test', 'Proficient'],
+                    ['SQL', 'Hard test · output verified', 'Advanced'],
+                    ['Programming', 'Python · Medium test', 'Developing'],
+                  ].map(([area, detail, level]) => (
+                    <p key={area} className="flex items-baseline gap-2 text-gray-300 text-[11px] leading-snug mb-1.5">
+                      <span className="text-white font-semibold">{area}</span>
+                      <span className="text-gray-500 truncate">{detail}</span>
+                      <span className="ml-auto text-emerald-400 font-semibold flex-shrink-0">{level}</span>
                     </p>
                   ))}
                 </div>
                 <p className="text-gray-400 text-[15px] leading-[1.7]">
-                  A sentence anyone can act on. It states what was done and under what
-                  conditions, and it survives being read in ten seconds.
+                  Real measures — words per minute, accuracy — plus the level of the test and
+                  a proficiency on one scale shared by every skill. Readable in ten seconds by
+                  someone who has never met the student.
                 </p>
               </div>
             </div>
@@ -1183,12 +1195,12 @@ export default function LandingPage() {
             <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7 flex items-start gap-4">
               <FontAwesomeIcon icon={faChartSimple} className="text-blue-400 text-sm mt-1 flex-shrink-0" />
               <div>
-                <p className="text-white font-semibold text-[15px] mb-2">The numbers still exist</p>
+                <p className="text-white font-semibold text-[15px] mb-2">One scale for every skill</p>
                 <p className="text-gray-400 text-[15px] leading-[1.7]">
-                  Every score, attempt and flag is available in the student&apos;s results page
-                  and the lecturer&apos;s. Progress between attempts is visible to both. The CV
-                  is simply not the place for it — it is the one document written for
-                  somebody who has never met the student.
+                  Advanced 85+, Proficient 70–84, Developing 55–69, Beginning below 55 — the same
+                  bands for typing, programming, SQL, debugging, flowcharts and communication,
+                  printed on the CV so an employer can read it. Every individual score, attempt
+                  and flag stays available in the student&apos;s and the lecturer&apos;s results pages.
                 </p>
               </div>
             </div>

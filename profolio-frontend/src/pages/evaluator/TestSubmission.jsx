@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import FacultyReviewPanel from '../../components/FacultyReviewPanel'
 
 // Must match the other evaluator pages exactly. This page had no sidebar at
 // all, so opening Results made the whole navigation vanish.
@@ -390,7 +391,12 @@ const TestSubmissions = () => {
 
                     <div className="w-16 text-right flex-shrink-0">
                       {result ? (
-                        <p className={`text-2xl font-black font-mono ${scoreColor(result.score)}`}>{result.score}</p>
+                        <>
+                          <p className={`text-2xl font-black font-mono ${scoreColor(result.score)}`}>{result.score}</p>
+                          <p className={`text-[10px] font-semibold ${result.metadata?.review ? 'text-amber-400' : 'text-gray-600'}`}>
+                            {result.metadata?.review ? (result.metadata.review.status === 'adjusted' ? 'Adjusted' : 'Reviewed') : 'Not reviewed'}
+                          </p>
+                        </>
                       ) : (
                         <p className="text-gray-600 text-2xl font-black font-mono">—</p>
                       )}
@@ -444,10 +450,17 @@ const TestSubmissions = () => {
                             {meta.overall_feedback || meta.feedback}
                           </p>
                           <p className="text-gray-600 text-xs mt-3">
-                            A suggestion, not a verdict — your judgement is the one that counts.
+                            A suggestion, not a verdict — confirm or adjust the score in your review below.
                           </p>
                         </div>
                       )}
+
+                      {/* The professor's final word — confirm or adjust the AI's score */}
+                      <FacultyReviewPanel
+                        result={result}
+                        onReviewed={(updated) => setRows((list) => list.map((r) =>
+                          r.result?.id === updated.id ? { ...r, result: updated } : r))}
+                      />
 
                       {/* How the score was reached */}
                       <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-gray-500">
@@ -504,4 +517,4 @@ const TestSubmissions = () => {
   )
 }
 
-export default TestSubmissions
+export default TestSubmission

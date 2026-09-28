@@ -1,6 +1,6 @@
 const cvService = require('../services/cv.service');
 
-const generate = async (req, res) => {
+const generate = async (req, res, next) => {
   try {
     const user_id = req.user.id;
     // Optional: { exclude: { projects: [ids], skills: [ids], ... } } — the
@@ -8,38 +8,38 @@ const generate = async (req, res) => {
     const data = await cvService.generateCV(user_id, req.body?.exclude);
     res.status(201).json(data);
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || 'Failed to generate CV.' });
+    next(err);
   }
 };
 
 // Everything the student can choose to put on the CV, for the step before
 // generating.
-const getSources = async (req, res) => {
+const getSources = async (req, res, next) => {
   try {
     const data = await cvService.getCVSources(req.user.id);
     res.status(200).json(data);
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || 'Failed to load your portfolio.' });
+    next(err);
   }
 };
 
-const getLatest = async (req, res) => {
+const getLatest = async (req, res, next) => {
   try {
     const user_id = req.user.id;
     const data = await cvService.getLatestCV(user_id);
     res.status(200).json(data);
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || 'No generated CV found.' });
+    next(err);
   }
 };
 
-const getHistory = async (req, res) => {
+const getHistory = async (req, res, next) => {
   try {
     const user_id = req.user.id;
     const data = await cvService.getCVHistory(user_id);
     res.status(200).json(data);
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message || 'Failed to retrieve CV history.' });
+    next(err);
   }
 };
 

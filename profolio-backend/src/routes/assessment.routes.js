@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const c = require('../controllers/assessment.controller');
 const { authenticate } = require('../middleware/auth.middleware');
+const { publicRubric } = require('../utils/rubrics');
+
+// How every assessment is scored — public, so it can be read before signing
+// up (and shown to a panel). Served from utils/rubrics.js, the same file the
+// graders use, so the page can't drift from what's actually applied.
+router.get('/rubric', (req, res) => res.json({ success: true, data: publicRubric() }));
 
 router.use(authenticate);
 

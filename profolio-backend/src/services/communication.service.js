@@ -1,3 +1,4 @@
+const { rubricPrompt, scoreFromCriteria, normalizeCriteria } = require('../utils/rubrics');
 const { getModel } = require('../utils/gemini');
 const assessmentRepo = require('../repositories/assessment.repo');
 const testRepo = require('../repositories/test.repo');
@@ -96,6 +97,9 @@ Student response:
 ${response_text}
 """
 
+${rubricPrompt('communication')}
+Report those four as clarity_score, structure_score, professionalism_score and grammar_score.
+
 Score the student strictly and fairly. Respond with JSON only, no markdown:
 {
   "skill_score": number from 0-100,
@@ -122,7 +126,15 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
   // the easiest ways to cheat on a written-response test.
   const totalViolations = violation_count + camera_violation_count;
   const penalty = Math.min(totalViolations * 5, 25);
-  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+  // Weighted by utils/rubrics.js from the four criterion scores
+  const criterionScores = {
+    clarity: aiResult.clarity_score,
+    structure: aiResult.structure_score,
+    professionalism: aiResult.professionalism_score,
+    grammar: aiResult.grammar_score,
+  };
+  const rubricScore = scoreFromCriteria('communication', criterionScores, aiResult.skill_score);
+  const finalScore = Math.max(0, rubricScore - penalty);
 
   const result = await assessmentRepo.saveResult({
     user_id,
@@ -131,6 +143,7 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
+      criteria: normalizeCriteria('communication', criterionScores),
       difficulty,
       topic: topicKey,
       prompt_id,
@@ -141,7 +154,7 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
       violation_count,
       camera_violation_count,
       penalty_applied: penalty,
-      ai_score: aiResult.skill_score,
+      ai_score: rubricScore,
       clarity_score: aiResult.clarity_score,
       professionalism_score: aiResult.professionalism_score,
       structure_score: aiResult.structure_score,

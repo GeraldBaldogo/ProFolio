@@ -146,6 +146,7 @@ const cvStyles = `
   .cv-bullets li + li { margin-top: calc(.12em * var(--cv-gap)); }
   .cv-para { text-align: justify; }
   .cv-inline strong { font-weight: 700; }
+  .cv-legend { font-size: .8em; font-style: italic; color: #555 !important; margin-top: calc(.35em * var(--cv-gap)) !important; }
 
   /* ── Print ──────────────────────────────────────────────────────────────
      margin: 0 on @page leaves the browser no room for its own header and
@@ -758,7 +759,7 @@ export default function CVPage() {
                       {readinessLabel[evidence.career_readiness] || evidence.career_readiness}
                     </span>
                   )}
-                  <span className="text-gray-600 text-xs ml-auto">Professor-set work only · scores aren&apos;t printed</span>
+                  <span className="text-gray-600 text-xs ml-auto">Professor-set work only · results shown as proficiency levels</span>
                 </div>
               )}
 
@@ -869,6 +870,19 @@ export default function CVPage() {
                       ))} />
                     )}
                     {c?.verified_competencies?.length > 0 && <Bullets items={c.verified_competencies} />}
+                  </CVSection>
+                )}
+
+                {/* Measured results from professor-set tests: the numbers the
+                    panel asked to see, on one proficiency scale for every type. */}
+                {c?.verified_performance?.length > 0 && (
+                  <CVSection title="Verified Performance" note="Timed, camera-proctored tests set by faculty">
+                    {c.verified_performance.map((p) => (
+                      <Entry key={p.type} title={p.area} detail={p.detail || null} date={p.proficiency} />
+                    ))}
+                    <p className="cv-legend">
+                      Proficiency: Advanced 85+ · Proficient 70–84 · Developing 55–69 · Beginning below 55
+                    </p>
                   </CVSection>
                 )}
 

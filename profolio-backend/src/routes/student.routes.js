@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const supabase = require('../config/db');
+const { requireRole } = require('../middleware/role.middleware');
+const showcaseService = require('../services/showcase.service');
 
 // The only columns a student may write through PATCH /profile. Before this
 // list existed the body was spread straight into the upsert, so a request
@@ -131,6 +133,38 @@ router.delete('/profile/photo', authenticate, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ── Showcase: a public page of the portfolio, for employers ────────────────
+// The student's own settings. Off until they turn it on.
+router.get('/showcase', authenticate, requireRole('student'), async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await showcaseService.getSettings(req.user.id) });
+  } catch (err) { next(err); }
+});
+
+// { enabled?: boolean, show_email?: boolean }. Turning it on the first time
+// creates the link.
+router.put('/showcase', authenticate, requireRole('student'), async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await showcaseService.updateSettings(req.user, req.body || {}) });
+  } catch (err) { next(err); }
+});
+
+// A new link; the old one stops working immediately.
+router.post('/showcase/reset', authenticate, requireRole('student'), async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await showcaseService.resetLink(req.user) });
+  } catch (err) { next(err); }
+});
+
+// The public page's data. No sign-in: this is what an employer opens.
+// Only returns anything while the student has the showcase turned on.
+router.get('/showcase/public/:slug', async (req, res, next) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json({ success: true, data: await showcaseService.getPublic(req.params.slug) });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

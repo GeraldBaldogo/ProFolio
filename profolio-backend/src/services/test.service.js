@@ -312,7 +312,60 @@ const getMyProfessors = async (student_id) => {
   return testRepo.findProfessorsForStudent(student_id);
 };
 
+// ── Faculty review ──────────────────────────────────────────────────────────
+// The AI's score is a recommendation; the professor who set the test has the
+// final word. They can confirm it as it stands, or adjust it with a reason.
+// The result's `score` becomes the professor's decision — so the CV, titles
+// and analytics all use it — while the AI's score, who reviewed it and why
+// are kept in metadata.review, so nothing is overwritten without a trace.
+const reviewResult = async (result_id, professor_id, { action, score, note } = {}) => {
+  if (!['confirm', 'adjust'].includes(action)) {
+    throw { status: 400, message: 'action must be "confirm" or "adjust".' };
+  }
+
+  const result = await testRepo.findResultById(result_id);
+  if (!result || !result.test_id) throw { status: 404, message: 'Submission not found.' };
+
+  const test = await testRepo.findById(result.test_id);
+  if (!test) throw { status: 404, message: 'Test not found.' };
+  assertOwnsTest(test, professor_id);
+
+  const reason = typeof note === 'string' ? note.trim() : '';
+  let finalScore = result.score;
+  if (action === 'adjust') {
+    const n = Number(score);
+    if (!Number.isInteger(n) || n < 0 || n > 100) {
+      throw { status: 400, message: 'The score must be a whole number from 0 to 100.' };
+    }
+    // A changed score has to be explained — to the student, and to anyone
+    // checking later why it differs from the AI's.
+    if (reason.length < 5) throw { status: 400, message: 'Please give a short reason for changing the score.' };
+    if (reason.length > 500) throw { status: 400, message: 'Keep the reason under 500 characters.' };
+    finalScore = n;
+  }
+
+  const metadata = result.metadata || {};
+  // The score the system gave, before any professor touched it. Kept from the
+  // first review, so adjusting twice still remembers the original.
+  const systemScore = metadata.review?.system_score ?? result.score;
+
+  const review = {
+    status: action === 'adjust' && finalScore !== systemScore ? 'adjusted' : 'confirmed',
+    system_score: systemScore,
+    final_score: finalScore,
+    note: reason || null,
+    reviewed_by: professor_id,
+    reviewed_at: new Date().toISOString(),
+  };
+
+  return testRepo.updateResultReview(result_id, {
+    score: finalScore,
+    metadata: { ...metadata, review },
+  });
+};
+
 module.exports = {
+  reviewResult,
   createTest,
   updateTest,
   deleteTest,
