@@ -1,5 +1,58 @@
 const testRepo = require('../repositories/test.repo');
 const supabase = require('../config/db');
+const { runSql } = require('../utils/sqlSandbox');
+
+// ─── Answers stay on the server ──────────────────────────────────────────────
+// A professor's SQL test can carry the reference answer in config.solution_sql,
+// which is what the student's query is marked against. The same config object
+// is what a student's browser receives when they open or start the test, so
+// without this the answer would be readable in DevTools → Network.
+//
+// Walks whatever shape the repository returns — a single test, a list, or
+// assignments with the test joined in — and removes secret fields from every
+// `config` it finds. Add a field name here to hide it too.
+// expected_query is the older name for the same thing. Tests created before the
+// rename may still carry it, and it was being sent to students until now.
+const SECRET_CONFIG_FIELDS = ['solution_sql', 'expected_query'];
+
+const stripSecrets = (value) => {
+  if (Array.isArray(value)) return value.map(stripSecrets);
+  if (!value || typeof value !== 'object') return value;
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (k === 'config' && v && typeof v === 'object' && !Array.isArray(v)) {
+      const clean = { ...v };
+      SECRET_CONFIG_FIELDS.forEach((f) => delete clean[f]);
+      out[k] = clean;
+    } else {
+      out[k] = stripSecrets(v);
+    }
+  }
+  return out;
+};
+
+// Runs a professor's SQL test before it is saved. A typo in the schema or the
+// answer is far better found by the professor at their desk than by thirty
+// students in the middle of a timed exam.
+const validateSqlTest = async (config) => {
+  const answer = config.solution_sql || config.expected_query || null;
+  const check = await runSql(config.schema_sql, answer || 'SELECT 1');
+  if (check.ok) {
+    const noRows = check.result && check.result.rows.length === 0;
+    const nothingAtAll = !check.result && !check.changes;
+    if (answer && (noRows || nothingAtAll)) {
+      throw { status: 400, message: 'Your answer query ran but returned no rows and changed no data. Check it against your sample data — a question whose correct answer is empty can\u2019t tell a right query from a wrong one.' };
+    }
+    return;
+  }
+  if (check.stage === 'schema') {
+    throw { status: 400, message: `Your schema could not be loaded: ${check.error}` };
+  }
+  if (check.stage === 'timeout') {
+    throw { status: 400, message: 'Your answer query took too long to run.' };
+  }
+  throw { status: 400, message: `Your answer query failed: ${check.error}` };
+};
 
 const VALID_TYPES = ['typing', 'programming', 'flowchart', 'sql', 'bugfix', 'communication'];
 
@@ -22,6 +75,12 @@ const validateConfig = (type, config) => {
   const missing = required.filter((field) => !config[field]);
   if (missing.length > 0) {
     throw { status: 400, message: `config is missing required field(s) for type "${type}": ${missing.join(', ')}` };
+  }
+  // The level decides which verified title a test can award. Optional, so
+  // older tests still save; an unlabelled test is treated as Easy.
+  if (config.level !== undefined && config.level !== null && config.level !== '' &&
+      !['easy', 'medium', 'hard'].includes(config.level)) {
+    throw { status: 400, message: 'Level must be easy, medium or hard.' };
   }
 };
 
@@ -48,6 +107,7 @@ const createTest = async (professor_id, { type, title, description, config, time
   }
   if (!title || !title.trim()) throw { status: 400, message: 'title is required.' };
   validateConfig(type, config);
+  if (type === 'sql') await validateSqlTest(config);
 
   return testRepo.createTest({ professor_id, type, title: title.trim(), description, config, time_limit_minutes, is_published });
 };
@@ -62,6 +122,7 @@ const updateTest = async (test_id, professor_id, updates) => {
   }
   if (updates.config) {
     validateConfig(updates.type || test.type, updates.config);
+    if ((updates.type || test.type) === 'sql') await validateSqlTest(updates.config);
   }
 
   return testRepo.updateTest(test_id, updates);
@@ -97,7 +158,7 @@ const getById = async (test_id, requestingUser) => {
   // Students can only view a test if they've been assigned it
   if (requestingUser.role === 'student') {
     const assignment = await testRepo.findAssignment(test_id, requestingUser.id);
-    if (assignment) return test;
+    if (assignment) return stripSecrets(test);
   }
 
   throw { status: 403, message: 'You do not have permission to view this test.' };
@@ -157,7 +218,7 @@ const getAssignmentsForTest = async (test_id, professor_id) => {
 };
  
 const getMyAssignedTests = async (student_id) => {
-  return testRepo.findAssignmentsForStudent(student_id);
+  return stripSecrets(await testRepo.findAssignmentsForStudent(student_id));
 };
 
 const startAssignment = async (test_id, student_id) => {
@@ -171,7 +232,7 @@ const startAssignment = async (test_id, student_id) => {
   }
  
   const test = await testRepo.findById(test_id);
-  return test;
+  return stripSecrets(test);
 };
 
 const markAssignmentSubmitted = async (test_id, student_id) => {

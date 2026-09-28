@@ -54,23 +54,39 @@ const AdminUsers = () => {
     }
   }
 
+  const ROLE_NAMES = { student: 'Student', evaluator: 'Professor', admin: 'Admin' }
+
+  // A role change moves someone to a different part of the app, so it's
+  // confirmed first. The server refuses the dangerous cases (your own admin
+  // access, the last admin) and its reason is shown as-is.
   const updateRole = async (userId, role) => {
+    const target = users.find(u => u.id === userId)
+    if (!target || target.role === role) return
+    if (userId === user?.id) {
+      showToast('You can\u2019t change your own role.', 'error')
+      return
+    }
+    if (!window.confirm(`Change ${target.full_name} from ${ROLE_NAMES[target.role] || target.role} to ${ROLE_NAMES[role] || role}?`)) return
     try {
       await api.patch(`/admin/users/${userId}/role`, { role })
-      setUsers(users.map(u => u.id === userId ? { ...u, role } : u))
-      showToast('Role updated successfully!')
+      setUsers(list => list.map(u => u.id === userId ? { ...u, role } : u))
+      showToast(`${target.full_name} is now a ${ROLE_NAMES[role] || role}.`)
     } catch (err) {
-      showToast('Failed to update role.', 'error')
+      showToast(err.response?.data?.message || 'Failed to update role.', 'error')
     }
   }
 
   const toggleStatus = async (userId, is_active) => {
+    if (userId === user?.id && !is_active) {
+      showToast('You can\u2019t deactivate your own account.', 'error')
+      return
+    }
     try {
       await api.patch(`/admin/users/${userId}/status`, { is_active })
       setUsers(users.map(u => u.id === userId ? { ...u, is_active } : u))
       showToast(`User ${is_active ? 'activated' : 'deactivated'} successfully!`)
     } catch (err) {
-      showToast('Failed to update status.', 'error')
+      showToast(err.response?.data?.message || 'Failed to update status.', 'error')
     }
   }
 
@@ -101,7 +117,7 @@ const AdminUsers = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -139,23 +155,23 @@ const AdminUsers = () => {
 
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
+          <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">User Management</h1>
-            <p className="text-gray-500 text-xs">Manage all ProFolio users</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg truncate">User Management</h1>
+            <p className="text-gray-500 text-xs truncate">Manage all ProFolio users</p>
           </div>
-          <div className="ml-auto">
-            <div className="w-9 h-9 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+          <div className="ml-auto flex-shrink-0">
+            <div className="w-9 h-9 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl hidden sm:flex items-center justify-center text-white font-bold text-sm">
               {user?.full_name?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <FontAwesomeIcon icon={faSpinner} className="text-rose-400 text-3xl animate-spin" />
@@ -229,15 +245,19 @@ const AdminUsers = () => {
                           </span>
                           <select
                             value={u.role}
+                            disabled={u.id === user?.id}
+                            title={u.id === user?.id ? 'You can\u2019t change your own role' : undefined}
                             onChange={e => updateRole(u.id, e.target.value)}
-                            className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border ${role.bg} ${role.border} ${role.color} bg-transparent outline-none cursor-pointer flex-shrink-0`}
+                            className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border ${role.bg} ${role.border} ${role.color} bg-transparent outline-none cursor-pointer flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
                             <option value="student">Student</option>
-                            <option value="evaluator">Evaluator</option>
+                            <option value="evaluator">Professor</option>
                             <option value="admin">Admin</option>
                           </select>
                           <button
                             onClick={() => toggleStatus(u.id, !u.is_active)}
+                            disabled={u.id === user?.id}
+                            title={u.id === user?.id ? 'This is you' : undefined}
                             className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all flex-shrink-0 ${u.is_active ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400' : 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-400'}`}
                           >
                             {u.is_active ? 'Active' : 'Inactive'}

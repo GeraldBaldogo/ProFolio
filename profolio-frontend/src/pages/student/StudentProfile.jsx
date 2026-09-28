@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -6,12 +6,13 @@ import {
   faRightFromBracket, faSpinner, faCircleCheck, faTriangleExclamation, faWandMagicSparkles,
   faPen, faSave, faGraduationCap, faBuilding, faClipboardList, faChartLine, 
   faEnvelope, faBriefcase, faQuoteLeft, faComments, faFingerprint, faLightbulb, faFileAlt,
-  faPlus, faTrashCan, faPhone,
+  faPlus, faTrashCan, faPhone, faCamera,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
+import { uploadProfilePhoto, removeProfilePhoto } from '../../services/photo.service'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 const navItems = [
@@ -34,7 +35,7 @@ const labelClass = "text-gray-400 text-xs font-semibold uppercase tracking-wider
 const StudentProfile = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { user, logout, updateUser } = useAuth()
   const { totalUnread } = useNotifications()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profile, setProfile] = useState(null)
@@ -42,7 +43,12 @@ const StudentProfile = () => {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
+  // Shown here, beside the name, and on the CV — one upload, used everywhere.
+  const [photo, setPhoto] = useState(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const photoInput = useRef(null)
   const [form, setForm] = useState({
+    full_name: '',
     professional_title: '',
     phone: '',
     location: '',
@@ -71,7 +77,9 @@ const StudentProfile = () => {
     try {
       const res = await api.get('/student/profile')
       const p = res.data.data
+      setPhoto(p?.profile_photo || null)
       setForm({
+        full_name: user?.full_name || '',
         professional_title: p?.professional_title || '',
         phone: p?.phone || '',
         location: p?.location || '',
@@ -97,16 +105,23 @@ const StudentProfile = () => {
   }
 
   const handleSave = async () => {
+    if (!form.full_name.trim()) {
+      showToast('Please enter your full name.', 'error')
+      return
+    }
     setSaving(true)
     try {
-      await api.patch('/student/profile', {
+      const res = await api.patch('/student/profile', {
         ...form,
         work_experience: form.work_experience.filter(e => e.role?.trim() || e.organisation?.trim()),
       })
+      const savedName = res.data?.data?.full_name
+      if (savedName && savedName !== user?.full_name) updateUser({ full_name: savedName })
+      setForm(f => ({ ...f, full_name: savedName || f.full_name }))
       showToast('Profile updated successfully!')
       setEditing(false)
     } catch (err) {
-      showToast('Failed to update profile.', 'error')
+      showToast(err.response?.data?.message || 'Failed to update profile.', 'error')
     } finally {
       setSaving(false)
     }
@@ -126,6 +141,34 @@ const StudentProfile = () => {
     ...f,
     work_experience: f.work_experience.filter((_, idx) => idx !== i),
   }))
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setPhotoBusy(true)
+    try {
+      setPhoto(await uploadProfilePhoto(file))
+      showToast('Photo updated.')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    setPhotoBusy(true)
+    try {
+      await removeProfilePhoto()
+      setPhoto(null)
+      showToast('Photo removed.')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
 
   const handleLogout = () => { logout(); navigate('/') }
 
@@ -239,8 +282,35 @@ const StudentProfile = () => {
               <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-6">
                 {/* Avatar + name row */}
                 <div className="flex items-start gap-3 sm:gap-5">
-                  <div className="w-14 h-14 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-black text-2xl sm:text-3xl flex-shrink-0">
-                    {user?.full_name?.charAt(0).toUpperCase()}
+                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                    <input ref={photoInput} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
+                    <button
+                      type="button"
+                      onClick={() => photoInput.current?.click()}
+                      disabled={photoBusy}
+                      title={photo ? 'Change photo' : 'Add photo'}
+                      className="group relative w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden flex-shrink-0 disabled:cursor-wait"
+                    >
+                      {photo ? (
+                        <img src={photo} alt={user?.full_name || ''} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center text-white font-black text-2xl sm:text-3xl">
+                          {user?.full_name?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className={`absolute inset-0 bg-black/55 flex items-center justify-center transition-opacity ${photoBusy ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}`}>
+                        <FontAwesomeIcon icon={photoBusy ? faSpinner : faCamera} className={`text-white text-base sm:text-lg ${photoBusy ? 'animate-spin' : ''}`} />
+                      </div>
+                    </button>
+                    {/* A phone has no hover, so the action is always spelled out */}
+                    <button
+                      type="button"
+                      onClick={photo ? handleRemovePhoto : () => photoInput.current?.click()}
+                      disabled={photoBusy}
+                      className={`text-[10px] sm:text-[11px] font-medium transition-colors disabled:opacity-50 ${photo ? 'text-gray-500 hover:text-rose-400' : 'text-blue-400 hover:text-blue-300'}`}
+                    >
+                      {photo ? 'Remove' : 'Add photo'}
+                    </button>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-white font-black text-base sm:text-xl truncate">{user?.full_name}</h2>
@@ -295,6 +365,13 @@ const StudentProfile = () => {
               {editing ? (
                 <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-5">
                   <h3 className="text-white font-bold text-sm">Edit Profile Information</h3>
+
+                  <div>
+                    <label className={labelClass}>Full Name</label>
+                    <input className={inputClass} placeholder="e.g. Juan Dela Cruz" autoComplete="name"
+                      value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} />
+                    <p className="text-gray-600 text-xs mt-1">First name and surname, exactly as they should appear at the top of your CV.</p>
+                  </div>
 
                   {/* Single col on mobile, 2 cols on md+ */}
                   <div>

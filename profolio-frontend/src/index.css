@@ -165,6 +165,108 @@
 [data-theme="light"] .text-blue-400 { color: var(--accent-600) !important; }
 [data-theme="light"] .text-blue-300 { color: var(--accent-600) !important; }
 
+/* Coloured text. The 200–400 shades are built for a dark page; on white
+   they wash out. In light mode each steps down to a 600/700 of the same
+   hue so status colours (green = done, rose = overdue, amber = waiting)
+   stay readable. Dark and photo surfaces keep the original shade. */
+[data-theme="light"] .text-amber-200,
+[data-theme="light"] .text-amber-300,
+[data-theme="light"] .text-amber-400 { color: #b45309 !important; }
+[data-theme="light"] .text-yellow-200,
+[data-theme="light"] .text-yellow-300,
+[data-theme="light"] .text-yellow-400 { color: #a16207 !important; }
+[data-theme="light"] .text-orange-200,
+[data-theme="light"] .text-orange-300,
+[data-theme="light"] .text-orange-400 { color: #c2410c !important; }
+[data-theme="light"] .text-rose-200,
+[data-theme="light"] .text-rose-300,
+[data-theme="light"] .text-rose-400 { color: #e11d48 !important; }
+[data-theme="light"] .text-red-200,
+[data-theme="light"] .text-red-300,
+[data-theme="light"] .text-red-400 { color: #dc2626 !important; }
+[data-theme="light"] .text-emerald-200,
+[data-theme="light"] .text-emerald-300,
+[data-theme="light"] .text-emerald-400 { color: #047857 !important; }
+[data-theme="light"] .text-green-200,
+[data-theme="light"] .text-green-300,
+[data-theme="light"] .text-green-400 { color: #15803d !important; }
+[data-theme="light"] .text-teal-200,
+[data-theme="light"] .text-teal-300,
+[data-theme="light"] .text-teal-400 { color: #0f766e !important; }
+[data-theme="light"] .text-cyan-200,
+[data-theme="light"] .text-cyan-300,
+[data-theme="light"] .text-cyan-400 { color: #0e7490 !important; }
+[data-theme="light"] .text-sky-200,
+[data-theme="light"] .text-sky-300,
+[data-theme="light"] .text-sky-400 { color: #0369a1 !important; }
+[data-theme="light"] .text-violet-200,
+[data-theme="light"] .text-violet-300,
+[data-theme="light"] .text-violet-400 { color: #7c3aed !important; }
+[data-theme="light"] .text-purple-200,
+[data-theme="light"] .text-purple-300,
+[data-theme="light"] .text-purple-400 { color: #9333ea !important; }
+[data-theme="light"] .text-fuchsia-200,
+[data-theme="light"] .text-fuchsia-300,
+[data-theme="light"] .text-fuchsia-400 { color: #c026d3 !important; }
+[data-theme="light"] .text-pink-200,
+[data-theme="light"] .text-pink-300,
+[data-theme="light"] .text-pink-400 { color: #db2777 !important; }
+[data-theme="light"] .text-indigo-200,
+[data-theme="light"] .text-indigo-300,
+[data-theme="light"] .text-indigo-400 { color: #4f46e5 !important; }
+[data-theme="light"] .text-lime-200,
+[data-theme="light"] .text-lime-300,
+[data-theme="light"] .text-lime-400 { color: #4d7c0f !important; }
+
+[data-theme="light"] .dark-surface .text-amber-200, [data-theme="light"] .photo-surface .text-amber-200 { color: #fde68a !important; }
+[data-theme="light"] .dark-surface .text-amber-300, [data-theme="light"] .photo-surface .text-amber-300 { color: #fcd34d !important; }
+[data-theme="light"] .dark-surface .text-amber-400, [data-theme="light"] .photo-surface .text-amber-400 { color: #fbbf24 !important; }
+[data-theme="light"] .dark-surface .text-yellow-200, [data-theme="light"] .photo-surface .text-yellow-200 { color: #fef08a !important; }
+[data-theme="light"] .dark-surface .text-yellow-300, [data-theme="light"] .photo-surface .text-yellow-300 { color: #fde047 !important; }
+[data-theme="light"] .dark-surface .text-yellow-400, [data-theme="light"] .photo-surface .text-yellow-400 { color: #facc15 !important; }
+[data-theme="light"] .dark-surface .text-orange-200, [data-theme="light"] .photo-surface .text-orange-200 { color: #fed7aa !important; }
+[data-theme="light"] .dark-surface .text-orange-300, [data-theme="light"] .photo-surface .text-orange-300 { color: #fdba74 !important; }
+[data-theme="light"] .dark-surface .text-orange-400, [data-theme="light"] .photo-surface .text-orange-400 { color: #fb923c !important; }
+[data-theme="light"] .dark-surface .text-rose-200, [data-theme="light"] .photo-surface .text-rose-200 { color: #fecdd3 !important; }
+[data-theme="light"] .dark-surface .text-rose-300, [data-theme="light"] .photo-surface .text-rose-300 { color: #fda4af !important; }
+[data-theme="light"] .dark-surface .text-rose-400, [data-theme="light"] .photo-surface .text-rose-400 { color: #fb7185 !important; }
+[data-theme="light"] .dark-surface .text-red-200, [data-theme="light"] .photo-surface .text-red-200 { color: #fecaca !important; }
+[data-theme="light"] .dark-surface .text-red-300, [data-theme="light"] .photo-surface .text-red-300 { color: #fca5a5 !important; }
+[data-theme="light"] .dark-surface .text-red-400, [data-theme="light"] .photo-surface .text-red-400 { color: #f87171 !important; }
+[data-theme="light"] .dark-surface .text-emerald-200, [data-theme="light"] .photo-surface .text-emerald-200 { color: #a7f3d0 !important; }
+[data-theme="light"] .dark-surface .text-emerald-300, [data-theme="light"] .photo-surface .text-emerald-300 { color: #6ee7b7 !important; }
+[data-theme="light"] .dark-surface .text-emerald-400, [data-theme="light"] .photo-surface .text-emerald-400 { color: #34d399 !important; }
+[data-theme="light"] .dark-surface .text-green-200, [data-theme="light"] .photo-surface .text-green-200 { color: #bbf7d0 !important; }
+[data-theme="light"] .dark-surface .text-green-300, [data-theme="light"] .photo-surface .text-green-300 { color: #86efac !important; }
+[data-theme="light"] .dark-surface .text-green-400, [data-theme="light"] .photo-surface .text-green-400 { color: #4ade80 !important; }
+[data-theme="light"] .dark-surface .text-teal-200, [data-theme="light"] .photo-surface .text-teal-200 { color: #99f6e4 !important; }
+[data-theme="light"] .dark-surface .text-teal-300, [data-theme="light"] .photo-surface .text-teal-300 { color: #5eead4 !important; }
+[data-theme="light"] .dark-surface .text-teal-400, [data-theme="light"] .photo-surface .text-teal-400 { color: #2dd4bf !important; }
+[data-theme="light"] .dark-surface .text-cyan-200, [data-theme="light"] .photo-surface .text-cyan-200 { color: #a5f3fc !important; }
+[data-theme="light"] .dark-surface .text-cyan-300, [data-theme="light"] .photo-surface .text-cyan-300 { color: #67e8f9 !important; }
+[data-theme="light"] .dark-surface .text-cyan-400, [data-theme="light"] .photo-surface .text-cyan-400 { color: #22d3ee !important; }
+[data-theme="light"] .dark-surface .text-sky-200, [data-theme="light"] .photo-surface .text-sky-200 { color: #bae6fd !important; }
+[data-theme="light"] .dark-surface .text-sky-300, [data-theme="light"] .photo-surface .text-sky-300 { color: #7dd3fc !important; }
+[data-theme="light"] .dark-surface .text-sky-400, [data-theme="light"] .photo-surface .text-sky-400 { color: #38bdf8 !important; }
+[data-theme="light"] .dark-surface .text-violet-200, [data-theme="light"] .photo-surface .text-violet-200 { color: #ddd6fe !important; }
+[data-theme="light"] .dark-surface .text-violet-300, [data-theme="light"] .photo-surface .text-violet-300 { color: #c4b5fd !important; }
+[data-theme="light"] .dark-surface .text-violet-400, [data-theme="light"] .photo-surface .text-violet-400 { color: #a78bfa !important; }
+[data-theme="light"] .dark-surface .text-purple-200, [data-theme="light"] .photo-surface .text-purple-200 { color: #e9d5ff !important; }
+[data-theme="light"] .dark-surface .text-purple-300, [data-theme="light"] .photo-surface .text-purple-300 { color: #d8b4fe !important; }
+[data-theme="light"] .dark-surface .text-purple-400, [data-theme="light"] .photo-surface .text-purple-400 { color: #c084fc !important; }
+[data-theme="light"] .dark-surface .text-fuchsia-200, [data-theme="light"] .photo-surface .text-fuchsia-200 { color: #f5d0fe !important; }
+[data-theme="light"] .dark-surface .text-fuchsia-300, [data-theme="light"] .photo-surface .text-fuchsia-300 { color: #f0abfc !important; }
+[data-theme="light"] .dark-surface .text-fuchsia-400, [data-theme="light"] .photo-surface .text-fuchsia-400 { color: #e879f9 !important; }
+[data-theme="light"] .dark-surface .text-pink-200, [data-theme="light"] .photo-surface .text-pink-200 { color: #fbcfe8 !important; }
+[data-theme="light"] .dark-surface .text-pink-300, [data-theme="light"] .photo-surface .text-pink-300 { color: #f9a8d4 !important; }
+[data-theme="light"] .dark-surface .text-pink-400, [data-theme="light"] .photo-surface .text-pink-400 { color: #f472b6 !important; }
+[data-theme="light"] .dark-surface .text-indigo-200, [data-theme="light"] .photo-surface .text-indigo-200 { color: #c7d2fe !important; }
+[data-theme="light"] .dark-surface .text-indigo-300, [data-theme="light"] .photo-surface .text-indigo-300 { color: #a5b4fc !important; }
+[data-theme="light"] .dark-surface .text-indigo-400, [data-theme="light"] .photo-surface .text-indigo-400 { color: #818cf8 !important; }
+[data-theme="light"] .dark-surface .text-lime-200, [data-theme="light"] .photo-surface .text-lime-200 { color: #d9f99d !important; }
+[data-theme="light"] .dark-surface .text-lime-300, [data-theme="light"] .photo-surface .text-lime-300 { color: #bef264 !important; }
+[data-theme="light"] .dark-surface .text-lime-400, [data-theme="light"] .photo-surface .text-lime-400 { color: #a3e635 !important; }
+
 /* ── Two kinds of surface stay dark whatever the theme ──
 
    .photo-surface — anything written over a photograph. The photo has a dark
@@ -419,3 +521,84 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   AMBIENT BACKDROP
+   Aurora + glitter behind every page (components/AmbientBackdrop.jsx, mounted
+   once in App.jsx). "full" on the landing/auth pages, "calm" inside the app,
+   off during a timed assessment.
+   ───────────────────────────────────────────────────────────────────────────── */
+/* ── Backdrop: aurora + glitter, fixed behind the whole page ── */
+.lp-backdrop {
+  position: fixed; inset: 0; z-index: -1;
+  overflow: hidden; pointer-events: none;
+}
+.lp-aurora {
+  position: absolute; border-radius: 9999px;
+  filter: blur(90px); opacity: 0.62;
+  mix-blend-mode: screen; will-change: transform;
+}
+.lp-aurora-1 {
+  width: 72vmax; height: 72vmax; top: -28vmax; left: -22vmax;
+  background: radial-gradient(circle at 35% 35%, rgba(var(--accent-rgb), 0.75), transparent 62%);
+  animation: lp-drift-1 26s ease-in-out infinite alternate;
+}
+.lp-aurora-2 {
+  width: 60vmax; height: 60vmax; top: 2vmax; right: -24vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.6), transparent 62%);
+  animation: lp-drift-2 32s ease-in-out infinite alternate;
+}
+.lp-aurora-3 {
+  width: 64vmax; height: 64vmax; bottom: -34vmax; left: 6vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.42), transparent 62%);
+  animation: lp-drift-3 38s ease-in-out infinite alternate;
+}
+.lp-aurora-4 {
+  width: 46vmax; height: 46vmax; bottom: -12vmax; right: -14vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(244, 114, 182, 0.38), transparent 62%);
+  animation: lp-drift-4 30s ease-in-out infinite alternate;
+}
+@keyframes lp-drift-1 { to { transform: translate(14vmax, 10vmax) rotate(40deg) scale(1.12); } }
+@keyframes lp-drift-2 { to { transform: translate(-16vmax, 14vmax) rotate(-30deg) scale(0.9); } }
+@keyframes lp-drift-3 { to { transform: translate(12vmax, -18vmax) rotate(25deg) scale(1.15); } }
+@keyframes lp-drift-4 { to { transform: translate(-18vmax, -10vmax) rotate(-45deg) scale(1.1); } }
+
+/* Darkens the edges so text in the middle always has contrast */
+.lp-veil {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 130% 95% at 50% 40%, transparent 45%, rgba(6, 6, 18, 0.35) 82%, rgba(6, 6, 18, 0.6) 100%);
+}
+.lp-glitter { position: absolute; inset: 0; }
+
+[data-theme="light"] .lp-aurora { mix-blend-mode: normal; opacity: 0.3; }
+[data-theme="light"] .lp-veil {
+  background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 40%, rgba(255, 255, 255, 0.45) 100%);
+}
+@media (max-width: 640px) { .lp-aurora { filter: blur(60px); } }
+
+/* Calm: the version behind pages people work in. Dimmer and slower, with a
+   darker veil so dense text and tables stay easy to read. */
+.lp-backdrop.is-calm .lp-aurora { opacity: 0.3; }
+.lp-backdrop.is-calm .lp-aurora-1 { animation-duration: 44s; }
+.lp-backdrop.is-calm .lp-aurora-2 { animation-duration: 52s; }
+.lp-backdrop.is-calm .lp-aurora-3 { animation-duration: 60s; }
+.lp-backdrop.is-calm .lp-aurora-4 { animation-duration: 48s; }
+.lp-backdrop.is-calm .lp-veil {
+  background:
+    linear-gradient(rgba(6, 6, 18, 0.28), rgba(6, 6, 18, 0.28)),
+    radial-gradient(ellipse 130% 95% at 50% 40%, transparent 45%, rgba(6, 6, 18, 0.45) 100%);
+}
+[data-theme="light"] .lp-backdrop.is-calm .lp-aurora { opacity: 0.22; }
+[data-theme="light"] .lp-backdrop.is-calm .lp-veil {
+  background: radial-gradient(ellipse 130% 95% at 50% 40%, transparent 40%, rgba(255, 255, 255, 0.5) 100%);
+}
+
+/* While the backdrop is showing, each page's own solid background steps
+   aside so it shows through. The body keeps the theme colour underneath. */
+html.fx-on #root > .min-h-screen { background-color: transparent !important; }
+
+/* Frozen while a timed assessment is running (hooks/useBackdropStill.js) */
+html[data-fx-still] .lp-aurora { animation-play-state: paused; }
+
+/* Nothing of this belongs on paper (the CV prints on white) */
+@media print { .lp-backdrop { display: none !important; } }

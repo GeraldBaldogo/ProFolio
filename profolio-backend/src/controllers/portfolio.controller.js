@@ -36,4 +36,13 @@ const submit = async (req, res, next) => {
   }
 };
 
-module.exports = { create, getMyPortfolios, getById, submit };
+const withdraw = async (req, res, next) => {
+  try {
+    const portfolio = await portfolioService.withdrawPortfolio(req.params.id, req.user);
+    res.json({ success: true, data: portfolio });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { create, getMyPortfolios, getById, submit, withdraw };

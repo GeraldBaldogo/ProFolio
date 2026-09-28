@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import AmbientBackdrop from './components/AmbientBackdrop'
 import LandingPage from './pages/public/LandingPage'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -34,9 +35,20 @@ import ProfessorTests from './pages/evaluator/ProfessorTests'
 import TestSubmissions from './pages/evaluator/TestSubmission'
 import EvaluatorStudents from './pages/evaluator/EvaluatorStudents'
 
+// How much of the aurora + glitter each page gets.
+//   full — the landing page and sign-in/register, where it sets the mood
+//   calm — everywhere else, including the assessments; those freeze it while
+//          the timed part is running (hooks/useBackdropStill.js)
+// "off" is also available if a page should have none at all.
+const PUBLIC_PAGES = ['/', '/login', '/register']
+const backdropFor = (path) => (PUBLIC_PAGES.includes(path) ? 'full' : 'calm')
+
 function App() {
+  const { pathname } = useLocation()
+
   return (
     <>
+      <AmbientBackdrop variant={backdropFor(pathname)} />
       <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />

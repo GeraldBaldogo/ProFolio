@@ -1,67 +1,30 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('../utils/gemini');
 const assessmentRepo = require('../repositories/assessment.repo');
 const testRepo = require('../repositories/test.repo');
 const { assertNotOverdue } = require('./test.service');
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const progress = require('./progress.service');
+const { findTopic } = require('../utils/curriculum');
+const { verifiedTitle } = require('../utils/titles');
 
 // ─── PROMPTS ──────────────────────────────────────────────────────────────────
 // Used for free practice only. When a professor assigns a communication test,
 // their own prompt is sent from the page instead.
 
-const COMMUNICATION_PROMPTS = {
-  easy: [
-    {
-      id: 'intro_self',
-      title: 'Introduce Yourself',
-      prompt: 'Write a brief professional self-introduction (3–5 sentences) as if you are meeting a potential employer for the first time. Include your name, your field of study, and one skill or achievement you are proud of.',
-      criteria: 'clarity, professional tone, completeness',
-    },
-    {
-      id: 'explain_project',
-      title: 'Explain a Project',
-      prompt: 'Describe a school project or personal project you worked on. Explain what it does, what technologies you used, and what you learned from building it. Write 3–5 sentences.',
-      criteria: 'clarity, technical accuracy, structure',
-    },
-  ],
-  medium: [
-    {
-      id: 'explain_concept',
-      title: 'Explain a Technical Concept',
-      prompt: 'Explain what an API is and why it is important in software development. Write your explanation as if you are teaching a non-technical friend. Use an analogy if it helps. Write 4–6 sentences.',
-      criteria: 'accuracy, use of analogy, audience awareness, clarity',
-    },
-    {
-      id: 'handle_conflict',
-      title: 'Team Communication Scenario',
-      prompt: 'Your teammate is not completing their assigned tasks and your group project deadline is in 3 days. Write a short message (4–6 sentences) you would send to them that is professional, direct, and solution-focused.',
-      criteria: 'professionalism, empathy, clarity, actionability',
-    },
-  ],
-  hard: [
-    {
-      id: 'technical_email',
-      title: 'Write a Technical Proposal Email',
-      prompt: 'Write a professional email to your professor proposing to add a new feature to your thesis system. Explain the feature, why it adds value, and how long it will take to implement. Write a proper email with subject, greeting, body, and closing. Aim for 6–10 sentences.',
-      criteria: 'structure, persuasiveness, professionalism, technical clarity, conciseness',
-    },
-    {
-      id: 'documentation',
-      title: 'Write a Feature Documentation',
-      prompt: 'Write a short documentation section (6–10 sentences) explaining how a user should use a login and registration feature in a web application. Include steps, expected behavior, and what happens if the user enters wrong credentials.',
-      criteria: 'structure, completeness, clarity, technical accuracy, user-focus',
-    },
-  ],
-};
+// The prompts now live in utils/curriculum.js — three per level, one per
+// topic — so a passed prompt counts toward unlocking the next level.
 
 // ─── GET PROMPT ──────────────────────────────────────────────────────────────
 
-const getCommunicationPrompt = ({ difficulty = 'easy' } = {}) => {
-  const prompts = COMMUNICATION_PROMPTS[difficulty] || COMMUNICATION_PROMPTS.easy;
-  const selected = prompts[Math.floor(Math.random() * prompts.length)];
+const getCommunicationPrompt = async (user_id, { difficulty = 'easy', topic: requestedTopic = null } = {}) => {
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'communication', difficulty, requestedTopic);
   return {
-    ...selected,
-    difficulty,
-    time_limit_minutes: difficulty === 'easy' ? 5 : difficulty === 'medium' ? 8 : 12,
+    id: topic.key,
+    title: topic.title,
+    prompt: topic.prompt,
+    criteria: topic.criteria,
+    difficulty: level,
+    topic: { key: topic.key, label: topic.label },
+    time_limit_minutes: level === 'easy' ? 5 : level === 'medium' ? 8 : 12,
   };
 };
 
@@ -93,12 +56,35 @@ const submitCommunicationResult = async (
     assertNotOverdue(assignment);
   }
 
-  // A professor's own rubric wins over the built-in criteria — they wrote it
-  // for this specific piece of work.
-  const criteria = (Array.isArray(rubric) && rubric.length)
-    ? rubric.join(', ')
-    : (COMMUNICATION_PROMPTS[difficulty]?.find((p) => p.id === prompt_id)?.criteria
-      || 'clarity, professionalism, completeness');
+  // The prompt being answered comes from the server, never from the page.
+  // Otherwise a student could submit an answer to an easier question under a
+  // harder prompt's id — or rewrite a professor's prompt before submitting.
+  let topicKey = null;
+  let criteria;
+
+  if (test_id) {
+    const test = await testRepo.findById(test_id);
+    const cfg = test?.config || {};
+    prompt_text = cfg.prompt || prompt_text;
+    const testRubric = Array.isArray(cfg.rubric) && cfg.rubric.length ? cfg.rubric : rubric;
+    criteria = Array.isArray(testRubric) && testRubric.length
+      ? testRubric.join(', ')
+      : 'clarity, professionalism, completeness';
+  } else {
+    const topic = findTopic('communication', prompt_id);
+    if (!topic) throw { status: 400, message: 'Unknown prompt.' };
+
+    // A prompt from a level that hasn't been opened yet doesn't count — and
+    // isn't marked, since marking it would spend a request for nothing.
+    const p = await progress.getProgress(user_id, 'communication');
+    progress.assertUnlocked(p, topic.level);
+
+    topicKey = topic.key;
+    difficulty = topic.level;
+    prompt_title = topic.title;
+    prompt_text = topic.prompt;
+    criteria = topic.criteria;
+  }
 
   const prompt = `You are evaluating a student's written communication skill for a portfolio assessment platform.
 
@@ -122,7 +108,7 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
   "overall_feedback": "2-3 sentence holistic evaluation"
 }`;
 
-  const model = genAI.getGenerativeModel({
+  const model = getModel({
     model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });
@@ -146,6 +132,7 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
     test_id,
     metadata: {
       difficulty,
+      topic: topicKey,
       prompt_id,
       prompt_title,
       prompt_text,
@@ -174,6 +161,16 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
     await testRepo.updateAssignmentStatus(test_id, user_id, 'submitted');
   }
 
+  let title_awarded = null;
+  let practice_rank = null;
+  if (test_id) {
+    const test = await testRepo.findById(test_id);
+    const award = verifiedTitle('communication', test?.config?.level, finalScore);
+    title_awarded = award && { label: award.label, level: award.level, test_level: test?.config?.level || 'easy' };
+  } else {
+    practice_rank = (await progress.getProgress(user_id, 'communication')).rank;
+  }
+
   return {
     ...result,
     feedback: aiResult.overall_feedback,
@@ -185,6 +182,8 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
       structure: aiResult.structure_score,
       grammar: aiResult.grammar_score,
     },
+    title_awarded,
+    practice_rank,
   };
 };
 

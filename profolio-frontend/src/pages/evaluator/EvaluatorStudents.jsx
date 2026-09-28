@@ -109,7 +109,7 @@ const EvaluatorStudents = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -156,15 +156,15 @@ const EvaluatorStudents = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
+          <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">Students</h1>
-            <p className="text-gray-500 text-xs">Everyone you&apos;ve set work for</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg truncate">Students</h1>
+            <p className="text-gray-500 text-xs truncate">Everyone you&apos;ve set work for</p>
           </div>
           {!loading && (
             <button onClick={fetchStudents}
@@ -174,7 +174,7 @@ const EvaluatorStudents = () => {
           )}
         </header>
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-3">
               <FontAwesomeIcon icon={faSpinner} className="text-amber-400 text-3xl animate-spin" />

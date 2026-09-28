@@ -1,7 +1,6 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('../utils/gemini');
 const supabase = require('../config/db');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const checkOriginality = async (user_id, content, content_type = 'text') => {
   const prompt = `
@@ -31,7 +30,7 @@ Provide your analysis in the following JSON format only, no other text:
 }
 `;
 
-  const model = genAI.getGenerativeModel({
+  const model = getModel({
     model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });

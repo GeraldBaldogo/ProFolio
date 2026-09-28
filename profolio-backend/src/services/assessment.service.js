@@ -1,14 +1,34 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('../utils/gemini');
 const assessmentRepo = require('../repositories/assessment.repo');
 const testRepo = require('../repositories/test.repo');
 const { assertNotOverdue } = require('./test.service');
+const {
+  runSql, signatureOf, signatureHash, isOrdered,
+  sealChallenge, openChallenge, preview,
+} = require('../utils/sqlSandbox');
+const progress = require('./progress.service');
+const { verifiedTitle } = require('../utils/titles');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// What an attempt earned, for the result screen. A verified title comes only
+// from a professor's test and depends on the level that professor set; a
+// practice attempt reports the practice rank instead.
+const awardFor = async (user_id, type, test_id, score) => {
+  if (test_id) {
+    const test = await testRepo.findById(test_id);
+    const award = verifiedTitle(type, test?.config?.level, score);
+    return {
+      title_awarded: award && { label: award.label, level: award.level, test_level: test?.config?.level || 'easy' },
+      practice_rank: null,
+    };
+  }
+  return { title_awarded: null, practice_rank: (await progress.getProgress(user_id, type)).rank };
+};
+
 
 // Helper: call Gemini and force a clean JSON response.
 // imageParts (optional): array of { inlineData: { mimeType, data } } for vision inputs.
 const generateJSON = async (prompt, imageParts = []) => {
-  const model = genAI.getGenerativeModel({
+  const model = getModel({
     model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });
@@ -125,33 +145,50 @@ const getTypingText = ({ difficulty = 'easy' }) => {
 
 // ─── PROGRAMMING ──────────────────────────────────────────────────────────────
 
-const generateChallenge = async ({ language, difficulty }) => {
-  if (!language || !difficulty) throw { status: 400, message: 'language and difficulty are required.' };
+// Each practice challenge targets one curriculum topic, so passing it means
+// something specific. The level must be unlocked; see progress.service.js.
+const generateChallenge = async (user_id, { language, difficulty, topic: requestedTopic = null }) => {
+  if (!language) throw { status: 400, message: 'language is required.' };
 
-  const prompt = `Generate a coding challenge for a student portfolio assessment.
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'programming', difficulty, requestedTopic);
+
+  const prompt = `Generate a coding challenge for a computer science student.
 
 Language: ${language}
-Difficulty: ${difficulty}
+Level: ${level}
+Topic: ${topic.label} — ${topic.brief}
 
-Difficulty guidelines:
-- easy: basic syntax, loops, conditionals, simple functions (1st-2nd year level)
-- medium: data structures, recursion, string manipulation, OOP basics (2nd-3rd year level)
-- hard: algorithms, complexity optimization, design patterns, advanced OOP (3rd-4th year level)
+The challenge must exercise this topic specifically and should be solvable in
+the time limit. For object-oriented topics, require the student to write the
+classes rather than a single function. For data structure and algorithm topics,
+make the efficient approach matter.
 
 Respond with JSON only, no markdown:
 {
   "title": "short challenge title",
-  "description": "clear problem statement, 2-4 sentences",
+  "description": "clear problem statement, 2-4 sentences, saying exactly what to build",
   "example_input": "example input if applicable, or null",
   "example_output": "expected output if applicable, or null",
-  "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
+  "time_limit_minutes": ${level === 'hard' ? 20 : level === 'medium' ? 15 : 10}
 }`;
 
-  return generateJSON(prompt);
+  const challenge = await generateJSON(prompt);
+
+  // The statement travels sealed with the topic, so marking uses the problem
+  // the student was actually given, not whatever the page sends back.
+  return {
+    ...challenge,
+    difficulty: level,
+    topic: { key: topic.key, label: topic.label },
+    progress_token: progress.sealPractice('programming', level, topic.key, {
+      title: challenge.title, description: challenge.description,
+    }),
+  };
 };
 
 const submitCodingResult = async (user_id, {
   language, difficulty, challenge_title, code,
+  progress_token = null,
   violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null,
   test_id = null,
   unproctored = false, unproctored_reason = null
@@ -160,11 +197,30 @@ const submitCodingResult = async (user_id, {
 
   await resolveTest(user_id, test_id);
 
+  // Practice only: the sealed level, topic and problem statement.
+  const practice = test_id ? { difficulty: null, topic: null, payload: null } : progress.readPractice(progress_token, 'programming');
+
+  // On an assigned test the problem and its test cases are read from the
+  // database rather than taken from the request — the same rule as SQL and
+  // communication. Marking without the test cases meant judging code against
+  // a title alone.
+  const testCfg = test_id ? (await testRepo.findById(test_id))?.config || null : null;
+  const cases = Array.isArray(testCfg?.test_cases)
+    ? testCfg.test_cases.filter((t) => t?.input || t?.expected_output)
+    : [];
+
+  const level = practice.difficulty || difficulty;
+  const title = testCfg?.title || practice.payload?.title || challenge_title;
+  const statement = testCfg?.problem_statement || practice.payload?.description;
+
   const prompt = `You are evaluating a coding assessment submission for a student portfolio platform.
 
 Language: ${language}
-Difficulty: ${difficulty}
-Challenge: ${challenge_title}
+Difficulty: ${level}
+Challenge: ${title}${statement ? `\nProblem statement: ${statement}` : ''}${cases.length ? `
+The code must produce these results:
+${cases.map((t) => `  input: ${t.input} → expected output: ${t.expected_output}`).join('\n')}
+Trace the student's code against each one. Say which cases it would pass and which it would fail, and why.` : ''}
 Tab/Paste Violations: ${violation_count}
 Camera Violations: ${camera_violation_count}
 
@@ -194,7 +250,7 @@ Respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
-      language, difficulty, challenge_title, code,
+      language, difficulty: level, topic: practice.topic, challenge_title: title, code,
       violation_count, camera_violation_count, time_taken_seconds,
       ai_score: aiResult.skill_score,
       penalty_applied: penalty,
@@ -206,20 +262,29 @@ Respond with JSON only, no markdown:
 
   await closeAssignment(user_id, test_id);
 
-  return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness };
+  // What this attempt earned, for the result screen. On a professor's test,
+  // a verified title from the test's level and the score. On practice, the
+  // practice rank as it now stands — never a verified title.
+  const award = await awardFor(user_id, 'programming', test_id, finalScore);
+
+  return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness, ...award };
 };
 
 // ─── FLOWCHART ────────────────────────────────────────────────────────────────
 
-const generateFlowchartProblem = async ({ difficulty = 'easy' } = {}) => {
-  const prompt = `Generate a flowchart problem for a student assessment.
+// The flowchart page has no level picker, so with no difficulty given the
+// server hands out the next topic the student hasn't passed yet.
+const generateFlowchartProblem = async (user_id, { difficulty = null, topic: requestedTopic = null } = {}) => {
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'flowchart', difficulty, requestedTopic);
 
-Difficulty: ${difficulty}
+  const prompt = `Generate a flowchart problem for a computer science student.
 
-Difficulty guidelines:
-- easy: simple linear process, 3-5 steps, no nested decisions (e.g. making coffee, login process)
-- medium: 1-2 decision points, loops allowed, 5-8 steps (e.g. grading system, ATM withdrawal)
-- hard: multiple decisions, nested conditions, 8+ steps, complex logic (e.g. sorting algorithm flow, order processing system)
+Level: ${level}
+Topic: ${topic.label} — ${topic.brief}
+
+The process must require exactly the structures this topic names, so a correct
+flowchart has to use them. Keep it drawable on one sheet of paper.
+
 Respond with JSON only, no markdown:
 {
   "title": "short title",
@@ -227,11 +292,23 @@ Respond with JSON only, no markdown:
   "hints": ["hint 1", "hint 2", "hint 3"]
 }`;
 
-  return generateJSON(prompt);
+  const problem = await generateJSON(prompt);
+  return {
+    ...problem,
+    difficulty: level,
+    topic: { key: topic.key, label: topic.label },
+    progress_token: progress.sealPractice('flowchart', level, topic.key, {
+      title: problem.title, description: problem.description,
+    }),
+  };
 };
 
 const submitFlowchartResult = async (user_id, {
   problem_title, difficulty = 'easy', image_base64, image_type,
+  // Present when the student drew it in the app rather than on paper: the
+  // actual shapes and arrows, not just a picture of them.
+  diagram = null,
+  progress_token = null,
   camera_violation_count = 0, session_id = null,
   test_id = null,
   unproctored = false, unproctored_reason = null
@@ -240,7 +317,25 @@ const submitFlowchartResult = async (user_id, {
 
   await resolveTest(user_id, test_id);
 
-  const prompt = `This is a student-drawn flowchart for the problem: "${problem_title}" (Difficulty: ${difficulty}).
+  const practice = test_id ? { difficulty: null, topic: null, payload: null } : progress.readPractice(progress_token, 'flowchart');
+  const level = practice.difficulty || difficulty;
+  const title = practice.payload?.title || problem_title;
+  const statement = practice.payload?.description;
+
+  // Drawn in the app: the structure is known exactly, so say so. Marking can
+  // then name the shape at fault instead of guessing at a photograph.
+  const structure = diagram?.nodes?.length
+    ? `\n\nThe student drew this in the app, so here is its exact structure.
+Shapes:
+${diagram.nodes.map((n) => `  - ${n.kind}: "${n.label}"`).join('\n')}
+Arrows:
+${(diagram.edges || []).map((e) => `  - "${e.from}" → "${e.to}"${e.label ? ` [${e.label}]` : ''}`).join('\n') || '  (none)'}
+
+Judge the logic from this structure; the image shows the same thing. Where
+something is wrong, name the shape or arrow by its text.`
+    : '\n\nThe student drew this on paper and photographed it, so read the image carefully.';
+
+  const prompt = `This is a student-drawn flowchart for the problem: "${title}" (Difficulty: ${level}).${statement ? `\nThe process to diagram: ${statement}` : ''}${structure}
 
 Evaluate the flowchart and respond with JSON only, no markdown:
 {
@@ -264,7 +359,9 @@ Evaluate the flowchart and respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
-      problem_title, difficulty,
+      problem_title: title, difficulty: level, topic: practice.topic,
+      drawn_in_app: !!diagram?.nodes?.length,
+      diagram,
       camera_violation_count,
       penalty_applied: penalty,
       feedback: aiResult.feedback,
@@ -277,42 +374,154 @@ Evaluate the flowchart and respond with JSON only, no markdown:
 
   await closeAssignment(user_id, test_id);
 
-  return { ...result, feedback: aiResult.feedback, logical_flow: aiResult.logical_flow };
+  const award = await awardFor(user_id, 'flowchart', test_id, finalScore);
+
+  return { ...result, feedback: aiResult.feedback, logical_flow: aiResult.logical_flow, ...award };
 };
 
 // ─── SQL ──────────────────────────────────────────────────────────────────────
+//
+// A SQL question means nothing without data to ask it of. Every challenge now
+// carries real tables with real rows, the student's query is actually run
+// against them, and the result is compared with a reference answer run against
+// the same data. See utils/sqlSandbox.js.
 
-const generateSQLChallenge = async ({ difficulty = 'easy' }) => {
-  const prompt = `Generate a SQL assessment challenge for a student.
+const SQL_GUIDE = {
+  easy:   'single table; SELECT with WHERE, ORDER BY, COUNT, or a simple INSERT, UPDATE or DELETE',
+  medium: 'two or three tables; INNER or LEFT JOIN, GROUP BY, HAVING, COUNT, SUM, AVG',
+  hard:   'three or four tables; subqueries, multiple JOINs, GROUP BY with HAVING, or an UPDATE/DELETE whose condition needs a subquery',
+};
 
-Difficulty: ${difficulty}
+const sqlChallengePrompt = (difficulty, topic) => `Generate a SQL assessment challenge for a computer science student.
 
-Difficulty guidelines:
-- easy: basic SELECT, WHERE, ORDER BY, simple single-table queries
-- medium: JOINs (INNER, LEFT), GROUP BY, HAVING, aggregate functions (COUNT, SUM, AVG)
-- hard: subqueries, nested SELECTs, multiple JOINs, UNION, window functions, complex aggregations
+Difficulty: ${difficulty} — ${SQL_GUIDE[difficulty] || SQL_GUIDE.easy}
+Topic: ${topic.label} — ${topic.brief}
+The question must require this topic specifically.
+
+The student will see the tables and their rows, write a query, and run it
+against that data. Your reference answer will be run against the same data to
+check theirs. So the schema and the answer must actually execute.
+
+Rules:
+- Write schema_sql in SQLite-compatible SQL: CREATE TABLE statements followed
+  by INSERT statements. Use INTEGER, TEXT, REAL, DECIMAL(10,2), VARCHAR(n), DATE.
+  Do not use AUTO_INCREMENT, ENUM, or engine options.
+- Give every table a primary key. Name foreign key columns after the table
+  they point to, e.g. customer_id referencing customers.customer_id.
+- Insert 6 to 12 rows per table, varied enough that a wrong query gives a
+  visibly different result from a right one.
+- Store dates as 'YYYY-MM-DD' text. Do not rely on the current date, random
+  values, or anything else that changes between runs.
+- solution_sql must be a single statement that answers the question exactly.
+  If it is a SELECT it must return at least one row. If the question asks for
+  an order, use ORDER BY; if it doesn't, don't.
+- The question must say precisely which columns to return, or precisely what
+  to change, so there is one correct result.
+- expected_output describes the result in words only. Never include the query.
 
 Respond with JSON only, no markdown:
 {
   "title": "short challenge title",
-  "scenario": "brief description of the database context (e.g. 'A university database with students and courses')",
-  "tables": [
-    {
-      "name": "table_name",
-      "columns": ["col1 (type)", "col2 (type)"],
-      "sample_data": "brief description of what data is in this table"
-    }
-  ],
-  "question": "the specific SQL query they need to write, 1-2 sentences",
-  "expected_output": "describe what the result should look like",
-  "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
+  "scenario": "one or two sentences describing the database",
+  "schema_sql": "CREATE TABLE ...; INSERT INTO ...;",
+  "question": "the task, 1-2 sentences, naming the exact columns or change required",
+  "expected_output": "what the correct result looks like, in words",
+  "solution_sql": "the reference query",
+  "time_limit_minutes": ${difficulty === 'hard' ? 20 : difficulty === 'medium' ? 15 : 10}
 }`;
 
-  return generateJSON(prompt);
+// The AI occasionally writes a schema that doesn't load or an answer that
+// returns nothing. Each attempt is run before it's accepted, so the student
+// never receives a challenge that can't be answered.
+const generateSQLChallenge = async (user_id, { difficulty = 'easy', topic: requestedTopic = null } = {}) => {
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'sql', difficulty, requestedTopic);
+  let lastProblem = 'unknown';
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const ai = await generateJSON(sqlChallengePrompt(level, topic));
+    if (!ai?.schema_sql || !ai?.solution_sql || !ai?.question) {
+      lastProblem = 'missing fields';
+      continue;
+    }
+
+    const reference = await runSql(ai.schema_sql, ai.solution_sql);
+    if (!reference.ok) {
+      lastProblem = `${reference.stage}: ${reference.error}`;
+      continue;
+    }
+    const returnsRows = reference.result && reference.result.rows.length > 0;
+    const changesData = !reference.result && reference.changes > 0;
+    if (!returnsRows && !changesData) {
+      lastProblem = 'reference answer produced nothing';
+      continue;
+    }
+
+    const ordered = isOrdered(ai.solution_sql);
+
+    // solution_sql is deliberately absent from what goes to the browser. It
+    // travels only inside the sealed token, which the student cannot read.
+    return {
+      title: ai.title,
+      scenario: ai.scenario,
+      schema_sql: ai.schema_sql,
+      question: ai.question,
+      expected_output: ai.expected_output,
+      time_limit_minutes: ai.time_limit_minutes,
+      difficulty: level,
+      topic: { key: topic.key, label: topic.label },
+      challenge_token: progress.sealPractice('sql', level, topic.key, {
+        schema_sql: ai.schema_sql,
+        solution_sql: ai.solution_sql,
+        question: ai.question,
+      }),
+      expected_signature: signatureHash(signatureOf(reference, ordered)),
+      ordered,
+    };
+  }
+
+  console.warn('[sql] challenge generation failed after 3 attempts:', lastProblem);
+  throw { status: 502, message: 'Couldn\u2019t generate a working SQL challenge. Please try again.' };
+};
+
+// Where the reference answer comes from: the professor's test config for an
+// assigned test, or the sealed token for a practice attempt. For a test, the
+// question and schema are read from the database rather than trusted from
+// the request, so they can't be swapped for easier ones.
+const loadSqlReference = async (test_id, challenge_token) => {
+  if (test_id) {
+    const test = await testRepo.findById(test_id);
+    const cfg = test?.config || {};
+    return {
+      schema_sql: cfg.schema_sql || null,
+      // expected_query is the field's older name; tests saved before the
+      // rename still mark correctly.
+      solution_sql: cfg.solution_sql || cfg.expected_query || null,
+      question: cfg.question || null,
+    };
+  }
+  if (challenge_token) {
+    try {
+      const t = openChallenge(challenge_token);
+      return { schema_sql: t.schema_sql, solution_sql: t.solution_sql, question: t.question };
+    } catch {
+      // Expired or tampered with. Mark by AI alone rather than fail the
+      // submission outright.
+    }
+  }
+  return { schema_sql: null, solution_sql: null, question: null };
+};
+
+// The data decides correctness; the AI only places the score within a band.
+// This stops a wrong answer from being scored 95 because the query looked tidy.
+const SQL_BANDS = {
+  correct:   [75, 100],
+  incorrect: [10, 70],
+  error:     [0, 40],
 };
 
 const submitSQLResult = async (user_id, {
   difficulty, challenge_title, scenario, question, sql_code,
+  challenge_token = null,
   violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null,
   test_id = null,
   unproctored = false, unproctored_reason = null
@@ -321,12 +530,55 @@ const submitSQLResult = async (user_id, {
 
   await resolveTest(user_id, test_id);
 
-  const prompt = `You are evaluating a SQL assessment submission for a student portfolio platform.
+  const ref = await loadSqlReference(test_id, challenge_token);
+  const officialQuestion = ref.question || question;
+  const practice = test_id ? { difficulty: null, topic: null } : progress.readPractice(challenge_token, 'sql');
+  const level = practice.difficulty || difficulty;
+
+  // ── Run it ──
+  let execution = null;
+  if (ref.schema_sql) {
+    const student = await runSql(ref.schema_sql, sql_code);
+    const reference = ref.solution_sql ? await runSql(ref.schema_sql, ref.solution_sql) : null;
+
+    let matches = null;
+    if (student.ok && reference?.ok) {
+      const ordered = isOrdered(ref.solution_sql);
+      matches = signatureOf(student, ordered) === signatureOf(reference, ordered);
+    }
+
+    execution = {
+      ran: student.ok,
+      error: student.ok ? null : student.error,
+      matches,
+      verified: matches !== null || !student.ok,
+      student_output: preview(student),
+      expected_output: reference?.ok ? preview(reference) : null,
+    };
+  }
+
+  const decided = !execution ? null
+    : !execution.ran ? 'error'
+    : execution.matches === true ? 'correct'
+    : execution.matches === false ? 'incorrect'
+    : null;
+
+  // ── Feedback ──
+  const facts = !execution
+    ? 'The query could not be executed because no schema was provided. Judge it by reading it.'
+    : !execution.ran
+      ? `The query was executed and FAILED with this error: ${execution.error}`
+      : `The query was executed successfully.
+Its result: ${JSON.stringify(execution.student_output)}
+${execution.expected_output ? `The correct result: ${JSON.stringify(execution.expected_output)}` : ''}
+${decided ? `Verdict from execution: ${decided === 'correct' ? 'the result MATCHES the correct answer' : 'the result DOES NOT match the correct answer'}.` : ''}`;
+
+  const prompt = `You are giving feedback on a SQL assessment submission for a student portfolio platform.
 
 Difficulty: ${difficulty}
 Challenge: ${challenge_title}
 Scenario: ${scenario}
-Question: ${question}
+Question: ${officialQuestion}
 Tab/Paste Violations: ${violation_count}
 Camera Violations: ${camera_violation_count}
 
@@ -335,19 +587,38 @@ Student SQL:
 ${sql_code}
 \`\`\`
 
+What happened when it ran:
+${facts}
+
+If an execution verdict is given above, it is final — do not contradict it.
+Explain WHY the result is right or wrong in terms the student can act on. If it
+is wrong, point to the specific clause at fault without writing the full
+corrected query.
+
 Respond with JSON only, no markdown:
 {
   "skill_score": number from 0-100,
   "correctness": "correct" | "partial" | "incorrect",
   "syntax_valid": boolean,
-  "feedback": "2-3 sentence evaluation: correctness, query quality, one improvement tip"
+  "feedback": "2-3 sentences: whether it is correct and why, query quality, one improvement tip"
 }`;
 
   const aiResult = await generateJSON(prompt);
 
+  let skill = Number(aiResult.skill_score) || 0;
+  let correctness = aiResult.correctness;
+  let syntaxValid = aiResult.syntax_valid;
+  if (decided) {
+    const [lo, hi] = SQL_BANDS[decided];
+    skill = Math.min(hi, Math.max(lo, skill));
+    if (decided === 'correct') { correctness = 'correct'; syntaxValid = true; }
+    if (decided === 'incorrect') { correctness = correctness === 'correct' ? 'partial' : correctness; syntaxValid = true; }
+    if (decided === 'error') { correctness = 'incorrect'; syntaxValid = false; }
+  }
+
   const totalViolations = violation_count + camera_violation_count;
   const penalty = Math.min(totalViolations * 5, 25);
-  const finalScore = Math.max(0, aiResult.skill_score - penalty);
+  const finalScore = Math.max(0, skill - penalty);
 
   const result = await assessmentRepo.saveResult({
     user_id,
@@ -356,34 +627,55 @@ Respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
-      difficulty, challenge_title, scenario, question, sql_code,
+      difficulty: level, topic: practice.topic, challenge_title, scenario, question: officialQuestion, sql_code,
       violation_count, camera_violation_count, time_taken_seconds,
-      ai_score: aiResult.skill_score,
+      ai_score: skill,
       penalty_applied: penalty,
-      correctness: aiResult.correctness,
-      syntax_valid: aiResult.syntax_valid,
+      correctness,
+      syntax_valid: syntaxValid,
       feedback: aiResult.feedback,
+      // Shown to the professor beside the answer: whether the query ran, and
+      // whether its output matched — evidence rather than opinion.
+      execution: execution && {
+        ran: execution.ran,
+        error: execution.error,
+        matches: execution.matches,
+        verified: execution.verified,
+        student_output: execution.student_output,
+        expected_output: execution.expected_output,
+      },
       unproctored, unproctored_reason
     }
   });
 
   await closeAssignment(user_id, test_id);
 
-  return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness };
+  const award = await awardFor(user_id, 'sql', test_id, finalScore);
+
+  return {
+    ...result,
+    feedback: aiResult.feedback,
+    correctness,
+    execution: execution && { ran: execution.ran, error: execution.error, matches: execution.matches, verified: execution.verified },
+    ...award,
+  };
 };
 
 // ─── BUG FIXING ───────────────────────────────────────────────────────────────
 
-const generateBugFixChallenge = async ({ language, difficulty = 'easy' }) => {
-  const prompt = `Generate a bug fixing challenge for a student assessment.
+const generateBugFixChallenge = async (user_id, { language, difficulty = 'easy', topic: requestedTopic = null }) => {
+  if (!language) throw { status: 400, message: 'language is required.' };
+
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'bugfix', difficulty, requestedTopic);
+
+  const prompt = `Generate a bug fixing challenge for a computer science student.
 
 Language: ${language}
-Difficulty: ${difficulty}
+Level: ${level}
+Topic: ${topic.label} — ${topic.brief}
 
-Difficulty guidelines:
-- easy: 1-2 obvious bugs, syntax errors, off-by-one errors, simple logic mistakes
-- medium: 2-3 bugs, logical errors, wrong conditions, missing edge case handling
-- hard: 3-5 subtle bugs, algorithmic errors, race conditions concepts, complex logic flaws
+Every bug planted must be of this kind. ${level === 'easy' ? 'Plant 1-2 bugs.' : level === 'medium' ? 'Plant 2-3 bugs.' : 'Plant 3-4 subtle bugs.'}
+${level === 'medium' ? 'The code must be object-oriented: at least one class, with the bugs inside it.' : ''}
 
 Respond with JSON only, no markdown:
 {
@@ -392,14 +684,26 @@ Respond with JSON only, no markdown:
   "buggy_code": "the code with bugs inserted (10-25 lines)",
   "bug_count": number,
   "hints": ["hint about bug 1", "hint about bug 2"],
-  "time_limit_minutes": number (10 for easy, 15 for medium, 20 for hard)
+  "time_limit_minutes": ${level === 'hard' ? 20 : level === 'medium' ? 15 : 10}
 }`;
 
-  return generateJSON(prompt);
+  const challenge = await generateJSON(prompt);
+
+  // The original buggy code is sealed too. Marking compares the student's fix
+  // against what they were actually given, not a version the page sends back.
+  return {
+    ...challenge,
+    difficulty: level,
+    topic: { key: topic.key, label: topic.label },
+    progress_token: progress.sealPractice('bugfix', level, topic.key, {
+      title: challenge.title, description: challenge.description, buggy_code: challenge.buggy_code,
+    }),
+  };
 };
 
 const submitBugFixResult = async (user_id, {
   language, difficulty, challenge_title, description, original_buggy_code, fixed_code,
+  progress_token = null,
   violation_count, camera_violation_count = 0, time_taken_seconds, session_id = null,
   test_id = null,
   unproctored = false, unproctored_reason = null
@@ -407,6 +711,12 @@ const submitBugFixResult = async (user_id, {
   if (!fixed_code) throw { status: 400, message: 'fixed_code is required.' };
 
   await resolveTest(user_id, test_id);
+
+  const practice = test_id ? { difficulty: null, topic: null, payload: null } : progress.readPractice(progress_token, 'bugfix');
+  difficulty = practice.difficulty || difficulty;
+  challenge_title = practice.payload?.title || challenge_title;
+  description = practice.payload?.description || description;
+  original_buggy_code = practice.payload?.buggy_code || original_buggy_code;
 
   const prompt = `You are evaluating a bug fixing assessment for a student portfolio platform.
 
@@ -448,7 +758,7 @@ Respond with JSON only, no markdown:
     session_id,
     test_id,
     metadata: {
-      language, difficulty, challenge_title, description,
+      language, difficulty, topic: practice.topic, challenge_title, description,
       original_buggy_code, fixed_code,
       violation_count, camera_violation_count, time_taken_seconds,
       ai_score: aiResult.skill_score,
@@ -462,7 +772,9 @@ Respond with JSON only, no markdown:
 
   await closeAssignment(user_id, test_id);
 
-  return { ...result, feedback: aiResult.feedback, bugs_fixed: aiResult.bugs_fixed };
+  const award = await awardFor(user_id, 'bugfix', test_id, finalScore);
+
+  return { ...result, feedback: aiResult.feedback, bugs_fixed: aiResult.bugs_fixed, ...award };
 };
 
 // ─── SUMMARY ──────────────────────────────────────────────────────────────────

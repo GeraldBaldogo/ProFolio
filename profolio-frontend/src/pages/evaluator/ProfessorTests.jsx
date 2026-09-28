@@ -66,13 +66,23 @@ const TEST_TYPES = [
     value: 'sql', label: 'SQL query', icon: faDatabase, accent: 'text-sky-400',
     blurb: 'A schema and a question to answer with SQL.',
     fields: [
-      { key: 'schema_sql', label: 'Schema SQL', type: 'textarea', rows: 6, mono: true, required: true,
-        placeholder: 'CREATE TABLE students (\n  id int,\n  name text,\n  score int\n);' },
+      // Tables AND rows. Students see the rows and run their queries against
+      // them; without data there is nothing to check a query against.
+      { key: 'schema_sql', label: 'Tables and sample data', type: 'textarea', rows: 10, mono: true, required: true,
+        placeholder:
+          'CREATE TABLE departments (\n  department_id INT PRIMARY KEY,\n  department_name VARCHAR(50)\n);\n\n' +
+          'CREATE TABLE employees (\n  employee_id INT PRIMARY KEY,\n  first_name VARCHAR(50),\n  department_id INT,\n  salary DECIMAL(10,2)\n);\n\n' +
+          "INSERT INTO departments VALUES (1, 'IT'), (2, 'HR');\n" +
+          "INSERT INTO employees VALUES\n  (1, 'Ana', 1, 35000),\n  (2, 'Ben', 2, 18000),\n  (3, 'Carla', 1, 22000);",
+        hint: 'CREATE TABLE for each table, then INSERT the rows students will query. Use six or more rows per table, varied enough that a wrong query gives a different result from a right one. Name link columns after the table they point to (department_id → departments) and the diagram draws the relationship for you.' },
       { key: 'question', label: 'Question', type: 'textarea', rows: 3, required: true,
-        placeholder: 'Return the names of students scoring above 80…' },
-      { key: 'expected_query', label: 'Expected query', type: 'textarea', rows: 3, mono: true,
-        placeholder: 'SELECT name FROM students WHERE score > 80;',
-        hint: 'Optional, for your reference when marking.' },
+        placeholder: 'List the first_name of every employee earning more than 20000, highest salary first.',
+        hint: 'Name the exact columns to return, or exactly what to change, so there is one correct result.' },
+      // Replaces the old expected_query field, which was only a note for the
+      // professor — and, sitting in config, was sent to students' browsers.
+      { key: 'solution_sql', label: 'Correct answer', type: 'textarea', rows: 4, mono: true,
+        placeholder: 'SELECT first_name FROM employees WHERE salary > 20000 ORDER BY salary DESC;',
+        hint: "Strongly recommended. The student's query and this one both run on your sample data and the results are compared, so marking is based on what the query returns rather than how it looks. Never shown to students. Checked when you save — a typo here will be reported before anyone sits the test." },
     ],
   },
   {
@@ -245,7 +255,14 @@ const ProfessorTests = () => {
       description: t.description || '',
       time_limit_minutes: t.time_limit_minutes ?? '',
       is_published: !!t.is_published,
-      config: t.config || {},
+      config: (() => {
+        const cfg = { ...(t.config || {}) }
+        if (t.type === 'sql' && cfg.expected_query && !cfg.solution_sql) {
+          cfg.solution_sql = cfg.expected_query
+        }
+        delete cfg.expected_query
+        return cfg
+      })(),
     })
     setFormError('')
     setShowForm(true)
@@ -260,7 +277,7 @@ const ProfessorTests = () => {
 
   // Changing type wipes config — the old keys mean nothing to the new type and
   // the server would reject them as missing fields anyway.
-  const changeType = (value) => setForm(f => ({ ...f, type: value, config: {} }))
+  const changeType = (value) => setForm(f => ({ ...f, type: value, config: f.config.level ? { level: f.config.level } : {} }))
 
   const setConfig = (key, value) =>
     setForm(f => ({ ...f, config: { ...f.config, [key]: value } }))
@@ -270,6 +287,10 @@ const ProfessorTests = () => {
 
     if (!form.title.trim()) {
       setFormError('Give the test a title.')
+      return
+    }
+    if (!['easy', 'medium', 'hard'].includes(form.config.level)) {
+      setFormError('Choose a level for this test — it decides which title a student can earn.')
       return
     }
     const missing = def.fields.filter(f => f.required && !String(form.config[f.key] ?? '').trim())
@@ -487,22 +508,22 @@ const ProfessorTests = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* ══ Main ══ */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <button aria-label="Open menu"
             className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg tracking-tight">My tests</h1>
-            <p className="text-gray-500 text-xs">
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg tracking-tight truncate">My tests</h1>
+            <p className="text-gray-500 text-xs truncate">
               {tests.length
                 ? `${published.length} published · ${drafts.length} draft`
                 : 'Create a test, then assign it to students'}
             </p>
           </div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-3 flex-shrink-0">
             {!loading && !loadError && (
               <>
                 <button onClick={fetchTests} aria-label="Refresh"
@@ -511,15 +532,15 @@ const ProfessorTests = () => {
                 </button>
                 <button onClick={openCreate}
                   className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold px-4 py-2.5 rounded-2xl transition-colors">
-                  <FontAwesomeIcon icon={faPlus} /> New test
+                  <FontAwesomeIcon icon={faPlus} /> <span className="whitespace-nowrap">New test</span>
                 </button>
               </>
             )}
-            <Avatar name={user?.full_name} />
+            <span className="hidden sm:block"><Avatar name={user?.full_name} /></span>
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-3">
               <FontAwesomeIcon icon={faSpinner} className="text-amber-400 text-3xl animate-spin" />
@@ -717,6 +738,37 @@ const ProfessorTests = () => {
                     onChange={e => setForm(f => ({ ...f, time_limit_minutes: e.target.value }))}
                     placeholder="Leave blank for none" />
                 </div>
+              </div>
+
+              {/* Stored in config.level. Same three levels as practice. */}
+              <div>
+                <p className={labelClass}>Level</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { v: 'easy',   name: 'Easy',   year: '1st year',     title: 'up to Trainee' },
+                    { v: 'medium', name: 'Medium', year: '2nd year',     title: 'up to Associate' },
+                    { v: 'hard',   name: 'Hard',   year: '3rd–4th year', title: 'up to Junior' },
+                  ].map(l => {
+                    const on = form.config.level === l.v
+                    return (
+                      <button
+                        key={l.v}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, config: { ...f.config, level: l.v } }))}
+                        className={`rounded-xl border px-3 py-2 text-left transition-all ${
+                          on ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <p className={`text-sm font-semibold ${on ? 'text-amber-300' : 'text-gray-300'}`}>{l.name}</p>
+                        <p className="text-[11px] text-gray-500">{l.year} · {l.title}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-gray-600 text-xs mt-1.5">
+                  Decides the verified title this test can award. A student scoring 85 or higher earns the title
+                  for this level; 70 or higher earns the one below.
+                </p>
               </div>
 
               <div>

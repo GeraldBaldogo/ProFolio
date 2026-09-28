@@ -2,45 +2,63 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
-const supabase = require('../config/db');
+const { assertOwnsPortfolio, assertCanReadPortfolio, assertOwnsRow, pickFields } = require('../utils/ownership');
 
 const skillRepo = require('../repositories/skill.repo');
 const certRepo = require('../repositories/certification.repo');
 const expRepo = require('../repositories/experience.repo');
 const achRepo = require('../repositories/achievement.repo');
 
-// Helper
-const handler = (repo) => ({
+// The columns a student can set on each kind of item — the same fields the
+// Portfolio Builder form shows. Everything else in the body is ignored.
+const FIELDS = {
+  skills: ['skill_name', 'category', 'self_rating'],
+  certifications: ['title', 'issuer', 'credential_url', 'issued_date', 'expiry_date'],
+  experiences: ['company', 'role', 'description', 'start_date', 'end_date', 'is_current'],
+  achievements: ['title', 'description', 'category', 'achieved_date'],
+};
+
+// Every write checks that the logged-in student owns the portfolio first.
+// Before, any logged-in student could add to, edit or delete another
+// student's items just by knowing the portfolio or item id.
+const handler = (repo, table) => ({
   add: async (req, res, next) => {
     try {
-      const data = await repo.create({ portfolio_id: req.params.portfolio_id, ...req.body });
+      await assertOwnsPortfolio(req.params.portfolio_id, req.user);
+      const data = await repo.create({
+        ...pickFields(req.body, FIELDS[table]),
+        portfolio_id: req.params.portfolio_id,
+      });
       res.status(201).json({ success: true, data });
     } catch (err) { next(err); }
   },
   getAll: async (req, res, next) => {
     try {
+      await assertCanReadPortfolio(req.params.portfolio_id, req.user);
       const data = await repo.findByPortfolioId(req.params.portfolio_id);
       res.json({ success: true, data });
     } catch (err) { next(err); }
   },
   update: async (req, res, next) => {
     try {
-      const data = await repo.update(req.params.id, req.body);
+      await assertOwnsRow(table, req.params.id, req.user);
+      const data = await repo.update(req.params.id, pickFields(req.body, FIELDS[table]));
       res.json({ success: true, data });
     } catch (err) { next(err); }
   },
   remove: async (req, res, next) => {
     try {
+      await assertOwnsRow(table, req.params.id, req.user);
       await repo.remove(req.params.id);
       res.json({ success: true, data: { message: 'Deleted successfully.' } });
     } catch (err) { next(err); }
-  }
+  },
 });
 
-const skills = handler(skillRepo);
-const certs = handler(certRepo);
-const exps = handler(expRepo);
-const achs = handler(achRepo);
+const skills = handler(skillRepo, 'skills');
+const certs = handler(certRepo, 'certifications');
+const exps = handler(expRepo, 'experiences');
+const achs = handler(achRepo, 'achievements');
 
 // Skills
 router.post('/skills/:portfolio_id', authenticate, requireRole('student'), skills.add);

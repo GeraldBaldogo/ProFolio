@@ -24,9 +24,9 @@ const reducedMotion = () =>
 /* ═══════════════════════════════════════════════════════════════════════════
    REVEAL
 
-   The only animation on the page. A serious product page earns attention with
-   what it says, not with things that move — so this is a short fade upward and
-   nothing else.
+   Sections arrive as they scroll into view: a fade, a short rise, and a blur
+   that resolves to sharp — the same motion everywhere, so the page feels like
+   one piece rather than a set of effects.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const Reveal = ({ children, delay = 0, className = '' }) => {
@@ -223,50 +223,52 @@ const ProfessorResults = () => (
   </Window>
 )
 
+// A small version of the real CV (pages/student/CVPage.jsx): white A4, the
+// same sections in the same order, the optional 2x2 photo. Its colours are
+// set in the lpcv-* rules below rather than with text-* classes, so light
+// mode can't turn the paper's text pale — paper is white in both themes.
 const CvDocument = ({ className = '' }) => (
-  <div className={`dark-surface bg-[#0d1218] p-6 flex flex-col ${className}`}>
-    <div className="border-b border-white/10 pb-3 mb-4">
-      <p className="text-white font-bold text-lg tracking-tight">Maria Santos</p>
-      <p className="text-blue-400 text-[11px] font-semibold">Aspiring Backend Developer</p>
-      <p className="text-gray-600 text-[9px] mt-1">maria@email.com · Manila · github.com/msantos</p>
+  <div className={`lpcv-stage ${className}`}>
+    <div className="lpcv-paper" aria-label="Example CV">
+      <div className="lpcv-head">
+        <div className="lpcv-head-text">
+          <p className="lpcv-name">Maria Santos</p>
+          <p className="lpcv-title">Aspiring Backend Developer</p>
+          <p className="lpcv-contact">maria.santos@email.com</p>
+          <p className="lpcv-contact">0917 555 0142 · Quezon City</p>
+          <p className="lpcv-contact">github.com/msantos</p>
+        </div>
+        <div className="lpcv-photo" aria-hidden="true"><span /><span /></div>
+      </div>
+
+      <p className="lpcv-h">Career Objective</p>
+      <p className="lpcv-p">
+        Final-year Computer Science student focused on backend systems and data
+        modelling, seeking an entry-level role building reliable services.
+      </p>
+
+      <p className="lpcv-h">Education</p>
+      <div className="lpcv-row">
+        <p><b>BS Computer Science</b> — Software Engineering</p>
+        <p className="lpcv-date">Expected 2027</p>
+      </div>
+      <p className="lpcv-sub">Tomas Claudio Colleges · Dean&apos;s Lister</p>
+
+      <p className="lpcv-h">Verified Competencies <i>Demonstrated in supervised, timed assessments</i></p>
+      <ul className="lpcv-list">
+        <li><b>SQL Specialist</b> — Databases</li>
+        <li>Wrote correct SQL against an unfamiliar schema</li>
+        <li>Isolated defects in code she did not write</li>
+      </ul>
+
+      <p className="lpcv-h">Skills</p>
+      <p className="lpcv-p">Python, PostgreSQL, Node.js, Express, Git, Docker</p>
+
+      <p className="lpcv-h">Projects</p>
+      <div className="lpcv-row"><p><b>Inventory System</b> — PHP, MySQL</p></div>
+      <div className="lpcv-row"><p><b>Campus Event App</b> — React, Firebase</p></div>
     </div>
-
-    <p className="text-gray-500 text-[8px] font-bold uppercase tracking-[0.18em] mb-1.5">About me</p>
-    <p className="text-gray-400 text-[10px] leading-relaxed mb-4">
-      A final-year computer science student oriented toward backend systems and data
-      modelling, who works through unfamiliar problems methodically rather than quickly.
-    </p>
-
-    <p className="text-gray-500 text-[8px] font-bold uppercase tracking-[0.18em] mb-0.5">
-      Demonstrated under supervision
-    </p>
-    <p className="text-gray-600 text-[8px] mb-2">Observed during timed, monitored assessments</p>
-    <div className="flex flex-col gap-1.5 mb-4">
-      {[
-        'Writing correct SQL against an unfamiliar schema',
-        'Isolating defects in code she did not write',
-        'Explaining technical decisions in plain language',
-      ].map((t, i) => (
-        <p key={i} className="flex items-start gap-2 text-gray-300 text-[10px] leading-snug">
-          <span className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
-          {t}
-        </p>
-      ))}
-    </div>
-
-    <p className="text-gray-500 text-[8px] font-bold uppercase tracking-[0.18em] mb-2">Projects</p>
-    <div className="flex flex-col gap-1 mb-4">
-      {[['Inventory System', 'PHP · MySQL'], ['Campus Event App', 'React · Firebase']].map(([n, s], i) => (
-        <p key={i} className="flex items-start gap-2 text-[10px] leading-snug">
-          <span className="w-1 h-1 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
-          <span><span className="text-white font-semibold">{n}</span> <span className="text-gray-500">— {s}</span></span>
-        </p>
-      ))}
-    </div>
-
-    <p className="text-gray-600 text-[8px] mt-auto pt-3 border-t border-white/5">
-      No scores printed. What she did, not what she scored.
-    </p>
+    <p className="lpcv-caption">No scores printed — what she did, not what she scored.</p>
   </div>
 )
 
@@ -435,6 +437,44 @@ const FAQ = [
    PAGE
    ═══════════════════════════════════════════════════════════════════════════ */
 
+// A thin gradient line along the top that fills as the page is read.
+// Updated on animation frames and written straight to the style, so scrolling
+// never re-renders the page.
+const ScrollProgress = () => {
+  const ref = useRef(null)
+  useEffect(() => {
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      const p = max > 0 ? Math.min(1, window.scrollY / max) : 0
+      if (ref.current) ref.current.style.transform = `scaleX(${p})`
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [])
+  return <div aria-hidden="true" className="lp-progress"><div ref={ref} className="lp-progress-bar" /></div>
+}
+
+// The headline arrives one word at a time. Screen readers get the sentence
+// whole from aria-label; the animated words are hidden from them.
+const AnimatedWords = ({ text, start = 0, className = '' }) => (
+  <>
+    {text.split(' ').map((word, i) => (
+      <span key={i}>
+        <span aria-hidden="true" className={`lp-word ${className}`} style={{ '--i': start + i }}>{word}</span>{' '}
+      </span>
+    ))}
+  </>
+)
+
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [openFaq, setOpenFaq] = useState(0)
@@ -460,7 +500,8 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#060612] font-sans overflow-x-hidden">
+    <div className="lp-root relative min-h-screen bg-[#060612] font-sans overflow-x-hidden">
+      <ScrollProgress />
 
       <style>{`
         /* The picker scrolls sideways on a phone; the bar under it just adds
@@ -470,11 +511,13 @@ export default function LandingPage() {
 
         .reveal {
           opacity: 0;
-          transform: translateY(18px);
-          transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-                      transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+          transform: translateY(26px) scale(0.985);
+          filter: blur(8px);
+          transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+                      transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+                      filter 0.9s cubic-bezier(0.22, 1, 0.36, 1);
         }
-        .reveal-in { opacity: 1; transform: translateY(0); }
+        .reveal-in { opacity: 1; transform: none; filter: none; }
 
         /* The wordmark picks up whichever accent is selected, so the gradient
            follows the theme rather than being hard-coded blue. */
@@ -529,6 +572,117 @@ export default function LandingPage() {
         [data-theme="light"] .ambient-c { background: rgba(var(--accent-rgb), 0.06); }
         [data-theme="light"] .ambient-d { background: rgba(var(--accent-rgb), 0.08); }
 
+        .lp-hero-bloom {
+          position: absolute; left: 50%; top: 48%;
+          width: min(980px, 130vw); height: 560px;
+          transform: translate(-50%, -50%);
+          background: radial-gradient(ellipse at center, rgba(var(--accent-rgb), 0.26), transparent 66%);
+          filter: blur(24px); pointer-events: none;
+          animation: lp-breathe 9s ease-in-out infinite;
+        }
+        @keyframes lp-breathe { 50% { opacity: 0.55; } }
+        .ambient-c, .ambient-d { animation: lp-breathe 11s ease-in-out infinite; }
+
+        /* ── Headline: one word at a time, blur to sharp ── */
+        .lp-word {
+          display: inline-block;
+          animation: lp-word-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+          animation-delay: calc(var(--i, 0) * 65ms + 120ms);
+        }
+        @keyframes lp-word-in {
+          from { opacity: 0; transform: translateY(0.45em) rotate(2deg); filter: blur(10px); }
+          to   { opacity: 1; transform: none; filter: none; }
+        }
+        /* The wordmark keeps a light running through it after it lands */
+        .lp-word.lp-shimmer {
+          background-image: linear-gradient(100deg, var(--accent-300) 0%, var(--accent-500) 28%, #f0abfc 50%, var(--accent-500) 72%, var(--accent-300) 100%);
+          background-size: 250% 100%;
+          animation: lp-word-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both,
+                     lp-shimmer 5s ease-in-out 1.6s infinite;
+        }
+        @keyframes lp-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -150% 0; } }
+
+        /* ── Buttons ── */
+        .lp-cta {
+          box-shadow: 0 12px 32px -12px rgba(var(--accent-rgb), 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+          transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s, background-color 0.2s;
+        }
+        .lp-cta::after {
+          content: ''; position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+          transform: translateX(-130%);
+          animation: lp-shine 4.5s ease-in-out 2.4s infinite;
+        }
+        @keyframes lp-shine { 0%, 60% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+        .lp-ghost { transition: border-color 0.25s, box-shadow 0.25s, background-color 0.2s, color 0.2s, transform 0.25s; }
+        @media (hover: hover) {
+          .lp-cta:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -12px rgba(var(--accent-rgb), 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
+          .lp-ghost:hover { transform: translateY(-2px); border-color: rgba(var(--accent-rgb), 0.5) !important; box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.1); }
+
+          /* Cards lift toward the reader and pick up the accent */
+          .lp-root section .rounded-2xl.border {
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s, box-shadow 0.4s;
+          }
+          .lp-root section .rounded-2xl.border:hover {
+            transform: translateY(-4px);
+            border-color: rgba(var(--accent-rgb), 0.35) !important;
+            box-shadow: 0 24px 50px -26px rgba(var(--accent-rgb), 0.6);
+          }
+        }
+
+        /* ── Reading progress ── */
+        .lp-progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 60; pointer-events: none; }
+        .lp-progress-bar {
+          height: 100%; transform-origin: 0 50%; transform: scaleX(0);
+          background: linear-gradient(90deg, var(--accent-300), #c084fc, #f472b6);
+          box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.8);
+        }
+
+        /* ── Example CV: the real template in miniature ── */
+        .lpcv-stage {
+          background: radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb), 0.18), transparent 60%), #0d1218;
+          padding: 22px 22px 14px; display: flex; flex-direction: column; align-items: center;
+        }
+        .lpcv-paper {
+          width: 100%; max-width: 440px; background: #fff; color: #111;
+          font-family: Calibri, Carlito, 'Segoe UI', Arial, sans-serif;
+          font-size: 10px; line-height: 1.4; padding: 20px 22px 18px;
+          border-radius: 3px; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
+          transform: rotate(-0.6deg); transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .lpcv-paper * { color: #111; margin: 0; }
+        @media (hover: hover) { .lpcv-stage:hover .lpcv-paper { transform: rotate(0deg) translateY(-3px); } }
+        .lpcv-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+        .lpcv-head-text { flex: 1; min-width: 0; }
+        .lpcv-name { font-size: 19px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.1; }
+        .lpcv-title { font-size: 11px; margin-top: 2px !important; }
+        .lpcv-contact { font-size: 9px; color: #333 !important; }
+        .lpcv-photo {
+          width: 62px; height: 62px; flex-shrink: 0; border: 1px solid #111; position: relative; overflow: hidden;
+          background: linear-gradient(#dbe4ee, #c7d3e0);
+        }
+        .lpcv-photo span:first-child { position: absolute; width: 24px; height: 24px; border-radius: 50%; background: #8a9bb0; left: 19px; top: 11px; }
+        .lpcv-photo span:last-child { position: absolute; width: 46px; height: 30px; border-radius: 50% 50% 0 0; background: #8a9bb0; left: 8px; top: 38px; }
+        .lpcv-h {
+          font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+          border-bottom: 1px solid #111; padding-bottom: 1px; margin: 9px 0 4px !important;
+        }
+        .lpcv-h i { font-size: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; color: #555 !important; margin-left: 6px; }
+        .lpcv-row { display: flex; justify-content: space-between; gap: 10px; }
+        .lpcv-date { white-space: nowrap; }
+        .lpcv-sub { font-style: italic; }
+        .lpcv-p { text-align: left; }
+        .lpcv-list { padding-left: 14px !important; list-style: disc; }
+        .lpcv-list li + li { margin-top: 1px; }
+        .lpcv-caption { font-size: 11px; margin-top: 12px; color: #6b7280; text-align: center; }
+        @media (max-width: 420px) {
+          .lpcv-stage { padding: 16px 12px 12px; }
+          .lpcv-paper { padding: 16px 14px; font-size: 9px; }
+          .lpcv-name { font-size: 16px; }
+          .lpcv-photo { width: 52px; height: 52px; }
+          .lpcv-h i { display: block; margin: 1px 0 0; }
+        }
+
         a:focus-visible, button:focus-visible {
           outline: 2px solid #60a5fa;
           outline-offset: 3px;
@@ -536,7 +690,9 @@ export default function LandingPage() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .reveal { opacity: 1 !important; transform: none !important; }
+          .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
+          .lp-word { opacity: 1 !important; transform: none !important; filter: none !important; }
+          .lp-cta::after { display: none; }
           *, *::before, *::after {
             animation: none !important;
             transition-duration: 0.01ms !important;
@@ -548,7 +704,7 @@ export default function LandingPage() {
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 ${
         scrolled ? 'bg-[#060612]/85 backdrop-blur-xl border-b border-white/5' : ''
       }`}>
-        <div className="max-w-6xl mx-auto px-6 h-[62px] flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[62px] flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
             <img src={logo} alt="" className="w-7 h-7 object-contain" />
             <span className="text-[16px] sm:text-[17px] font-bold text-white tracking-tight">
@@ -567,12 +723,13 @@ export default function LandingPage() {
 
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden lg:block mr-1"><ThemePicker /></div>
+            {/* On a phone, Sign in moves into the menu so Get started has room */}
             <Link to="/login"
-              className="text-gray-400 hover:text-white text-[13px] sm:text-[14px] font-medium px-2 sm:px-3 py-2 transition-colors">
+              className="hidden sm:inline-block whitespace-nowrap text-gray-400 hover:text-white text-[14px] font-medium px-3 py-2 transition-colors">
               Sign in
             </Link>
             <Link to="/register"
-              className="bg-blue-500 hover:bg-blue-600 text-white text-[13px] sm:text-[14px] font-semibold px-3 sm:px-4 py-2 rounded-lg transition-colors">
+              className="whitespace-nowrap bg-blue-500 hover:bg-blue-600 text-white text-[13px] sm:text-[14px] font-semibold px-3 sm:px-4 py-2 rounded-lg transition-colors">
               Get started
             </Link>
             <button
@@ -594,6 +751,10 @@ export default function LandingPage() {
                 {label}
               </a>
             ))}
+            <Link to="/login" onClick={() => setMenuOpen(false)}
+              className="sm:hidden text-gray-300 hover:text-white text-sm font-medium py-1">
+              Sign in
+            </Link>
             <div className="pt-2"><ThemePicker /></div>
           </div>
         )}
@@ -604,23 +765,22 @@ export default function LandingPage() {
           screenshot cut in half by the fold. */}
       <section className="relative min-h-[88vh] lg:min-h-screen flex flex-col items-center justify-center px-5 sm:px-6 pt-24 pb-20 overflow-hidden">
 
-        {/* Ambient wash. Two soft pools of the accent colour behind the text,
-            which is where the page gets its depth from now that nothing moves. */}
-        <div aria-hidden="true" className="ambient ambient-a" />
-        <div aria-hidden="true" className="ambient ambient-b" />
+        {/* A brighter bloom right behind the headline, on top of the aurora */}
+        <div aria-hidden="true" className="lp-hero-bloom" />
 
         <div className="relative max-w-4xl mx-auto text-center">
-          <Reveal>
-            <h1 className="text-white font-bold text-[1.85rem] sm:text-[3.1rem] lg:text-[3.9rem] leading-[1.12] sm:leading-[1.06] tracking-[-0.02em] sm:tracking-[-0.03em] mb-6 sm:mb-7">
-              <span className="brand-gradient">ProFolio</span> turns the work
-              <br className="hidden sm:block" />
-              {' '}your professor sets into a CV
-              <br className="hidden sm:block" />
-              {' '}an employer can trust
-            </h1>
-          </Reveal>
+          <h1
+            aria-label="ProFolio turns the work your professor sets into a CV an employer can trust"
+            className="text-white font-bold text-[1.85rem] sm:text-[3.1rem] lg:text-[3.9rem] leading-[1.12] sm:leading-[1.06] tracking-[-0.02em] sm:tracking-[-0.03em] mb-6 sm:mb-7">
+            <span aria-hidden="true" className="lp-word brand-gradient lp-shimmer" style={{ '--i': 0 }}>ProFolio</span>{' '}
+            <AnimatedWords text="turns the work" start={1} />
+            <br className="hidden sm:block" />
+            <AnimatedWords text={"your professor sets into a\u00a0CV"} start={4} />
+            <br className="hidden sm:block" />
+            <AnimatedWords text="an employer can trust" start={10} />
+          </h1>
 
-          <Reveal delay={80}>
+          <Reveal delay={700}>
             <p className="text-gray-400 text-[15px] sm:text-[19px] leading-[1.7] sm:leading-[1.65] max-w-2xl mx-auto mb-7 sm:mb-9">
               Lecturers write the assessments themselves. Students sit them under
               supervision. What they were observed doing becomes a one-page CV — written
@@ -628,24 +788,19 @@ export default function LandingPage() {
             </p>
           </Reveal>
 
-          <Reveal delay={180}>
+          <Reveal delay={850}>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 mb-6">
               <Link to="/register"
-                className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-[15px] px-6 py-3.5 sm:py-3 rounded-xl transition-colors">
+                className="lp-cta relative overflow-hidden flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-[15px] px-6 py-3.5 sm:py-3 rounded-xl transition-colors">
                 Get started <FontAwesomeIcon icon={faArrowRight} className="text-xs" />
               </Link>
               <a href="#product"
-                className="flex items-center justify-center gap-2 border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white font-semibold text-[15px] px-6 py-3.5 sm:py-3 rounded-xl transition-all">
+                className="lp-ghost flex items-center justify-center gap-2 border border-white/10 hover:bg-white/5 text-gray-300 hover:text-white font-semibold text-[15px] px-6 py-3.5 sm:py-3 rounded-xl transition-all">
                 See how it works
               </a>
             </div>
           </Reveal>
 
-          <Reveal delay={240}>
-            <p className="text-gray-600 text-[13px]">
-              Free for students · Faculty accounts approved by an administrator
-            </p>
-          </Reveal>
         </div>
 
         {/* Outside the centred block, so it anchors to the section rather than
@@ -805,14 +960,17 @@ export default function LandingPage() {
                   </h3>
                   <p className="text-gray-400 text-[16px] leading-[1.7] mb-6">
                     One page, generated from two halves: what the student was observed doing,
-                    and the portfolio they built themselves. Written as prose rather than a
-                    scorecard, and regenerated whenever new work is completed.
+                    and the portfolio they built themselves. Laid out like a fresh-graduate
+                    CV an employer already knows how to read, and regenerated whenever new
+                    work is completed.
                   </p>
                   <div className="flex flex-col gap-3">
                     {[
                       'Written from assessed evidence and portfolio content',
+                      'The student picks which projects, skills and certificates go on each version',
+                      'Always exactly one A4 page, with an optional 2x2 photo',
                       'No marks printed anywhere on the document',
-                      'Exports to PDF, kept after graduation',
+                      'Saves as a PDF, kept after graduation',
                     ].map((t, i) => (
                       <span key={i} className="flex items-start gap-3 text-gray-400 text-[15px]">
                         <FontAwesomeIcon icon={faCheck} className="text-blue-400 text-xs mt-1.5 flex-shrink-0" />
@@ -823,7 +981,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl order-first lg:order-last">
-                  <CvDocument className="aspect-auto min-h-[380px] sm:aspect-[4/3]" />
+                  <CvDocument />
                 </div>
               </div>
             </Reveal>

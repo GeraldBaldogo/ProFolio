@@ -3,11 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft, faCode, faShield, faTriangleExclamation, faDisplay,
-  faCircleCheck, faSpinner, faPlay, faUserTie, faRotateRight,
+  faCircleCheck, faSpinner, faPlay, faUserTie, faRotateRight, faAward, faSeedling,
 } from '@fortawesome/free-solid-svg-icons'
 import { generateChallenge, submitCodingResult } from '../../../services/assessment.service'
 import { getTestById } from '../../../services/test.service'
 import ProctoringCamera from '../../../components/ProctoringCamera'
+import PracticeLevels from '../../../components/PracticeLevels'
+import AttemptAward from '../../../components/AttemptAward'
+import { useBackdropStill } from '../../../hooks/useBackdropStill'
 
 const LANGUAGES = [
   'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'C#',
@@ -120,6 +123,10 @@ const CodingAssessment = () => {
         setChallenge({
           title: t.title,
           description: cfg.problem_statement,
+          // Every case the professor wrote, not only the first. A practice
+          // challenge carries a single example, which is why this used to take
+          // just one — and three carefully chosen cases were reduced to one.
+          test_cases: Array.isArray(cfg.test_cases) ? cfg.test_cases.filter((t) => t?.input || t?.expected_output) : [],
           example_input: cfg.test_cases?.[0]?.input || null,
           example_output: cfg.test_cases?.[0]?.expected_output || null,
         })
@@ -232,6 +239,128 @@ const CodingAssessment = () => {
     beginTimer(limit)
   }
 
+
+  // ── Editor helpers ─────────────────────────────────────────────────────────
+  // Typing aids only. Nothing here suggests code — a student who does not know
+  // the answer gets no closer to it by having brackets close themselves.
+
+  const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' }
+  const INDENT = '    '
+
+  const applyEdit = (el, nextValue, caretStart, caretEnd = caretStart) => {
+    setCode(nextValue)
+    // The caret has to be restored after React re-renders, or it jumps to the
+    // end of the document on every keystroke.
+    requestAnimationFrame(() => {
+      el.selectionStart = caretStart
+      el.selectionEnd = caretEnd
+    })
+  }
+
+  const handleCodeKeyDown = (e) => {
+    const el = e.target
+    const { selectionStart: start, selectionEnd: end, value } = el
+
+    // Tab indents; Shift+Tab outdents. Without this, Tab leaves the editor
+    // entirely and the student loses their place.
+    if (e.key === 'Tab') {
+      e.preventDefault()
+
+      if (start !== end) {
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1
+        const block = value.slice(lineStart, end)
+        const lines = block.split('\n')
+
+        const shifted = e.shiftKey
+          ? lines.map(l => l.startsWith(INDENT) ? l.slice(INDENT.length) : l.replace(/^\s{1,4}/, ''))
+          : lines.map(l => INDENT + l)
+
+        const next = value.slice(0, lineStart) + shifted.join('\n') + value.slice(end)
+        const delta = shifted.join('\n').length - block.length
+        applyEdit(el, next, lineStart, end + delta)
+        return
+      }
+
+      if (e.shiftKey) {
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1
+        const line = value.slice(lineStart, start)
+        const removed = line.startsWith(INDENT) ? INDENT.length : (line.match(/^\s{1,4}/)?.[0].length || 0)
+        if (!removed) return
+        applyEdit(el, value.slice(0, lineStart) + value.slice(lineStart + removed), start - removed)
+        return
+      }
+
+      applyEdit(el, value.slice(0, start) + INDENT + value.slice(end), start + INDENT.length)
+      return
+    }
+
+    // Enter keeps the current indentation, and adds one level after an opening
+    // brace or a colon. Re-indenting by hand after every line is busywork.
+    if (e.key === 'Enter') {
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1
+      const line = value.slice(lineStart, start)
+      const indent = line.match(/^[ \t]*/)[0]
+      const opensBlock = /[{[(:]\s*$/.test(line)
+      const closesNext = /^\s*[)\]}]/.test(value.slice(end))
+
+      if (!indent && !opensBlock) return
+      e.preventDefault()
+
+      const added = opensBlock ? indent + INDENT : indent
+
+      // Put a closing brace on its own line, the way an editor would.
+      if (opensBlock && closesNext) {
+        const next = value.slice(0, start) + '\n' + added + '\n' + indent + value.slice(end)
+        applyEdit(el, next, start + 1 + added.length)
+        return
+      }
+
+      applyEdit(el, value.slice(0, start) + '\n' + added + value.slice(end), start + 1 + added.length)
+      return
+    }
+
+    // Typing a closing character where one already sits just moves past it,
+    // rather than producing a duplicate.
+    if ([')', ']', '}', '"', "'", '`'].includes(e.key) && start === end && value[start] === e.key) {
+      e.preventDefault()
+      applyEdit(el, value, start + 1)
+      return
+    }
+
+    // Wrap a selection in the pair instead of replacing it.
+    if (PAIRS[e.key] && start !== end) {
+      e.preventDefault()
+      const selected = value.slice(start, end)
+      const next = value.slice(0, start) + e.key + selected + PAIRS[e.key] + value.slice(end)
+      applyEdit(el, next, start + 1, end + 1)
+      return
+    }
+
+    // Auto-close. Quotes only close when not already inside a word, so
+    // apostrophes in comments don't sprout a partner.
+    if (PAIRS[e.key] && start === end) {
+      const isQuote = ['"', "'", '`'].includes(e.key)
+      const before = value[start - 1] || ''
+      const after = value[start] || ''
+      if (isQuote && (/[\w"'`]/.test(before) || /[\w]/.test(after))) return
+
+      e.preventDefault()
+      const next = value.slice(0, start) + e.key + PAIRS[e.key] + value.slice(start)
+      applyEdit(el, next, start + 1)
+      return
+    }
+
+    // Backspace between an empty pair removes both.
+    if (e.key === 'Backspace' && start === end && start > 0) {
+      const before = value[start - 1]
+      const after = value[start]
+      if (PAIRS[before] && PAIRS[before] === after) {
+        e.preventDefault()
+        applyEdit(el, value.slice(0, start - 1) + value.slice(start + 1), start - 1)
+      }
+    }
+  }
+
   const handleSubmit = async (timedOut = false) => {
     clearInterval(timerRef.current)
     if (submitting || result) return
@@ -244,6 +373,8 @@ const CodingAssessment = () => {
 
     try {
       const data = await submitCodingResult({
+        // Practice only: binds the result to the topic it was generated for.
+        progress_token: challenge?.progress_token || null,
         language,
         difficulty,
         challenge_title: challenge?.title || '',
@@ -285,6 +416,9 @@ const CodingAssessment = () => {
   const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
 
   // Don't let them start before the professor's problem has arrived.
+  // The background stops moving while the timed part is running
+  useBackdropStill(phase === 'challenge')
+
   if (loadingTest) {
     return (
       <div className="min-h-screen bg-[#060612] font-sans flex flex-col items-center justify-center gap-3">
@@ -387,18 +521,9 @@ const CodingAssessment = () => {
 
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-6">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Difficulty</p>
-            <div className="flex gap-3">
-              {DIFFICULTIES.map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${
-                    difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
+            {/* Levels unlock in order; see PracticeLevels. */}
+            <div>
+              <PracticeLevels type="programming" value={difficulty} onChange={setDifficulty} />
             </div>
             <p className="text-gray-600 text-xs mt-3">
               Time limit: {TIME_LIMITS[difficulty] / 60} minutes
@@ -492,6 +617,9 @@ const CodingAssessment = () => {
         )}
       </div>
 
+      {/* What this attempt earned — a verified title, or the practice rank. */}
+      <AttemptAward testId={testId} result={result} />
+
       {result?.feedback && (
         <div className="border border-violet-500/20 bg-violet-500/5 rounded-2xl p-5 mb-4">
           <p className="text-violet-400 text-xs font-semibold mb-2">AI Feedback</p>
@@ -551,7 +679,7 @@ const CodingAssessment = () => {
       )}
 
       {/* Challenge header */}
-      <header className="sticky top-0 z-30 bg-[#060612]/95 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center gap-4">
+      <header className="sticky top-0 z-30 bg-[#060612]/95 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-sm truncate">{challenge?.title}</p>
           <p className="text-gray-500 text-xs capitalize">
@@ -595,17 +723,41 @@ const CodingAssessment = () => {
           <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">Problem</p>
           <p className="text-white font-bold text-sm mb-3">{challenge?.title}</p>
           <p className="text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">{challenge?.description}</p>
-          {challenge?.example_input && (
-            <div className="mb-3">
-              <p className="text-gray-500 text-xs mb-1">Input</p>
-              <code className="text-cyan-300 text-xs bg-white/5 px-2 py-1 rounded-lg block whitespace-pre-wrap">{challenge.example_input}</code>
-            </div>
-          )}
-          {challenge?.example_output && (
-            <div>
-              <p className="text-gray-500 text-xs mb-1">Output</p>
-              <code className="text-green-300 text-xs bg-white/5 px-2 py-1 rounded-lg block whitespace-pre-wrap">{challenge.example_output}</code>
-            </div>
+          {challenge?.test_cases?.length > 0 ? (
+            <>
+              <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                It should pass {challenge.test_cases.length > 1 ? `these ${challenge.test_cases.length} cases` : 'this case'}
+              </p>
+              <div className="flex flex-col gap-2">
+                {challenge.test_cases.map((t, i) => (
+                  <div key={i} className="border border-white/8 rounded-xl p-2.5">
+                    <div className="flex items-start gap-2 mb-1.5">
+                      <span className="text-gray-600 text-[10px] font-mono w-10 flex-shrink-0 pt-0.5">Input</span>
+                      <code className="text-cyan-300 text-xs whitespace-pre-wrap break-all">{t.input}</code>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-600 text-[10px] font-mono w-10 flex-shrink-0 pt-0.5">Output</span>
+                      <code className="text-green-300 text-xs whitespace-pre-wrap break-all">{t.expected_output}</code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {challenge?.example_input && (
+                <div className="mb-3">
+                  <p className="text-gray-500 text-xs mb-1">Input</p>
+                  <code className="text-cyan-300 text-xs bg-white/5 px-2 py-1 rounded-lg block whitespace-pre-wrap">{challenge.example_input}</code>
+                </div>
+              )}
+              {challenge?.example_output && (
+                <div>
+                  <p className="text-gray-500 text-xs mb-1">Output</p>
+                  <code className="text-green-300 text-xs bg-white/5 px-2 py-1 rounded-lg block whitespace-pre-wrap">{challenge.example_output}</code>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -624,6 +776,7 @@ const CodingAssessment = () => {
           <textarea
             value={code}
             onChange={(e) => setCode(e.target.value)}
+            onKeyDown={handleCodeKeyDown}
             onPaste={(e) => {
               e.preventDefault()
               violationsRef.current += 1

@@ -1,9 +1,11 @@
 const communicationService = require('../services/communication.service');
 
-const getPrompt = (req, res, next) => {
+// Async now, and told who's asking: the service checks which levels this
+// student has opened before handing out a prompt from one.
+const getPrompt = async (req, res, next) => {
   try {
-    const { difficulty = 'easy' } = req.query;
-    const prompt = communicationService.getCommunicationPrompt({ difficulty });
+    const { difficulty = 'easy', topic = null } = req.query;
+    const prompt = await communicationService.getCommunicationPrompt(req.user.id, { difficulty, topic });
     res.json({ success: true, data: prompt });
   } catch (err) {
     next(err);

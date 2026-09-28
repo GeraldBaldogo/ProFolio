@@ -113,7 +113,7 @@ const RecommendationsPage = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -158,36 +158,37 @@ const RecommendationsPage = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
         {/* Topbar */}
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
+          <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">Recommendations</h1>
-            <p className="text-gray-500 text-xs">Personalized learning path based on your profile</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg truncate">Recommendations</h1>
+            <p className="text-gray-500 text-xs truncate">Personalized learning path based on your profile</p>
           </div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-3 flex-shrink-0">
             {rec && (
               <button
                 onClick={generate}
                 disabled={generating}
-                className="flex items-center gap-2 border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] text-gray-400 hover:text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all disabled:opacity-50"
+                aria-label="Regenerate recommendations"
+                className="flex items-center gap-2 border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] text-gray-400 hover:text-white text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all disabled:opacity-50"
               >
                 <FontAwesomeIcon icon={faRotateRight} className={generating ? 'animate-spin' : ''} />
-                Regenerate
+                <span className="hidden sm:inline">Regenerate</span>
               </button>
             )}
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl hidden sm:flex items-center justify-center text-white font-bold text-sm">
               {user?.full_name?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <FontAwesomeIcon icon={faSpinner} className="text-violet-400 text-3xl animate-spin" />

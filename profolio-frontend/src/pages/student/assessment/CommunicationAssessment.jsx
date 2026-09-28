@@ -3,11 +3,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft, faComments, faCircleCheck, faSpinner, faPlay,
-  faTriangleExclamation, faPen, faChartBar, faUserTie, faRotateRight,
+  faTriangleExclamation, faPen, faChartBar, faUserTie, faRotateRight, faDisplay,
 } from '@fortawesome/free-solid-svg-icons'
 import api from '../../../services/api'
 import { getTestById } from '../../../services/test.service'
 import { useProctoring } from '../../../hooks/useProctoring'
+import ProctoringCamera from '../../../components/ProctoringCamera'
+import PracticeLevels from '../../../components/PracticeLevels'
+import AttemptAward from '../../../components/AttemptAward'
+import { useBackdropStill } from '../../../hooks/useBackdropStill'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 const TIME_LIMITS = { easy: 5 * 60, medium: 8 * 60, hard: 12 * 60 }
@@ -60,6 +64,15 @@ const CommunicationAssessment = () => {
   const [submitError, setSubmitError] = useState('')
   const [result, setResult] = useState(null)
   const [wordCount, setWordCount] = useState(0)
+
+  // The last of the six pages with no camera at all. A written answer is the
+  // easiest of them to have produced elsewhere, so it needs proctoring most.
+  const [cameraReady, setCameraReady] = useState(false)
+  const [unproctored, setUnproctored] = useState(null)
+  const [cameraViolations, setCameraViolations] = useState(0)
+
+  const [screenShare, setScreenShare] = useState(null)
+  const [screenError, setScreenError] = useState('')
 
   const timerRef = useRef(null)
   const startTimeRef = useRef(null)
@@ -145,7 +158,25 @@ const CommunicationAssessment = () => {
   }
 
   // Graded test: the prompt already exists, so go straight in.
-  const startAssignedTest = () => {
+  const startAssignedTest = async () => {
+    setScreenError('')
+
+    if (!screenShare) {
+      setScreenError('Proctoring is still starting up. Please wait a moment and try again.')
+      return
+    }
+    if (screenShare.state === 'unsupported') {
+      setScreenError('Screen sharing is not available on this device. Please take this assessment on a laptop or desktop computer.')
+      return
+    }
+    if (screenShare.state !== 'sharing') {
+      const granted = await screenShare.request()
+      if (!granted) {
+        setScreenError(screenShare.note || 'Screen sharing is required before this assessment can begin.')
+        return
+      }
+    }
+
     resetSession()
     beginTimer(test?.time_limit_minutes ? test.time_limit_minutes * 60 : TIME_LIMITS.medium)
   }
@@ -168,12 +199,15 @@ const CommunicationAssessment = () => {
         prompt_text: prompt?.prompt,
         response_text: timedOut && !response ? '(no submission — time ran out)' : response,
         time_taken_seconds: timeTaken,
-        violation_count: violationCount,
+        violation_count: violationCount + cameraViolations,
+        camera_violation_count: cameraViolations,
+        unproctored: !!unproctored,
         session_id: sessionId,
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId, rubric: prompt?.rubric || [] } : {}),
       })
       setResult(res.data.data)
+      screenShare?.stop()
       setPhase('result')
     } catch (err) {
       // On a graded test this is the only attempt — losing the writing to a
@@ -204,6 +238,9 @@ const CommunicationAssessment = () => {
   const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
 
   // Don't let them start before the professor's prompt has arrived.
+  // The background stops moving while the timed part is running
+  useBackdropStill(phase === 'challenge')
+
   if (loadingTest) {
     return (
       <div className="min-h-screen bg-[#060612] font-sans flex flex-col items-center justify-center gap-3">
@@ -216,6 +253,15 @@ const CommunicationAssessment = () => {
   // ── SETUP ──────────────────────────────────────────────────────────────────
   if (phase === 'setup') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
+
+      <ProctoringCamera
+        active={phase === 'challenge'}
+        onViolation={() => setCameraViolations(v => v + 1)}
+        onReady={() => setCameraReady(true)}
+        onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
+        onScreenShareReady={setScreenShare}
+      />
+
       <div className="flex items-center gap-4 mb-8">
         <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
@@ -277,33 +323,14 @@ const CommunicationAssessment = () => {
         <>
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Difficulty</p>
-            <div className="flex gap-3 mb-4">
-              {DIFFICULTIES.map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
-                    }`}
-                >
-                  {d}
-                </button>
-              ))}
+            {/* Levels unlock in order; see PracticeLevels. */}
+            <div className="mb-4">
+              <PracticeLevels type="communication" value={difficulty} onChange={setDifficulty} />
             </div>
-            <div className="flex flex-col gap-2">
-              {[
-                { d: 'easy', time: '5 min', desc: 'Self-intro or project explanation — short and direct' },
-                { d: 'medium', time: '8 min', desc: 'Technical concepts or team communication scenarios' },
-                { d: 'hard', time: '12 min', desc: 'Professional emails or feature documentation' },
-              ].map(({ d, time, desc }) => (
-                <div key={d} className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${difficulty === d ? 'border-white/10 bg-white/5' : 'border-transparent opacity-40'}`}>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border capitalize flex-shrink-0 mt-0.5 ${diffColor[d]}`}>{d}</span>
-                  <div className="flex-1">
-                    <p className="text-gray-300 text-xs">{desc}</p>
-                  </div>
-                  <span className="text-gray-500 text-xs flex-shrink-0">{time}</span>
-                </div>
-              ))}
-            </div>
+            {/* The topics themselves are listed by PracticeLevels above. */}
+            <p className="text-gray-600 text-xs mt-3">
+              Time limit: {difficulty === 'easy' ? 5 : difficulty === 'medium' ? 8 : 12} minutes
+            </p>
           </div>
 
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-6">
@@ -318,6 +345,28 @@ const CommunicationAssessment = () => {
             </div>
           </div>
         </>
+      )}
+
+      {testId && (
+        <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <FontAwesomeIcon icon={faDisplay} className="text-amber-400 mt-0.5" />
+          <div>
+            <p className="text-amber-400 text-sm font-semibold mb-1">Screen sharing is required</p>
+            <p className="text-gray-500 text-xs leading-relaxed">
+              When you press Start, your browser will ask you to share your screen. Choose{' '}
+              <span className="text-gray-400 font-semibold">Entire Screen</span> — a single
+              window or tab will not be accepted. Nothing is recorded; only whether sharing
+              stays active is monitored.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {screenError && (
+        <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 mt-0.5 flex-shrink-0" />
+          <p className="text-rose-400 text-xs leading-relaxed">{screenError}</p>
+        </div>
       )}
 
       <button
@@ -384,6 +433,9 @@ const CommunicationAssessment = () => {
       )}
 
       {/* Overall feedback */}
+      {/* What this attempt earned — a verified title, or the practice rank. */}
+      <AttemptAward testId={testId} result={result} />
+
       {result?.feedback && (
         <div className="border border-violet-500/20 bg-violet-500/5 rounded-2xl p-5 mb-5">
           <p className="text-violet-400 text-xs font-semibold mb-2">AI Overall Feedback</p>
@@ -415,8 +467,16 @@ const CommunicationAssessment = () => {
   return (
     <div className="min-h-screen bg-[#060612] font-sans flex flex-col">
 
+      <ProctoringCamera
+        active={true}
+        onViolation={() => setCameraViolations(v => v + 1)}
+        onReady={() => setCameraReady(true)}
+        onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
+        onScreenShareReady={setScreenShare}
+      />
+
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#060612]/95 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center gap-4">
+      <header className="sticky top-0 z-30 bg-[#060612]/95 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-sm truncate">{prompt?.title}</p>
           <p className="text-gray-500 text-xs capitalize">
@@ -491,10 +551,29 @@ const CommunicationAssessment = () => {
           <textarea
             value={response}
             onChange={handleResponseChange}
+            // Every other assessment blocks pasting at the input as well as
+            // logging it through useProctoring. This one only logged it, so a
+            // pasted answer went through — on the assessment where pasting an
+            // AI-written response is most tempting. Blocking here; the hook's
+            // document-level listener still records the attempt, so nothing is
+            // counted twice.
+            onPaste={(e) => e.preventDefault()}
+            onCopy={(e) => e.preventDefault()}
+            onCut={(e) => e.preventDefault()}
+            // Dragging selected text in from another window bypasses paste
+            // entirely.
+            onDrop={(e) => e.preventDefault()}
             placeholder="Write your response here..."
             className="flex-1 bg-transparent text-gray-200 text-sm p-5 resize-none outline-none leading-7 min-h-[320px]"
             autoComplete="off"
             autoCorrect="off"
+            autoCapitalize="off"
+            // Writing quality is what this assessment measures. Grammarly and
+            // the browser's spellcheck would both correct it for the student.
+            spellCheck={false}
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
           />
 
           <div className="flex items-center justify-between px-4 py-3 bg-[#060610] border-t border-white/5">

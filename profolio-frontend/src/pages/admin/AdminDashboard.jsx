@@ -5,7 +5,7 @@ import {
   faHouse, faUsers, faChartLine, faBars, faTimes,
   faRightFromBracket, faSpinner, faCircleCheck, faTriangleExclamation,
   faUserTie, faGraduationCap, faShieldHalved,
-  faClipboardCheck, faFolder, faClock, faRotateRight,
+  faClipboardCheck, faFileAlt, faClock, faRotateRight,
   faMagnifyingGlass, faUserSlash, faUserCheck, faBan,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
@@ -178,14 +178,14 @@ const AdminDashboard = () => {
       sub: `${analytics.users?.students ?? 0} students · ${analytics.users?.evaluators ?? 0} professors`,
     },
     {
-      label: 'Portfolios', value: analytics.portfolios?.total ?? '—', icon: faFolder,
+      label: 'Students with a CV', value: analytics.cv?.students_with_cv ?? '—', icon: faFileAlt,
       gradient: 'from-violet-500 to-purple-600',
-      sub: `${analytics.portfolios?.submitted ?? 0} submitted · ${analytics.portfolios?.completed ?? 0} completed`,
+      sub: `${analytics.cv?.percent_of_students ?? 0}% of students · ${analytics.cv?.total_generated ?? 0} CVs in total`,
     },
     {
-      label: 'Evaluations', value: analytics.evaluations?.total ?? '—', icon: faClipboardCheck,
+      label: 'Assessments', value: analytics.assessments?.in_range ?? '—', icon: faClipboardCheck,
       gradient: 'from-amber-500 to-orange-500',
-      sub: `${analytics.evaluations?.passed ?? 0} passed`,
+      sub: `last ${analytics.range?.weeks ?? 12} weeks · ${analytics.tests?.completion_rate ?? 0}% of assigned tests done`,
     },
     {
       label: 'Waiting for you', value: pendingUsers.length, icon: faClock,
@@ -275,18 +275,18 @@ const AdminDashboard = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* ══ Main ══ */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
-        <header className="sticky top-0 z-30 bg-[#0a0d10]/90 backdrop-blur-xl border-b border-white/8 px-6 py-4 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-[#0a0d10]/90 backdrop-blur-xl border-b border-white/8 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <button aria-label="Open menu"
             className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg tracking-tight">Admin dashboard</h1>
-            <p className="text-gray-500 text-xs">Accounts and system health</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg tracking-tight truncate">Admin dashboard</h1>
+            <p className="text-gray-500 text-xs truncate">Accounts and system health</p>
           </div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-3 flex-shrink-0">
             {!loading && !loadError && (
               <button onClick={fetchData} aria-label="Refresh"
                 className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-all flex items-center justify-center">
@@ -297,7 +297,7 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-3">
               <FontAwesomeIcon icon={faSpinner} className="text-rose-400 text-3xl animate-spin" />

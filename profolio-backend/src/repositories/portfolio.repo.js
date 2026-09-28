@@ -41,4 +41,15 @@ const submit = async (id) => {
   return data;
 };
 
-module.exports = { create, findByStudentId, findById, submit };
+const setStatus = async (id, status) => {
+  const { data, error } = await supabase
+    .from('portfolios')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+module.exports = { create, findByStudentId, findById, submit, setStatus };

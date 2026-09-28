@@ -64,4 +64,63 @@ const getLatestGradedByType = async (user_id, type) => {
   return null;
 };
 
-module.exports = { saveResult, getResultsByUser, getLatestByType, getLatestGradedByType };
+// Practice results only, and only the fields level-unlocking needs. Pulling
+// difficulty and topic out of the JSON column here keeps the code and feedback
+// text — often the bulk of a row — from being fetched just to be ignored.
+const getPracticeScores = async (user_id) => {
+  const { data, error } = await supabase
+    .from('assessment_results')
+    .select('type, score, difficulty:metadata->>difficulty, topic:metadata->>topic')
+    .eq('user_id', user_id)
+    .is('test_id', null);
+
+  if (error) throw { status: 500, message: error.message };
+  return data || [];
+};
+
+// Every result from a professor-assigned test, with the test's title and
+// level and the name of the professor who set it — what a verified title is
+// worked out from. Three small queries rather than a join, so it doesn't
+// depend on how the foreign keys happen to be declared.
+const getGradedResults = async (user_id) => {
+  const { data: rows, error } = await supabase
+    .from('assessment_results')
+    .select('id, type, score, test_id, created_at')
+    .eq('user_id', user_id)
+    .not('test_id', 'is', null)
+    .order('created_at', { ascending: false });
+  if (error) throw { status: 500, message: error.message };
+  if (!rows?.length) return [];
+
+  const testIds = [...new Set(rows.map((r) => r.test_id))];
+  const { data: tests, error: tErr } = await supabase
+    .from('tests')
+    .select('id, title, config, professor_id')
+    .in('id', testIds);
+  if (tErr) throw { status: 500, message: tErr.message };
+
+  const profIds = [...new Set((tests || []).map((t) => t.professor_id).filter(Boolean))];
+  let profs = [];
+  if (profIds.length) {
+    const { data, error: pErr } = await supabase.from('users').select('id, full_name').in('id', profIds);
+    if (pErr) throw { status: 500, message: pErr.message };
+    profs = data || [];
+  }
+
+  const testById = new Map((tests || []).map((t) => [t.id, t]));
+  const profById = new Map(profs.map((p) => [p.id, p.full_name]));
+
+  return rows.map((r) => {
+    const t = testById.get(r.test_id);
+    return {
+      ...r,
+      test: t ? {
+        title: t.title,
+        level: t.config?.level || null,
+        professor_name: profById.get(t.professor_id) || null,
+      } : null,
+    };
+  });
+};
+
+module.exports = { saveResult, getResultsByUser, getLatestByType, getLatestGradedByType, getPracticeScores, getGradedResults };

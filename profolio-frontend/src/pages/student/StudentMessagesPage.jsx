@@ -123,7 +123,7 @@ const StudentMessagesPage = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -170,17 +170,17 @@ const StudentMessagesPage = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
+          <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">Messages</h1>
-            <p className="text-gray-500 text-xs">Talk to the professors who set your work</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg truncate">Messages</h1>
+            <p className="text-gray-500 text-xs truncate">Talk to the professors who set your work</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             {!loading && (
               <button onClick={fetchAll} aria-label="Refresh"
                 className="w-9 h-9 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all">
@@ -196,7 +196,7 @@ const StudentMessagesPage = () => {
           </div>
         </header>
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           {loadError && (
             <div className="max-w-2xl mx-auto mb-6 border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 flex items-center gap-3">
               <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 flex-shrink-0" />

@@ -27,6 +27,13 @@ router.post('/bugfix/submit', c.submitBugFix);
 
 router.post('/communication/submit', c.submitCommunication);
 
+// Practice progress — which levels are unlocked, which topics are passed
+router.get('/progress', c.getProgress);
+router.get('/progress/:type', c.getProgress);
+
+// Practice ranks and verified titles
+router.get('/titles', c.getTitles);
+
 // Summary & Reset
 router.get('/summary', c.getSummary);
 router.delete('/reset', c.resetScores);

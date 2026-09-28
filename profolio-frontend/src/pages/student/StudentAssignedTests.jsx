@@ -147,7 +147,7 @@ const StudentAssignedTests = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -193,19 +193,19 @@ const StudentAssignedTests = () => {
 
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
         {/* The sticky header the other student pages use. Back is gone — the
             sidebar carries Dashboard now, and two routes to one place is a
             question nobody needs to answer. */}
-        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <button onClick={() => setSidebarOpen(true)} aria-label="Open menu"
             className="lg:hidden text-gray-400 hover:text-white">
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <div>
-            <h1 className="text-white font-bold text-lg">Assigned Tests</h1>
-            <p className="text-gray-500 text-xs">Tests your professor has assigned to you</p>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-base sm:text-lg truncate">Assigned Tests</h1>
+            <p className="text-gray-500 text-xs truncate">Tests your professor has assigned to you</p>
           </div>
           {!loading && (
             <button onClick={fetchAssignments} aria-label="Refresh"
@@ -215,7 +215,7 @@ const StudentAssignedTests = () => {
           )}
         </header>
 
-        <main className="flex-1 px-6 py-8">
+        <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
         <div className="max-w-3xl mx-auto">
 
       {error && (

@@ -1,8 +1,8 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('../utils/gemini');
 const supabase = require('../config/db');
 const assessmentRepo = require('../repositories/assessment.repo');
+const titlesService = require('./titles.service');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const ASSESSMENT_TYPES = ['typing', 'programming', 'flowchart', 'sql', 'bugfix', 'communication'];
 
@@ -40,7 +40,46 @@ const bandFor = (score) => {
  *    someone can do. The scores stay inside the system for the professor; the
  *    CV gets the meaning of them.
  */
-const generateCV = async (user_id) => {
+// "2026-06-01" → "Jun 2026". Anything that isn't a date is shown as typed.
+const monthYear = (value) => {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+};
+
+const periodOf = (e) => {
+  const start = monthYear(e.start_date);
+  const end = e.is_current ? 'Present' : monthYear(e.end_date);
+  if (start && end) return `${start} \u2013 ${end}`;
+  return start || end || null;
+};
+
+// Each entry gets a key the CV page can use to include or leave it out:
+// "profile-<index>" for Profile entries, "exp-<id>" for Portfolio ones.
+const mergeExperience = (fromProfile, fromPortfolio) => {
+  const own = fromProfile.map((e, i) => ({ ...e, key: `profile-${i}` }));
+  const converted = fromPortfolio.map((e) => ({
+    key: `exp-${e.id}`,
+    role: e.role || null,
+    organisation: e.company || null,
+    period: periodOf(e),
+    summary: e.description || null,
+  }));
+  const seen = new Set();
+  return [...own, ...converted].filter((e) => {
+    if (!e || !(e.role || e.organisation)) return false;
+    const key = `${(e.role || '').trim().toLowerCase()}|${(e.organisation || '').trim().toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+// Everything the CV can be built from: the profile, the latest portfolio and
+// its items. Shared by generateCV and getCVSources so the list the student
+// picks from is exactly what the generator will see.
+const loadSources = async (user_id) => {
   // 1. Student profile
   const { data: profile } = await supabase
     .from('student_profiles')
@@ -65,19 +104,70 @@ const generateCV = async (user_id) => {
   let skills = [];
   let certifications = [];
   let achievements = [];
+  let experiences = [];
 
   if (portfolio) {
-    const [projRes, skillRes, certRes, achRes] = await Promise.all([
+    const [projRes, skillRes, certRes, achRes, expRes] = await Promise.all([
       supabase.from('projects').select('*').eq('portfolio_id', portfolio.id),
       supabase.from('skills').select('*').eq('portfolio_id', portfolio.id),
       supabase.from('certifications').select('*').eq('portfolio_id', portfolio.id),
       supabase.from('achievements').select('*').eq('portfolio_id', portfolio.id),
+      supabase.from('experiences').select('*').eq('portfolio_id', portfolio.id),
     ]);
     projects = projRes.data || [];
     skills = skillRes.data || [];
     certifications = certRes.data || [];
     achievements = achRes.data || [];
+    experiences = expRes.data || [];
   }
+
+  // Work history can be entered in two places: the Profile page (a list on
+  // student_profiles.work_experience) and the Portfolio Builder's Experiences
+  // tab (the experiences table). Only the first used to reach the CV, so
+  // anything added in the Portfolio Builder silently went missing. Both are
+  // merged here into the profile's shape, with duplicates dropped.
+  const workExperience = mergeExperience(
+    Array.isArray(profile.work_experience) ? profile.work_experience : [],
+    experiences,
+  );
+
+  return { profile, portfolio, projects, skills, certifications, achievements, workExperience };
+};
+
+// What the "choose what goes on your CV" step shows: every item, with a short
+// label and detail line, keyed by the id generateCV's `exclude` refers to.
+const getCVSources = async (user_id) => {
+  const s = await loadSources(user_id);
+  const detail = (...parts) => parts.filter(Boolean).join(' \u00b7 ') || null;
+  return {
+    has_portfolio: !!s.portfolio,
+    projects: s.projects.map((p) => ({ id: String(p.id), label: p.title, detail: detail(p.tech_stack) })),
+    skills: s.skills.map((k) => ({ id: String(k.id), label: k.skill_name, detail: detail(k.category) })),
+    certifications: s.certifications.map((c) => ({ id: String(c.id), label: c.title, detail: detail(c.issuer) })),
+    experiences: s.workExperience.map((e) => ({ id: e.key, label: e.role || e.organisation, detail: detail(e.role && e.organisation, e.period) })),
+    achievements: s.achievements.map((a) => ({ id: String(a.id), label: a.title, detail: detail(a.category) })),
+  };
+};
+
+// Normalises { projects: [...ids], ... } from the request. Anything that isn't
+// an array of ids is ignored, so a missing or malformed body means "include
+// everything" rather than an error.
+const SOURCE_KEYS = ['projects', 'skills', 'certifications', 'experiences', 'achievements'];
+const readExclude = (exclude) => Object.fromEntries(SOURCE_KEYS.map((k) => [
+  k,
+  Array.isArray(exclude?.[k]) ? exclude[k].map(String) : [],
+]));
+
+const generateCV = async (user_id, excludeInput) => {
+  const exclude = readExclude(excludeInput);
+  const src = await loadSources(user_id);
+  const { profile } = src;
+  // Items the student chose to leave out never reach the AI or the page.
+  const projects = src.projects.filter((p) => !exclude.projects.includes(String(p.id)));
+  const skills = src.skills.filter((k) => !exclude.skills.includes(String(k.id)));
+  const certifications = src.certifications.filter((c) => !exclude.certifications.includes(String(c.id)));
+  const achievements = src.achievements.filter((a) => !exclude.achievements.includes(String(a.id)));
+  const workExperience = src.workExperience.filter((e) => !exclude.experiences.includes(e.key));
 
   // 4. Assessment evidence — professor-set tests only.
   //
@@ -104,15 +194,32 @@ const generateCV = async (user_id) => {
 
   // 5. Human evaluation
   let humanEval = null;
-  if (portfolio) {
+  if (src.portfolio) {
     const { data: evalData } = await supabase
       .from('human_evaluations')
       .select('*, users:evaluator_id(full_name)')
-      .eq('portfolio_id', portfolio.id)
+      .eq('portfolio_id', src.portfolio.id)
       .order('created_at', { ascending: false })
       .limit(1);
     humanEval = evalData?.[0] || null;
   }
+
+  // ── Verified titles ──
+  // Computed from the level of the professor's test and the score, exactly as
+  // shown in the app. The AI is told about them so the opening paragraph can
+  // read honestly, but the lines themselves are placed by this code.
+  const allTitles = await titlesService.getTitles(user_id);
+  const verifiedTitles = Object.entries(allTitles)
+    .filter(([, t]) => t.verified)
+    .map(([type, t]) => ({
+      type,
+      area: TYPE_LABELS[type] || type,
+      label: t.verified.title,
+      level: t.verified.test_level,
+      test_title: t.verified.test_title,
+      professor_name: t.verified.professor_name,
+      awarded_at: t.verified.awarded_at,
+    }));
 
   // ── Evidence for the AI, described rather than scored ──
   const evidenceLines = ASSESSMENT_TYPES
@@ -138,6 +245,15 @@ const generateCV = async (user_id) => {
 
   const prompt = `You are writing the narrative sections of a CV for a Computer Science student.
 
+VERIFIED TITLES ALREADY AWARDED
+${verifiedTitles.length
+  ? verifiedTitles.map(t => `- ${t.label} (${t.area}), awarded on a ${t.level} level assessment set by ${t.professor_name || 'their professor'}`).join('\n')
+  : '- None yet'}
+These appear on the CV as written above. Do not restate them, invent others, or
+describe the student with a seniority they were not awarded.
+
+TODAY: ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+
 STUDENT
 Name: ${profile.users?.full_name}
 Title they use: ${profile.professional_title || profile.career_goal || 'Not stated'}
@@ -149,7 +265,7 @@ Academic honours: ${profile.academic_honors || 'None stated'}
 Bio in their own words: ${profile.bio || 'None provided'}
 
 WORK EXPERIENCE
-${(Array.isArray(profile.work_experience) ? profile.work_experience : [])
+${workExperience
   .map(e => `- ${e.role || 'Role not stated'} at ${e.organisation || 'unnamed organisation'}${e.period ? ` (${e.period})` : ''}${e.summary ? `: ${e.summary}` : ''}`)
   .join('\n') || '- None'}
 
@@ -197,20 +313,26 @@ WRITING RULES — these matter more than anything else:
 5. Where something is weak, frame it as a direction of growth, never as a
    failing, and never quantify it.
 
-6. Third person, no name repetition after the first sentence.
+6. Write about_me as a Career Objective the way it appears on a Philippine CV:
+   implied first person. Never use the student's name, "I", "he", "she",
+   "they", "the candidate" or "the student". Open with who they are, e.g.
+   "Fourth-year BS Computer Science student and consistent Dean's Lister
+   seeking an entry-level frontend developer role..." — then what they bring.
+   Compare every date with TODAY: if expected graduation is already past, do
+   not describe them as preparing or about to graduate.
 
 7. This CV must fit on one printed page. Be brief. A short honest paragraph
    beats a long one that repeats itself.
 
 Respond with JSON only, no markdown:
 {
-  "about_me": "ONE paragraph, 3-4 sentences. Who this person is as a developer, what they are oriented toward, and what stage they are at. This is the only prose on the page — everything else is a bullet list — so it has to carry the whole introduction. Written for a hiring manager skimming for ten seconds.",
+  "about_me": "A Career Objective: ONE paragraph, 3-4 sentences, implied first person (see rule 6). Who this person is as a developer, what they are oriented toward, and what stage they are at. This is the only prose on the page — everything else is a bullet list — so it has to carry the whole introduction. Written for a hiring manager skimming for ten seconds.",
   "verified_competencies": ["4-6 short phrases naming what has been demonstrated under supervision, e.g. 'Debugging unfamiliar code under time pressure'. Each one under 10 words. No numbers."],
   "growth_areas": ["2-3 short phrases naming honest next steps, framed forward. No numbers."],
   "suggested_roles": ["2-4 job titles this person could realistically apply for now"]
 }`;
 
-  const model = genAI.getGenerativeModel({
+  const model = getModel({
     model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' },
   });
@@ -245,6 +367,10 @@ Respond with JSON only, no markdown:
       linkedin_url: profile.linkedin_url,
       portfolio_url: profile.portfolio_url || null,
     },
+    // Placed here rather than generated: a title is a fact about what a
+    // professor's test awarded, not a phrase for the model to improve on.
+    verified_titles: verifiedTitles,
+
     about_me: stripScores(aiContent.about_me),
     verified_competencies: (aiContent.verified_competencies || []).map(stripScores),
     growth_areas: (aiContent.growth_areas || []).map(stripScores),
@@ -262,9 +388,8 @@ Respond with JSON only, no markdown:
       academic_honors: profile.academic_honors || null,
     },
 
-    // Nothing else in the system holds a job history, so this comes straight
-    // from the profile rather than from the portfolio tables.
-    work_experience: Array.isArray(profile.work_experience) ? profile.work_experience : [],
+    // Profile work history and Portfolio Builder experiences, merged above.
+    work_experience: workExperience.map(({ key, ...e }) => e),
 
     self_reported_skills: skills.map((s) => ({
       name: s.skill_name,
@@ -282,13 +407,19 @@ Respond with JSON only, no markdown:
     certifications: certifications.map((c) => ({
       title: c.title,
       issuer: c.issuer,
-      date_earned: c.date_earned,
+      // The column is issued_date; the CV page reads date_earned.
+      date_earned: c.issued_date || null,
     })),
     achievements: achievements.map((a) => ({
       title: a.title,
       category: a.category,
-      date_achieved: a.date_achieved,
+      date_achieved: a.achieved_date || null,
     })),
+
+    // What the student left out this time, so the next "choose what goes on
+    // your CV" step starts from the same choices. New items aren't in here,
+    // so they start ticked.
+    excluded: exclude,
 
     // Kept for the professor's and the student's own view — deliberately not
     // rendered on the employer-facing CV.
@@ -348,4 +479,4 @@ const getCVHistory = async (user_id) => {
   return data || [];
 };
 
-module.exports = { generateCV, getLatestCV, getCVHistory };
+module.exports = { generateCV, getCVSources, getLatestCV, getCVHistory };

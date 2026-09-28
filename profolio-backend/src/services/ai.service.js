@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('../utils/gemini');
 const portfolioRepo = require('../repositories/portfolio.repo');
 const portfolioService = require('./portfolio.service');
 const projectRepo = require('../repositories/project.repo');
@@ -8,7 +8,6 @@ const experienceRepo = require('../repositories/experience.repo');
 const achievementRepo = require('../repositories/achievement.repo');
 const supabase = require('../config/db');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const evaluatePortfolio = async (portfolio_id) => {
   const portfolio = await portfolioRepo.findById(portfolio_id);
@@ -48,7 +47,7 @@ Provide your evaluation in the following JSON format only, no other text:
 }
 `;
 
-  const model = genAI.getGenerativeModel({
+  const model = getModel({
     model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });

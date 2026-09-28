@@ -4,11 +4,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowLeft, faBug, faShield, faTriangleExclamation,
   faCircleCheck, faSpinner, faPlay, faCode, faLightbulb,
-  faUserTie, faRotateRight, faVialCircleCheck,
+  faUserTie, faRotateRight, faVialCircleCheck, faDisplay,
 } from '@fortawesome/free-solid-svg-icons'
 import { generateBugFixChallenge, submitBugFixResult } from '../../../services/assessment.service'
 import { getTestById } from '../../../services/test.service'
 import { useProctoring } from '../../../hooks/useProctoring'
+import ProctoringCamera from '../../../components/ProctoringCamera'
+import PracticeLevels from '../../../components/PracticeLevels'
+import AttemptAward from '../../../components/AttemptAward'
+import { useBackdropStill } from '../../../hooks/useBackdropStill'
 
 const LANGUAGES = [
   'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'C#', 'PHP', 'Ruby', 'Go',
@@ -60,6 +64,15 @@ const BugFixAssessment = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [result, setResult] = useState(null)
+
+  // Like SQL, this page had no camera at all while typing, coding and flowchart
+  // were fully proctored. On a graded assessment that gap is indefensible.
+  const [cameraReady, setCameraReady] = useState(false)
+  const [unproctored, setUnproctored] = useState(null)
+  const [cameraViolations, setCameraViolations] = useState(0)
+
+  const [screenShare, setScreenShare] = useState(null)
+  const [screenError, setScreenError] = useState('')
 
   const timerRef = useRef(null)
   const startTimeRef = useRef(null)
@@ -157,10 +170,152 @@ const BugFixAssessment = () => {
   }
 
   // Graded test: the code already exists, so go straight in.
-  const startAssignedTest = () => {
+  const startAssignedTest = async () => {
+    setScreenError('')
+
+    // Required for graded work only — a practice attempt has nothing at stake.
+    if (!screenShare) {
+      setScreenError('Proctoring is still starting up. Please wait a moment and try again.')
+      return
+    }
+    if (screenShare.state === 'unsupported') {
+      setScreenError('Screen sharing is not available on this device. Please take this assessment on a laptop or desktop computer.')
+      return
+    }
+    if (screenShare.state !== 'sharing') {
+      const granted = await screenShare.request()
+      if (!granted) {
+        setScreenError(screenShare.note || 'Screen sharing is required before this assessment can begin.')
+        return
+      }
+    }
+
     resetSession()
     prevTabRef.current = 0
     beginTimer(test?.time_limit_minutes ? test.time_limit_minutes * 60 : TIME_LIMITS.medium)
+  }
+
+
+  // ── Editor helpers ─────────────────────────────────────────────────────────
+  // Typing aids only. Nothing here suggests code — a student who cannot find
+  // the bug gets no closer to it by having brackets close themselves. This
+  // page needs them more than most: the code is pre-loaded and already
+  // indented, so editing it in a plain textarea means re-indenting by hand
+  // after every change.
+
+  const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' }
+  const INDENT = '    '
+
+  const applyEdit = (el, nextValue, caretStart, caretEnd = caretStart) => {
+    setFixedCode(nextValue)
+    // Restore the caret after React re-renders, or it jumps to the end of the
+    // document on every keystroke.
+    requestAnimationFrame(() => {
+      el.selectionStart = caretStart
+      el.selectionEnd = caretEnd
+    })
+  }
+
+  const handleCodeKeyDown = (e) => {
+    const el = e.target
+    const { selectionStart: start, selectionEnd: end, value } = el
+
+    // Tab indents; Shift+Tab outdents. Without this, Tab leaves the editor.
+    if (e.key === 'Tab') {
+      e.preventDefault()
+
+      if (start !== end) {
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1
+        const block = value.slice(lineStart, end)
+        const lines = block.split('\n')
+
+        const shifted = e.shiftKey
+          ? lines.map(l => l.startsWith(INDENT) ? l.slice(INDENT.length) : l.replace(/^\s{1,4}/, ''))
+          : lines.map(l => INDENT + l)
+
+        const next = value.slice(0, lineStart) + shifted.join('\n') + value.slice(end)
+        const delta = shifted.join('\n').length - block.length
+        applyEdit(el, next, lineStart, end + delta)
+        return
+      }
+
+      if (e.shiftKey) {
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1
+        const line = value.slice(lineStart, start)
+        const removed = line.startsWith(INDENT) ? INDENT.length : (line.match(/^\s{1,4}/)?.[0].length || 0)
+        if (!removed) return
+        applyEdit(el, value.slice(0, lineStart) + value.slice(lineStart + removed), start - removed)
+        return
+      }
+
+      applyEdit(el, value.slice(0, start) + INDENT + value.slice(end), start + INDENT.length)
+      return
+    }
+
+    // Enter keeps the current indentation, and adds a level after an opening
+    // brace or colon.
+    if (e.key === 'Enter') {
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1
+      const line = value.slice(lineStart, start)
+      const indent = line.match(/^[ \t]*/)[0]
+      const opensBlock = /[{[(:]\s*$/.test(line)
+      const closesNext = /^\s*[)\]}]/.test(value.slice(end))
+
+      if (!indent && !opensBlock) return
+      e.preventDefault()
+
+      const added = opensBlock ? indent + INDENT : indent
+
+      if (opensBlock && closesNext) {
+        const next = value.slice(0, start) + '\n' + added + '\n' + indent + value.slice(end)
+        applyEdit(el, next, start + 1 + added.length)
+        return
+      }
+
+      applyEdit(el, value.slice(0, start) + '\n' + added + value.slice(end), start + 1 + added.length)
+      return
+    }
+
+    // Typing a closing character where one already sits moves past it rather
+    // than producing a duplicate.
+    if ([')', ']', '}', '"', "'", '`'].includes(e.key) && start === end && value[start] === e.key) {
+      e.preventDefault()
+      applyEdit(el, value, start + 1)
+      return
+    }
+
+    // Wrap a selection rather than replacing it.
+    if (PAIRS[e.key] && start !== end) {
+      e.preventDefault()
+      const selected = value.slice(start, end)
+      const next = value.slice(0, start) + e.key + selected + PAIRS[e.key] + value.slice(end)
+      applyEdit(el, next, start + 1, end + 1)
+      return
+    }
+
+    // Auto-close. Quotes stay out of the way inside words, so an apostrophe in
+    // a comment doesn't sprout a partner.
+    if (PAIRS[e.key] && start === end) {
+      const isQuote = ['"', "'", '`'].includes(e.key)
+      const before = value[start - 1] || ''
+      const after = value[start] || ''
+      if (isQuote && (/[\w"'`]/.test(before) || /[\w]/.test(after))) return
+
+      e.preventDefault()
+      const next = value.slice(0, start) + e.key + PAIRS[e.key] + value.slice(start)
+      applyEdit(el, next, start + 1)
+      return
+    }
+
+    // Backspace between an empty pair removes both.
+    if (e.key === 'Backspace' && start === end && start > 0) {
+      const before = value[start - 1]
+      const after = value[start]
+      if (PAIRS[before] && PAIRS[before] === after) {
+        e.preventDefault()
+        applyEdit(el, value.slice(0, start - 1) + value.slice(start + 1), start - 1)
+      }
+    }
   }
 
   const handleSubmit = async (timedOut = false) => {
@@ -176,19 +331,24 @@ const BugFixAssessment = () => {
     try {
       const counts = getViolationCounts() // ref-backed, always current
       const data = await submitBugFixResult({
+        // Practice only: binds the result to the topic it was generated for.
+        progress_token: challenge?.progress_token || null,
         language,
         difficulty,
         challenge_title: challenge?.title || '',
         description: challenge?.description || '',
         original_buggy_code: challenge?.buggy_code || '',
         fixed_code: timedOut && !fixedCode ? '(no submission — time ran out)' : fixedCode,
-        violation_count: counts.violation_count,
+        violation_count: counts.violation_count + cameraViolations,
+        camera_violation_count: cameraViolations,
+        unproctored: !!unproctored,
         time_taken_seconds: timeTaken,
         session_id: sessionId,
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId } : {}),
       })
       setResult(data)
+      screenShare?.stop()
       setPhase('result')
     } catch (err) {
       // On a graded test this is the only attempt — losing the work to a
@@ -216,6 +376,9 @@ const BugFixAssessment = () => {
   const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
 
   // Don't let them start before the professor's code has arrived.
+  // The background stops moving while the timed part is running
+  useBackdropStill(phase === 'challenge')
+
   if (loadingTest) {
     return (
       <div className="min-h-screen bg-[#060612] font-sans flex flex-col items-center justify-center gap-3">
@@ -228,6 +391,15 @@ const BugFixAssessment = () => {
   // ── SETUP ──────────────────────────────────────────────────────────────────
   if (phase === 'setup') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
+
+      <ProctoringCamera
+        active={phase === 'challenge'}
+        onViolation={() => setCameraViolations(v => v + 1)}
+        onReady={() => setCameraReady(true)}
+        onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
+        onScreenShareReady={setScreenShare}
+      />
+
       <div className="flex items-center gap-4 mb-8">
         <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
@@ -299,18 +471,9 @@ const BugFixAssessment = () => {
 
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Difficulty</p>
-            <div className="flex gap-3">
-              {DIFFICULTIES.map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all capitalize ${
-                    difficulty === d ? diffColor[d] : 'border-white/8 text-gray-500 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
+            {/* Levels unlock in order; see PracticeLevels. */}
+            <div>
+              <PracticeLevels type="bugfix" value={difficulty} onChange={setDifficulty} />
             </div>
             <div className="mt-3 pt-3 border-t border-white/5">
               {[
@@ -338,6 +501,28 @@ const BugFixAssessment = () => {
           </p>
         </div>
       </div>
+
+      {testId && (
+        <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <FontAwesomeIcon icon={faDisplay} className="text-amber-400 mt-0.5" />
+          <div>
+            <p className="text-amber-400 text-sm font-semibold mb-1">Screen sharing is required</p>
+            <p className="text-gray-500 text-xs leading-relaxed">
+              When you press Start, your browser will ask you to share your screen. Choose{' '}
+              <span className="text-gray-400 font-semibold">Entire Screen</span> — a single
+              window or tab will not be accepted. Nothing is recorded; only whether sharing
+              stays active is monitored.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {screenError && (
+        <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 mt-0.5 flex-shrink-0" />
+          <p className="text-rose-400 text-xs leading-relaxed">{screenError}</p>
+        </div>
+      )}
 
       <button
         onClick={testId ? startAssignedTest : startChallenge}
@@ -388,6 +573,9 @@ const BugFixAssessment = () => {
         </div>
       )}
 
+      {/* What this attempt earned — a verified title, or the practice rank. */}
+      <AttemptAward testId={testId} result={result} />
+
       {/* AI Feedback */}
       {result?.feedback && (
         <div className="border border-violet-500/20 bg-violet-500/5 rounded-2xl p-5 mb-5">
@@ -420,6 +608,14 @@ const BugFixAssessment = () => {
   return (
     <div className="min-h-screen bg-[#060612] font-sans flex flex-col">
 
+      <ProctoringCamera
+        active={true}
+        onViolation={() => setCameraViolations(v => v + 1)}
+        onReady={() => setCameraReady(true)}
+        onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
+        onScreenShareReady={setScreenShare}
+      />
+
       {/* Tab switch warning */}
       {showWarning && (
         <div className="fixed inset-0 z-50 bg-rose-950/95 flex items-center justify-center flex-col gap-4 text-center px-6">
@@ -433,7 +629,7 @@ const BugFixAssessment = () => {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#060612]/95 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center gap-4">
+      <header className="sticky top-0 z-30 bg-[#060612]/95 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-sm truncate">{challenge?.title}</p>
           <p className="text-gray-500 text-xs capitalize">
@@ -572,6 +768,7 @@ const BugFixAssessment = () => {
           <textarea
             value={fixedCode}
             onChange={(e) => setFixedCode(e.target.value)}
+            onKeyDown={handleCodeKeyDown}
             onPaste={(e) => {
               e.preventDefault()
               // Don't manually count here — useProctoring's document-level

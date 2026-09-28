@@ -1,4 +1,6 @@
 const assessmentService = require('../services/assessment.service');
+const progressService = require('../services/progress.service');
+const titlesService = require('../services/titles.service');
 
 const submitTyping = async (req, res, next) => {
   try {
@@ -16,7 +18,7 @@ const getTypingText = async (req, res, next) => {
 
 const generateChallenge = async (req, res, next) => {
   try {
-    const challenge = await assessmentService.generateChallenge(req.body);
+    const challenge = await assessmentService.generateChallenge(req.user.id, req.body);
     res.json({ success: true, data: challenge });
   } catch (err) { next(err); }
 };
@@ -30,7 +32,7 @@ const submitCoding = async (req, res, next) => {
 
 const generateFlowchartProblem = async (req, res, next) => {
   try {
-    const problem = await assessmentService.generateFlowchartProblem(req.query);
+    const problem = await assessmentService.generateFlowchartProblem(req.user.id, req.query);
     res.json({ success: true, data: problem });
   } catch (err) { next(err); }
 };
@@ -44,7 +46,7 @@ const submitFlowchart = async (req, res, next) => {
 
 const generateSQLChallenge = async (req, res, next) => {
   try {
-    const challenge = await assessmentService.generateSQLChallenge(req.body);
+    const challenge = await assessmentService.generateSQLChallenge(req.user.id, req.body);
     res.json({ success: true, data: challenge });
   } catch (err) { next(err); }
 };
@@ -58,7 +60,7 @@ const submitSQL = async (req, res, next) => {
 
 const generateBugFixChallenge = async (req, res, next) => {
   try {
-    const challenge = await assessmentService.generateBugFixChallenge(req.body);
+    const challenge = await assessmentService.generateBugFixChallenge(req.user.id, req.body);
     res.json({ success: true, data: challenge });
   } catch (err) { next(err); }
 };
@@ -103,7 +105,26 @@ const resetScores = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// Which practice levels and topics this student has opened and passed.
+// /progress for every type at once, /progress/:type for one.
+const getProgress = async (req, res, next) => {
+  try {
+    const data = req.params.type
+      ? await progressService.getProgress(req.user.id, req.params.type)
+      : await progressService.getAllProgress(req.user.id);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+// Practice ranks and verified titles, with the history behind each.
+const getTitles = async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await titlesService.getTitles(req.user.id) });
+  } catch (err) { next(err); }
+};
+
 module.exports = {
+  getProgress, getTitles,
   submitTyping, getTypingText,
   generateChallenge, submitCoding,
   generateFlowchartProblem, submitFlowchart,

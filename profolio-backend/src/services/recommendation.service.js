@@ -1,9 +1,8 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('../utils/gemini');
 const supabase = require('../config/db');
 const portfolioRepo = require('../repositories/portfolio.repo');
 const assessmentRepo = require('../repositories/assessment.repo');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const generateRecommendations = async (user_id) => {
   // Bug fix: 'profiles' table doesn't exist - same mismatch as cv.service.js
@@ -100,7 +99,7 @@ Generate personalized recommendations in the following JSON format only, no othe
 }
 `;
 
-  const model = genAI.getGenerativeModel({
+  const model = getModel({
     model: 'gemini-3.6-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });

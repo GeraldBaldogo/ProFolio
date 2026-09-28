@@ -6,6 +6,9 @@ const experienceRepo = require('../repositories/experience.repo');
 const achievementRepo = require('../repositories/achievement.repo');
 const supabase = require('../config/db');
 
+const SUBMITTABLE = ['draft', 'revision_requested', 'completed'];
+const WITHDRAWABLE = ['submitted', 'ai_reviewed'];
+
 const createPortfolio = async (user_id) => {
   const { data: profile, error } = await supabase
     .from('student_profiles')
@@ -13,6 +16,13 @@ const createPortfolio = async (user_id) => {
     .eq('user_id', user_id)
     .single();
   if (error || !profile) throw { status: 404, message: 'Student profile not found. Please complete your profile first.' };
+
+  // One portfolio per student. The Portfolio Builder and the CV both read the
+  // newest one, so a second, empty portfolio would make everything the
+  // student had saved look deleted. Hand back the existing one instead.
+  const existing = await portfolioRepo.findByStudentId(profile.id);
+  if (existing?.length) return existing[0];
+
   const portfolio = await portfolioRepo.create(profile.id);
   return portfolio;
 };
@@ -119,9 +129,37 @@ const submitPortfolio = async (id, requestingUser) => {
 
   await assertCanAccessPortfolio(portfolio, requestingUser);
 
-  if (portfolio.status !== 'draft') throw { status: 400, message: 'Only draft portfolios can be submitted.' };
+  // A draft goes in for the first time; a revision_requested one goes back
+  // after the student made the changes asked for; a completed one can go in
+  // again for a fresh review.
+  if (!SUBMITTABLE.includes(portfolio.status)) {
+    throw { status: 400, message: 'This portfolio is already waiting for review.' };
+  }
   const updated = await portfolioRepo.submit(id);
   return updated;
 };
 
-module.exports = { createPortfolio, getMyPortfolios, getPortfolioById, submitPortfolio, assertCanAccessPortfolio };
+// Takes a submission back before any professor has picked it up, so the
+// student can keep editing. Once it's under_review it stays put — changing
+// work while someone is marking it isn't fair to either of them.
+const withdrawPortfolio = async (id, requestingUser) => {
+  const portfolio = await portfolioRepo.findById(id);
+  if (!portfolio) throw { status: 404, message: 'Portfolio not found.' };
+
+  await assertCanAccessPortfolio(portfolio, requestingUser);
+
+  if (requestingUser.role !== 'student') {
+    throw { status: 403, message: 'Only the owning student can withdraw a portfolio.' };
+  }
+  if (!WITHDRAWABLE.includes(portfolio.status)) {
+    throw {
+      status: 400,
+      message: portfolio.status === 'under_review'
+        ? 'A professor is already reviewing this portfolio. You can edit it again once they finish.'
+        : 'Only a submitted portfolio can be withdrawn.',
+    };
+  }
+  return portfolioRepo.setStatus(id, 'draft');
+};
+
+module.exports = { createPortfolio, getMyPortfolios, getPortfolioById, submitPortfolio, withdrawPortfolio, assertCanAccessPortfolio };

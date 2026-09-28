@@ -127,7 +127,7 @@ const OriginalityCheck = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -172,7 +172,7 @@ const OriginalityCheck = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
         {/* Topbar */}
         {/* Five things in one 375px row forced the title to wrap and squeezed
@@ -184,7 +184,7 @@ const OriginalityCheck = () => {
               <FontAwesomeIcon icon={faBars} className="text-lg" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-white font-bold text-lg truncate">Originality Check</h1>
+              <h1 className="text-white font-bold text-base sm:text-lg truncate">Originality Check</h1>
               <p className="text-gray-500 text-xs hidden sm:block">Verify your work reflects your own knowledge and effort</p>
             </div>
 

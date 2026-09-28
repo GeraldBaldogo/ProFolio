@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faKeyboard, faRotateRight, faCircleCheck, faSpinner,
+  faArrowLeft, faDisplay, faKeyboard, faRotateRight, faCircleCheck, faSpinner,
   faShield, faTriangleExclamation, faUserTie,
 } from '@fortawesome/free-solid-svg-icons'
 import { submitTypingResult } from '../../../services/assessment.service'
 import { getTestById } from '../../../services/test.service'
 import ProctoringCamera from '../../../components/ProctoringCamera'
+import KeyboardVisualizer from '../../../components/KeyboardVisualizer'
 import { useProctoring } from '../../../hooks/useProctoring'
+import { useBackdropStill } from '../../../hooks/useBackdropStill'
 
 // Used only for free practice. When the page is opened from an assigned test,
 // the passage comes from the professor's config instead.
@@ -44,6 +46,13 @@ const TypingAssessment = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [result, setResult] = useState(null)
+
+  // Handed up by ProctoringCamera once it mounts: { request, stop, state, note }
+  const [screenShare, setScreenShare] = useState(null)
+  const [screenError, setScreenError] = useState('')
+  // Typing has no Start button — it begins the moment you type — so the gate
+  // sits in front of the input instead. Practice needs no gate.
+  const [screenReady, setScreenReady] = useState(!testId)
 
   const [cameraReady, setCameraReady] = useState(false)
   // Set when the attempt goes ahead without a camera. Sent with the result so
@@ -86,6 +95,28 @@ const TypingAssessment = () => {
 
   // The professor can cap the attempt in seconds.
   const limitSeconds = test?.config?.duration_seconds || null
+
+  const beginAssignedTest = async () => {
+    setScreenError('')
+
+    if (!screenShare) {
+      setScreenError('Proctoring is still starting up. Please wait a moment and try again.')
+      return
+    }
+    if (screenShare.state === 'unsupported') {
+      setScreenError('Screen sharing is not available on this device. Please take this assessment on a laptop or desktop computer.')
+      return
+    }
+    if (screenShare.state !== 'sharing') {
+      const granted = await screenShare.request()
+      if (!granted) {
+        setScreenError(screenShare.note || 'Screen sharing is required before this assessment can begin.')
+        return
+      }
+    }
+
+    setScreenReady(true)
+  }
 
   const handleType = (e) => {
     const value = e.target.value
@@ -159,6 +190,7 @@ const TypingAssessment = () => {
         ...(unproctored ? { unproctored: true, unproctored_reason: unproctored } : {}),
       })
       setResult(data)
+      screenShare?.stop()
     } catch (err) {
       // Previously this was console.error only, which left the student on a
       // spinner-less screen with no result and no explanation.
@@ -204,6 +236,9 @@ const TypingAssessment = () => {
   const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
 
   // Don't let them start on the wrong passage while the real one is still loading.
+  // The background stops moving while the timed part is running
+  useBackdropStill(started && !finished)
+
   if (loadingTest) {
     return (
       <div className="min-h-screen bg-[#060612] font-sans flex flex-col items-center justify-center gap-3">
@@ -214,7 +249,7 @@ const TypingAssessment = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-3xl mx-auto">
+    <div className="min-h-screen bg-[#060612] font-sans px-4 sm:px-6 py-6 sm:py-8 max-w-3xl mx-auto">
 
       {/* Proctoring camera — active once started */}
       <ProctoringCamera
@@ -222,18 +257,19 @@ const TypingAssessment = () => {
         onViolation={logEvent}
         onReady={() => setCameraReady(true)}
         onCameraUnavailable={(reason) => setUnproctored(reason)}
+        onScreenShareReady={setScreenShare}
       />
 
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-6">
         <button
           onClick={goBack}
-          className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors"
+          className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0"
         >
           <FontAwesomeIcon icon={faArrowLeft} /> Back
         </button>
-        <div>
-          <h1 className="text-white font-bold text-lg flex items-center gap-2">
+        <div className="min-w-0">
+          <h1 className="text-white font-bold text-base sm:text-lg flex items-center gap-2 break-words">
             <FontAwesomeIcon icon={faKeyboard} className="text-cyan-400" />
             {test?.title || 'Speed Typing'}
           </h1>
@@ -320,8 +356,40 @@ const TypingAssessment = () => {
         {renderText()}
       </div>
 
+      {/* The gate. Typing starts on the first keystroke, so for an assigned test
+          the input stays hidden until screen sharing is running — otherwise the
+          attempt would already be under way before anything could be required
+          of it. */}
+      {!finished && !screenReady && (
+        <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-5 mb-4">
+          <div className="flex items-start gap-3 mb-4">
+            <FontAwesomeIcon icon={faDisplay} className="text-amber-400 mt-0.5" />
+            <div>
+              <p className="text-amber-400 text-sm font-semibold mb-1">Screen sharing is required</p>
+              <p className="text-gray-500 text-xs leading-relaxed">
+                Your browser will ask you to share your screen. Choose{' '}
+                <span className="text-gray-400 font-semibold">Entire Screen</span> — a single
+                window or tab will not be accepted. Nothing is recorded; only whether sharing
+                stays active is monitored.
+              </p>
+            </div>
+          </div>
+
+          {screenError && (
+            <p className="text-rose-400 text-xs leading-relaxed mb-3">{screenError}</p>
+          )}
+
+          <button
+            onClick={beginAssignedTest}
+            className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-2xl transition-all"
+          >
+            <FontAwesomeIcon icon={faDisplay} /> Share screen and begin
+          </button>
+        </div>
+      )}
+
       {/* Input */}
-      {!finished && (
+      {!finished && screenReady && (
         <>
           <textarea
             ref={textareaRef}
@@ -333,7 +401,25 @@ const TypingAssessment = () => {
             rows={3}
             className="w-full bg-[#0a0a18] border border-white/8 rounded-2xl p-4 text-white font-mono text-sm resize-none outline-none focus:border-blue-500/40 transition-colors placeholder:text-gray-700 mb-3 disabled:opacity-40"
             autoFocus
+            // Grammarly and the browser's own spellcheck both draw on the input
+            // and can offer corrections mid-test. Neither belongs in a typing
+            // assessment, where accuracy is the thing being measured.
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
           />
+
+          {/* The next character is already on screen in the passage above; the
+              keyboard only shows where it lives. */}
+          <KeyboardVisualizer
+            nextChar={typed.length < sampleText.length ? sampleText[typed.length] : null}
+            active={cameraReady && !finished}
+          />
+
           <button
             onClick={handleFinish}
             disabled={!started || !cameraReady}

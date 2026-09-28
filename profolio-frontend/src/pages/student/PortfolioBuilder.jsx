@@ -36,6 +36,17 @@ const SECTIONS = [
   { key: 'achievements', label: 'Achievements', icon: faTrophy, color: 'from-emerald-500 to-teal-600' },
 ]
 
+// "2025-03-01" → "Mar 2025"
+const monthYear = (v) => {
+  if (!v) return ''
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
+// The server says why something failed ("Withdraw it to make changes", "not
+// found"…); show that rather than a generic line.
+const reason = (err, fallback) => err?.response?.data?.message || fallback
+
 const inputClass = "w-full bg-white/5 border border-white/8 hover:border-white/15 focus:border-blue-500/50 focus:bg-blue-500/5 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 outline-none transition-all"
 const labelClass = "text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1.5 block"
 
@@ -49,7 +60,7 @@ const PortfolioBuilder = () => {
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('projects')
   const [toast, setToast] = useState(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
   const [projects, setProjects] = useState([])
   const [skills, setSkills] = useState([])
@@ -76,9 +87,15 @@ const PortfolioBuilder = () => {
       if (portfolios.length > 0) {
         setPortfolio(portfolios[0])
         await fetchSectionData(portfolios[0].id)
+      } else {
+        // A portfolio is just the container for these items — make it the
+        // first time the page opens rather than asking for an extra click.
+        const created = await api.post('/portfolios')
+        setPortfolio(created.data.data)
       }
     } catch (err) {
       console.error(err)
+      setLoadError(reason(err, 'Couldn\u2019t load your portfolio.'))
     } finally {
       setLoading(false)
     }
@@ -100,29 +117,6 @@ const PortfolioBuilder = () => {
       setAchievements(achRes.data.data)
     } catch (err) {
       console.error(err)
-    }
-  }
-
-  const createPortfolio = async () => {
-    try {
-      const res = await api.post('/portfolios')
-      setPortfolio(res.data.data)
-      showToast('Portfolio created!')
-    } catch (err) {
-      showToast('Failed to create portfolio.', 'error')
-    }
-  }
-
-  const submitPortfolio = async () => {
-    setSubmitting(true)
-    try {
-      await api.patch(`/portfolios/${portfolio.id}/submit`)
-      showToast('Portfolio submitted for evaluation!')
-      fetchPortfolio()
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to submit.', 'error')
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -182,13 +176,14 @@ const PortfolioBuilder = () => {
       showToast(editItem ? 'Updated successfully!' : 'Added successfully!')
       closeForm()
     } catch (err) {
-      showToast('Failed to save. Please try again.', 'error')
+      showToast(reason(err, 'Failed to save. Please try again.'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this item? This can\u2019t be undone.')) return
     try {
       if (activeSection === 'projects') {
         await api.delete(`/projects/${id}`)
@@ -201,7 +196,7 @@ const PortfolioBuilder = () => {
       }
       showToast('Deleted successfully!')
     } catch (err) {
-      showToast('Failed to delete.', 'error')
+      showToast(reason(err, 'Failed to delete.'), 'error')
     }
   }
 
@@ -240,7 +235,7 @@ const PortfolioBuilder = () => {
           <div>
             <p className="text-white font-semibold text-sm">{item.title}</p>
             <p className="text-gray-500 text-xs mt-0.5">{item.issuer}</p>
-            {item.issued_date && <p className="text-amber-400 text-xs mt-1">{item.issued_date}</p>}
+            {item.issued_date && <p className="text-amber-400 text-xs mt-1">{monthYear(item.issued_date)}{item.expiry_date ? ` \u2013 ${monthYear(item.expiry_date)}` : ''}</p>}
           </div>
         )
       case 'experiences':
@@ -248,7 +243,9 @@ const PortfolioBuilder = () => {
           <div>
             <p className="text-white font-semibold text-sm">{item.role}</p>
             <p className="text-gray-500 text-xs mt-0.5">{item.company}</p>
-            <p className="text-sky-400 text-xs mt-1">{item.start_date} — {item.is_current ? 'Present' : item.end_date}</p>
+            {(item.start_date || item.end_date || item.is_current) && (
+              <p className="text-sky-400 text-xs mt-1">{monthYear(item.start_date) || '?'} \u2013 {item.is_current ? 'Present' : (monthYear(item.end_date) || '?')}</p>
+            )}
           </div>
         )
       case 'achievements':
@@ -336,6 +333,7 @@ const PortfolioBuilder = () => {
   }
 
   const activeSection_ = SECTIONS.find(s => s.key === activeSection)
+  const canEdit = !!portfolio
 
   return (
     <div className="min-h-screen bg-[#060612] flex font-sans">
@@ -348,7 +346,7 @@ const PortfolioBuilder = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -393,11 +391,11 @@ const PortfolioBuilder = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
         {/* Topbar */}
         <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-4 flex items-center gap-3">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+          <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
           <div className="min-w-0">
@@ -405,19 +403,6 @@ const PortfolioBuilder = () => {
             <p className="text-gray-500 text-xs hidden sm:block">Build and manage your portfolio</p>
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {portfolio && portfolio.status === 'draft' && (
-              <button
-                onClick={submitPortfolio}
-                disabled={submitting}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-cyan-500 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all disabled:opacity-60"
-              >
-                {submitting
-                  ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
-                  : <FontAwesomeIcon icon={faArrowRight} />}
-                <span className="hidden xs:inline">Submit</span>
-                <span className="hidden sm:inline"> Portfolio</span>
-              </button>
-            )}
             <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user?.full_name?.charAt(0).toUpperCase()}
             </div>
@@ -432,42 +417,43 @@ const PortfolioBuilder = () => {
             </div>
           ) : !portfolio ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-              <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4">
-                <FontAwesomeIcon icon={faFolder} className="text-blue-400 text-2xl" />
+              <div className="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center mb-4">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 text-2xl" />
               </div>
-              <h2 className="text-white font-bold text-lg mb-2">No portfolio yet</h2>
-              <p className="text-gray-500 text-sm mb-6">Create your portfolio to get started</p>
-              <button onClick={createPortfolio} className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-xl transition-all">
-                <FontAwesomeIcon icon={faPlus} /> Create Portfolio
+              <h2 className="text-white font-bold text-lg mb-2">Couldn&apos;t open your portfolio</h2>
+              <p className="text-gray-500 text-sm mb-6">{loadError || 'Please try again.'}</p>
+              <button
+                onClick={() => { setLoading(true); setLoadError(''); fetchPortfolio() }}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-xl transition-all"
+              >
+                Try again
               </button>
             </div>
           ) : (
             <div className="flex flex-col gap-4 sm:gap-6">
 
-              {/* Portfolio status bar */}
-              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div>
-                    <p className="text-gray-500 text-xs mb-0.5">Portfolio Status</p>
-                    <p className="text-white font-bold capitalize">{portfolio.status.replace('_', ' ')}</p>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3 sm:ml-auto flex-wrap text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <FontAwesomeIcon icon={faCode} className="text-blue-400 text-[10px]" />
-                      {projects.length} projects
-                    </span>
-                    <span className="text-gray-700">·</span>
-                    <span className="flex items-center gap-1">
-                      <FontAwesomeIcon icon={faChartLine} className="text-violet-400 text-[10px]" />
-                      {skills.length} skills
-                    </span>
-                    <span className="text-gray-700">·</span>
-                    <span className="flex items-center gap-1">
-                      <FontAwesomeIcon icon={faCertificate} className="text-amber-400 text-[10px]" />
-                      {certifications.length} certs
-                    </span>
+              {/* Summary — what's saved, and where it goes */}
+              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-white font-bold text-sm">Everything here saves as soon as you press Save</p>
+                  <p className="text-gray-400 text-xs mt-1 leading-relaxed">
+                    Your CV is built from this page. When you generate it, you choose which items to include.
+                  </p>
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-xs text-gray-500 mt-3">
+                    {SECTIONS.map((sec, i) => (
+                      <span key={sec.key} className="flex items-center gap-2">
+                        {i > 0 && <span className="text-gray-700">·</span>}
+                        <span>{{ projects, skills, certifications, experiences, achievements }[sec.key].length} {sec.label.toLowerCase()}</span>
+                      </span>
+                    ))}
                   </div>
                 </div>
+                <Link
+                  to="/student/cv"
+                  className="flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all flex-shrink-0"
+                >
+                  <FontAwesomeIcon icon={faFileAlt} className="text-blue-400" /> Go to CV Builder
+                </Link>
               </div>
 
               {/* Section tabs — scrollable on mobile */}
@@ -502,7 +488,7 @@ const PortfolioBuilder = () => {
                     </div>
                     <h2 className="text-white font-bold text-sm">{activeSection_.label}</h2>
                   </div>
-                  {!showForm && portfolio.status === 'draft' && (
+                  {!showForm && canEdit && (
                     <button
                       onClick={() => openForm()}
                       className="flex items-center gap-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/20 text-blue-400 text-xs font-semibold px-2.5 sm:px-3 py-2 rounded-xl transition-all"
@@ -548,7 +534,9 @@ const PortfolioBuilder = () => {
                         <FontAwesomeIcon icon={activeSection_.icon} className="text-white text-lg" />
                       </div>
                       <p className="text-gray-500 text-sm">No {activeSection_.label.toLowerCase()} yet</p>
-                      <p className="text-gray-600 text-xs mt-1">Click "Add" to get started</p>
+                      <p className="text-gray-600 text-xs mt-1">
+                        {'Click \u201cAdd\u201d to get started'}
+                      </p>
                     </div>
                   ) : (
                     getCurrentData().map((item) => (
@@ -559,7 +547,7 @@ const PortfolioBuilder = () => {
                         <div className="flex-1 min-w-0">
                           {renderItem(item)}
                         </div>
-                        {portfolio.status === 'draft' && (
+                        {canEdit && (
                           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                             <button
                               onClick={() => openForm(item)}

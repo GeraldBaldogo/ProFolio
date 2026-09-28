@@ -24,6 +24,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', userToken)
   }
 
+  // Merge changes into the signed-in user (e.g. a corrected name) so every
+  // page that shows it updates at once, and it survives a refresh.
+  const updateUser = (changes) => {
+    setUser((prev) => {
+      const next = { ...prev, ...changes }
+      localStorage.setItem('user', JSON.stringify(next))
+      return next
+    })
+  }
+
   const logout = () => {
     setUser(null)
     setToken(null)
@@ -32,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   )

@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
+import TitlesCard from '../../components/TitlesCard'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 const navItems = [
@@ -229,6 +230,9 @@ const StudentResults = () => {
 
           ) : (
             <>
+              {/* Verified titles from professor tests, and practice ranks. */}
+              <TitlesCard />
+
               {/* Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 {[

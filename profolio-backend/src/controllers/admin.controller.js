@@ -20,7 +20,7 @@ const approveUser = async (req, res, next) => {
 
 const updateUserRole = async (req, res, next) => {
   try {
-    const user = await adminService.updateUserRole(req.params.id, req.body.role);
+    const user = await adminService.updateUserRole(req.params.id, req.body?.role, req.user);
     res.json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -29,7 +29,7 @@ const updateUserRole = async (req, res, next) => {
 
 const toggleUserStatus = async (req, res, next) => {
   try {
-    const user = await adminService.toggleUserStatus(req.params.id, req.body.is_active);
+    const user = await adminService.toggleUserStatus(req.params.id, req.body?.is_active, req.user);
     res.json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -60,7 +60,7 @@ const getPortfolios = async (req, res, next) => {
 
 const getAnalytics = async (req, res, next) => {
   try {
-    const analytics = await adminService.getAnalytics();
+    const analytics = await adminService.getAnalytics(req.query.weeks);
     res.json({ success: true, data: analytics });
   } catch (err) {
     next(err);

@@ -1,7 +1,6 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('../utils/gemini');
 const chatbotRepo = require('../repositories/chatbot.repo');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const SYSTEM_PROMPT = `You are the ProFolio Assistant, a friendly and encouraging AI helper embedded in ProFolio,
 an AI-assisted web-based portfolio platform for students. Your job is to:
@@ -40,7 +39,7 @@ const sendMessage = async (user_id, { message }) => {
     geminiHistory = geminiHistory.slice(1);
   }
 
-  const model = genAI.getGenerativeModel({
+  const model = getModel({
     model: 'gemini-3.6-flash',
     systemInstruction: SYSTEM_PROMPT
   });

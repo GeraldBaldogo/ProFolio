@@ -13,11 +13,20 @@ const handle = async (res) => {
   return data
 }
 
-export const generateCV = async () => {
+// exclude: { projects: [ids], skills: [ids], certifications: [ids],
+// experiences: [ids], achievements: [ids] } — what the student unticked.
+export const generateCV = async (exclude) => {
   const res = await fetch(`${API}/api/cv/generate`, {
     method: 'POST',
     headers: authHeader(),
+    body: JSON.stringify(exclude ? { exclude } : {}),
   })
+  return handle(res)
+}
+
+// Everything that can go on the CV, for the "choose what to include" step.
+export const getCVSources = async () => {
+  const res = await fetch(`${API}/api/cv/sources`, { headers: authHeader() })
   return handle(res)
 }
 

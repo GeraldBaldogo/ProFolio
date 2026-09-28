@@ -377,14 +377,30 @@ const ProctoringCamera = ({
 
   // Hand the screen-share controls up to the assessment page, which owns the
   // Start button and decides whether to require sharing before beginning.
+  //
+  // One object, made once and never replaced. Handing up a fresh object on
+  // every render made the page store it, re-render, and receive another —
+  // a loop that React eventually stops with "Maximum update depth exceeded",
+  // taking the rest of the app's rendering down with it.
+  //
+  // The live values are read through getters and through refs, so the page
+  // always sees the current state without the object's identity ever changing.
+  const liveRef = useRef({})
+  liveRef.current = { requestScreenShare, stopScreenShare, screenState, screenNote }
+
+  const controlsRef = useRef(null)
+  if (!controlsRef.current) {
+    controlsRef.current = {
+      request: (...args) => liveRef.current.requestScreenShare(...args),
+      stop: (...args) => liveRef.current.stopScreenShare(...args),
+      get state() { return liveRef.current.screenState },
+      get note() { return liveRef.current.screenNote },
+    }
+  }
+
   useEffect(() => {
-    onScreenShareReady?.({
-      request: requestScreenShare,
-      stop: stopScreenShare,
-      state: screenState,
-      note: screenNote,
-    })
-  }, [onScreenShareReady, requestScreenShare, stopScreenShare, screenState, screenNote])
+    onScreenShareReady?.(controlsRef.current)
+  }, [onScreenShareReady])
 
   const stateConfig = {
     // Detection is deliberately paused until the assessment starts. Saying

@@ -134,7 +134,7 @@ const TestSubmissions = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -173,7 +173,7 @@ const TestSubmissions = () => {
       </aside>
 
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-        <div className="flex-1 lg:ml-64 flex flex-col items-center justify-center gap-3">
+        <div className="flex-1 min-w-0 lg:ml-64 flex flex-col items-center justify-center gap-3">
           <FontAwesomeIcon icon={faSpinner} className="text-amber-400 text-2xl animate-spin" />
           <p className="text-gray-500 text-sm">Loading submissions...</p>
         </div>
@@ -191,7 +191,7 @@ const TestSubmissions = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -230,7 +230,7 @@ const TestSubmissions = () => {
       </aside>
 
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-        <div className="flex-1 lg:ml-64 px-6 py-8 max-w-md mx-auto text-center">
+        <div className="flex-1 min-w-0 lg:ml-64 px-6 py-8 max-w-md mx-auto text-center">
         <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 text-3xl mb-4 mt-16" />
         <p className="text-white font-bold mb-1">{loadError}</p>
         <p className="text-gray-500 text-sm mb-6">This is a connection problem, not an empty class.</p>
@@ -258,7 +258,7 @@ const TestSubmissions = () => {
             <img src={logo} alt="ProFolio" className="relative w-8 h-8 object-contain" />
           </div>
           <span className="text-lg font-black text-white tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
-          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" onClick={() => setSidebarOpen(false)}>
+          <button className="ml-auto lg:hidden text-gray-500 hover:text-white" aria-label="Close menu" onClick={() => setSidebarOpen(false)}>
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
@@ -297,21 +297,21 @@ const TestSubmissions = () => {
       </aside>
 
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-      <div className="flex-1 lg:ml-64 px-6 py-8">
+      <div className="flex-1 min-w-0 lg:ml-64 px-4 sm:px-6 py-6 sm:py-8">
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <button onClick={() => navigate('/evaluator/tests')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-            <FontAwesomeIcon icon={faArrowLeft} /> Back
+          <button onClick={() => navigate('/evaluator/tests')} aria-label="Back to tests"
+            className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0">
+            <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden sm:inline">Back</span>
           </button>
           <div className="min-w-0">
             <h1 className="text-white font-bold text-lg tracking-tight truncate">{test?.title}</h1>
-            <p className="text-gray-500 text-xs">Who answered, and how they did</p>
+            <p className="text-gray-500 text-xs truncate">Who answered, and how they did</p>
           </div>
           <button onClick={fetchAll} aria-label="Refresh"
             className="ml-auto w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-all flex items-center justify-center flex-shrink-0">
@@ -320,7 +320,7 @@ const TestSubmissions = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: 'Assigned', value: stats.assigned, icon: faUsers, color: 'text-blue-400' },
             { label: 'Submitted', value: `${stats.submitted}/${stats.assigned}`, icon: faCircleCheck, color: 'text-emerald-400' },

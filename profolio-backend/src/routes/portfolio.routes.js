@@ -8,5 +8,6 @@ router.post('/', authenticate, requireRole('student'), portfolioController.creat
 router.get('/my', authenticate, requireRole('student'), portfolioController.getMyPortfolios);
 router.get('/:id', authenticate, portfolioController.getById);
 router.patch('/:id/submit', authenticate, requireRole('student'), portfolioController.submit);
+router.patch('/:id/withdraw', authenticate, requireRole('student'), portfolioController.withdraw);
 
 module.exports = router;

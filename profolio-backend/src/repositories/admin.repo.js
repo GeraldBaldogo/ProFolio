@@ -20,6 +20,38 @@ const updateUserRole = async (id, role) => {
   return data;
 };
 
+const findUser = async (id) => {
+  const { data } = await supabase
+    .from('users')
+    .select('id, role, is_active')
+    .eq('id', id)
+    .maybeSingle();
+  return data;
+};
+
+const countActiveAdmins = async () => {
+  const { count, error } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'admin')
+    .eq('is_active', true);
+  if (error) throw error;
+  return count || 0;
+};
+
+// Registration creates a student_profiles or professor_profiles row. A role
+// change has to do the same, or the account breaks: a professor turned
+// student gets "Student profile not found" on Profile, Portfolio and CV.
+// Existing rows are left alone, so switching back and forth loses nothing.
+const ensureRoleProfile = async (user_id, role) => {
+  const table = role === 'student' ? 'student_profiles' : role === 'evaluator' ? 'professor_profiles' : null;
+  if (!table) return;
+  const { data: existing } = await supabase.from(table).select('id').eq('user_id', user_id).maybeSingle();
+  if (existing) return;
+  const { error } = await supabase.from(table).insert({ user_id });
+  if (error) throw error;
+};
+
 const approveUser = async (id) => {
   const { data, error } = await supabase
     .from('users')
@@ -151,4 +183,4 @@ const getAnalytics = async () => {
   };
 };
 
-module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics, approveUser };
+module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics, approveUser, findUser, countActiveAdmins, ensureRoleProfile };
