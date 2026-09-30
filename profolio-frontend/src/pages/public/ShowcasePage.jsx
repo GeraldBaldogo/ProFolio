@@ -32,10 +32,51 @@ const monthYear = (v) => {
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 
+// Frosted cards: solid enough that the glitter and aurora never pass behind
+// text, translucent enough that the backdrop still shows at the edges.
+// Own classes (not bg-white/…) so light mode gets its own values.
+const glassStyles = `
+  .sc-card {
+    background: rgba(12, 14, 26, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -24px rgba(0, 0, 0, 0.6);
+  }
+  .sc-inner {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    transition: border-color .25s, transform .25s;
+  }
+  @media (hover: hover) {
+    .sc-inner:hover { border-color: rgba(var(--accent-rgb), 0.35); transform: translateY(-2px); }
+  }
+  /* The name card gets a soft glow of the accent colour across its top */
+  .sc-hero {
+    position: relative; overflow: hidden;
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(var(--accent-rgb), 0.22), transparent 55%),
+      radial-gradient(90% 120% at 100% 0%, rgba(168, 85, 247, 0.16), transparent 60%),
+      rgba(12, 14, 26, 0.82);
+  }
+  [data-theme="light"] .sc-card {
+    background: rgba(255, 255, 255, 0.86);
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 20px 40px -28px rgba(15, 23, 42, 0.25);
+  }
+  [data-theme="light"] .sc-inner { background: rgba(15, 23, 42, 0.025); border-color: rgba(15, 23, 42, 0.08); }
+  [data-theme="light"] .sc-hero {
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(var(--accent-rgb), 0.16), transparent 55%),
+      radial-gradient(90% 120% at 100% 0%, rgba(168, 85, 247, 0.10), transparent 60%),
+      rgba(255, 255, 255, 0.9);
+  }
+`
+
 const initials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
 
 const Card = ({ icon, title, children, className = '' }) => (
-  <section className={`border border-white/8 bg-white/[0.03] rounded-2xl p-5 sm:p-6 ${className}`}>
+  <section className={`sc-card rounded-2xl p-5 sm:p-6 ${className}`}>
     {title && (
       <h2 className="text-white font-semibold text-sm flex items-center gap-2 mb-4">
         {icon && <FontAwesomeIcon icon={icon} className="text-blue-400 text-xs" />}
@@ -121,12 +162,13 @@ export default function ShowcasePage() {
 
   return (
     <div className="min-h-screen bg-[#060612] font-sans">
+      <style>{glassStyles}</style>
       {TopBar}
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 flex flex-col gap-4 sm:gap-5">
 
         {/* ── Who ── */}
-        <section className="border border-white/8 bg-white/[0.03] rounded-3xl p-5 sm:p-8 flex flex-col sm:flex-row gap-5 sm:gap-7 sm:items-center">
+        <section className="sc-card sc-hero rounded-3xl p-5 sm:p-8 flex flex-col sm:flex-row gap-5 sm:gap-7 sm:items-center">
           {d.photo ? (
             <img src={d.photo} alt={d.name} className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl object-cover flex-shrink-0 border border-white/10" />
           ) : (
@@ -203,7 +245,7 @@ export default function ShowcasePage() {
               <Card icon={faCode} title="Projects">
                 <div className="grid sm:grid-cols-2 gap-3">
                   {d.projects.map((p, i) => (
-                    <div key={i} className="border border-white/8 bg-white/[0.02] rounded-xl p-4 flex flex-col">
+                    <div key={i} className="sc-inner rounded-xl p-4 flex flex-col">
                       <p className="text-white font-semibold text-sm">{p.title}</p>
                       {p.description && <p className="text-gray-400 text-xs mt-1.5 leading-relaxed line-clamp-4">{p.description}</p>}
                       {p.tech_stack && (
