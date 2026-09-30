@@ -825,9 +825,13 @@ export default function LandingPage() {
       {/* The product itself, on its own. A serious page shows the thing rather
           than describing it — but it earns its own space rather than crowding
           the sentence above it. */}
+      {/* The mock frames below have a fixed ratio from tablet up only. On a
+          phone a ratio plus a minimum height forces the box wider than the
+          screen (300px tall at 4:3 = 400px wide), so there it just has a
+          minimum height; `grid` lets the window inside fill it. */}
       <section className="px-5 sm:px-6 pb-8">
         <Reveal className="max-w-5xl mx-auto">
-          <div className="border border-white/8 rounded-2xl overflow-hidden shadow-2xl aspect-[4/3] sm:aspect-[16/10] min-h-[300px]">
+          <div className="grid border border-white/8 rounded-2xl overflow-hidden shadow-2xl min-h-[300px] sm:aspect-[16/10]">
             <StudentEditor />
           </div>
         </Reveal>
@@ -890,7 +894,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl aspect-[4/3] min-h-[280px] order-first lg:order-last">
+                <div className="grid border border-white/8 rounded-2xl overflow-hidden shadow-xl min-h-[280px] sm:aspect-[4/3] order-first lg:order-last">
                   <Window file="new test — programming" className="w-full h-full">
                     <div className="flex-1 p-5 flex flex-col gap-3">
                       {[
@@ -928,7 +932,7 @@ export default function LandingPage() {
             {/* 02 */}
             <Reveal>
               <div className="grid lg:grid-cols-2 gap-7 sm:gap-12 items-center">
-                <div className="border border-white/8 rounded-2xl overflow-hidden shadow-xl aspect-[4/3] min-h-[280px]">
+                <div className="grid border border-white/8 rounded-2xl overflow-hidden shadow-xl min-h-[280px] sm:aspect-[4/3]">
                   <ProfessorResults />
                 </div>
 
@@ -1143,7 +1147,7 @@ export default function LandingPage() {
 
           <Reveal delay={60}>
             <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
+              <div className="min-w-0 border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
                 <div className="flex items-center gap-2.5 mb-5">
                   <FontAwesomeIcon icon={faXmark} className="text-rose-400 text-sm" />
                   <p className="text-gray-400 font-semibold text-[14px]">A bare scorecard</p>
@@ -1161,7 +1165,7 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
+              <div className="min-w-0 border border-white/8 bg-white/[0.02] rounded-2xl p-5 sm:p-7">
                 <div className="flex items-center gap-2.5 mb-5">
                   <FontAwesomeIcon icon={faCheck} className="text-emerald-400 text-sm" />
                   <p className="text-gray-400 font-semibold text-[14px]">What ProFolio prints instead</p>
@@ -1175,9 +1179,9 @@ export default function LandingPage() {
                     ['SQL', 'Hard test · output verified', 'Advanced'],
                     ['Programming', 'Python · Medium test', 'Developing'],
                   ].map(([area, detail, level]) => (
-                    <p key={area} className="flex items-baseline gap-2 text-gray-300 text-[11px] leading-snug mb-1.5">
+                    <p key={area} className="flex flex-wrap items-baseline gap-x-2 text-gray-300 text-[11px] leading-snug mb-2 sm:mb-1.5">
                       <span className="text-white font-semibold">{area}</span>
-                      <span className="text-gray-500 truncate">{detail}</span>
+                      <span className="order-last w-full text-gray-500 sm:order-none sm:w-auto sm:flex-1 sm:min-w-0 sm:truncate">{detail}</span>
                       <span className="ml-auto text-emerald-400 font-semibold flex-shrink-0">{level}</span>
                     </p>
                   ))}
