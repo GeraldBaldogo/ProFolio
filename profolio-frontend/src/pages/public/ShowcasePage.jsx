@@ -87,6 +87,18 @@ const Card = ({ icon, title, children, className = '' }) => (
   </section>
 )
 
+// Lays out up to three cards side by side at equal height
+const ROW_COLS = { 1: '', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3' }
+const Row = ({ cards }) => {
+  const present = cards.filter(Boolean)
+  if (!present.length) return null
+  return (
+    <div className={`grid gap-4 sm:gap-5 items-stretch ${ROW_COLS[present.length]}`}>
+      {present.map((card, i) => <div key={i} className="min-w-0">{card}</div>)}
+    </div>
+  )
+}
+
 const ExternalLink = ({ href, icon, children }) => {
   const url = safe(href)
   if (!url) return null
@@ -159,6 +171,112 @@ export default function ShowcasePage() {
 
   const d = data
   const edu = d.education
+
+  const projectsCard = d.projects?.length > 0 ? (
+    <Card className="h-full" icon={faCode} title="Projects">
+      <div className={`grid gap-3 ${
+        // As many columns as there are projects, up to three — so two
+        // projects share the width instead of leaving an empty third slot
+        d.projects.length === 1 ? '' : d.projects.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'
+      }`}>
+        {d.projects.map((p, i) => (
+          <div key={i} className="sc-inner rounded-xl p-4 flex flex-col">
+            <p className="text-white font-semibold text-sm">{p.title}</p>
+            {p.description && <p className="text-gray-400 text-xs mt-1.5 leading-relaxed line-clamp-4">{p.description}</p>}
+            {p.tech_stack && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {p.tech_stack.split(',').map((t) => t.trim()).filter(Boolean).map((t) => (
+                  <span key={t} className="text-[11px] text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md">{t}</span>
+                ))}
+              </div>
+            )}
+            {(safe(p.github_url) || safe(p.live_url)) && (
+              <div className="flex gap-3 mt-auto pt-3">
+                {safe(p.github_url) && (
+                  <a href={safe(p.github_url)} target="_blank" rel="noopener noreferrer nofollow" className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faGithub} /> Code
+                  </a>
+                )}
+                {safe(p.live_url) && (
+                  <a href={safe(p.live_url)} target="_blank" rel="noopener noreferrer nofollow" className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5">
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-[10px]" /> Live
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  ) : null
+  const experienceCard = d.experience?.length > 0 ? (
+    <Card className="h-full" icon={faBriefcase} title="Experience">
+      <div className="flex flex-col gap-4">
+        {d.experience.map((e, i) => (
+          <div key={i} className="flex gap-3">
+            <span className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-white font-semibold text-sm">
+                {e.role}{e.organisation && <span className="text-gray-400 font-normal"> · {e.organisation}</span>}
+              </p>
+              {e.period && <p className="text-gray-500 text-xs mt-0.5">{e.period}</p>}
+              {e.summary && <p className="text-gray-400 text-xs sm:text-sm mt-1.5 leading-relaxed">{e.summary}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  ) : null
+  const educationCard = edu ? (
+    <Card className="h-full" icon={faGraduationCap} title="Education">
+      <p className="text-white font-semibold text-sm">{edu.course}{edu.specialization ? ` — ${edu.specialization}` : ''}</p>
+      {edu.school && <p className="text-gray-400 text-xs mt-1">{edu.school}</p>}
+      {(edu.year_level || edu.expected_graduation) && (
+        <p className="text-gray-500 text-xs mt-1">
+          {[edu.year_level, edu.expected_graduation && `Expected ${edu.expected_graduation}`].filter(Boolean).join(' · ')}
+        </p>
+      )}
+      {edu.honors && <p className="text-amber-400 text-xs mt-2">{edu.honors}</p>}
+    </Card>
+  ) : null
+  const skillsCard = d.skills?.length > 0 ? (
+    <Card className="h-full" title="Skills">
+      <div className="flex flex-wrap gap-1.5">
+        {d.skills.map((s, i) => (
+          <span key={i} className="text-xs text-gray-200 bg-white/5 border border-white/8 px-2.5 py-1 rounded-lg">{s.name}</span>
+        ))}
+      </div>
+      <p className="text-gray-600 text-[11px] mt-3">Listed by the student</p>
+    </Card>
+  ) : null
+  const certificationsCard = d.certifications?.length > 0 ? (
+    <Card className="h-full" icon={faCertificate} title="Certifications">
+      <div className="flex flex-col gap-3">
+        {d.certifications.map((c, i) => (
+          <div key={i}>
+            <p className="text-white text-sm font-medium">
+              {safe(c.credential_url)
+                ? <a href={safe(c.credential_url)} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-blue-400 transition-colors">{c.title} <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-[9px] ml-0.5" /></a>
+                : c.title}
+            </p>
+            <p className="text-gray-500 text-xs">{[c.issuer, monthYear(c.issued_date)].filter(Boolean).join(' · ')}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  ) : null
+  const achievementsCard = d.achievements?.length > 0 ? (
+    <Card className="h-full" icon={faTrophy} title="Achievements">
+      <div className="flex flex-col gap-3">
+        {d.achievements.map((a, i) => (
+          <div key={i}>
+            <p className="text-white text-sm font-medium">{a.title}</p>
+            <p className="text-gray-500 text-xs">{[a.category, monthYear(a.achieved_date)].filter(Boolean).join(' · ')}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  ) : null
 
   return (
     <div className="min-h-screen bg-[#060612] font-sans">
@@ -238,121 +356,12 @@ export default function ShowcasePage() {
           </Card>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-4 sm:gap-5 items-start">
-          {/* ── Left: projects and experience ── */}
-          <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5">
-            {d.projects?.length > 0 && (
-              <Card icon={faCode} title="Projects">
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {d.projects.map((p, i) => (
-                    <div key={i} className="sc-inner rounded-xl p-4 flex flex-col">
-                      <p className="text-white font-semibold text-sm">{p.title}</p>
-                      {p.description && <p className="text-gray-400 text-xs mt-1.5 leading-relaxed line-clamp-4">{p.description}</p>}
-                      {p.tech_stack && (
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                          {p.tech_stack.split(',').map((t) => t.trim()).filter(Boolean).map((t) => (
-                            <span key={t} className="text-[11px] text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md">{t}</span>
-                          ))}
-                        </div>
-                      )}
-                      {(safe(p.github_url) || safe(p.live_url)) && (
-                        <div className="flex gap-3 mt-auto pt-3">
-                          {safe(p.github_url) && (
-                            <a href={safe(p.github_url)} target="_blank" rel="noopener noreferrer nofollow" className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5">
-                              <FontAwesomeIcon icon={faGithub} /> Code
-                            </a>
-                          )}
-                          {safe(p.live_url) && (
-                            <a href={safe(p.live_url)} target="_blank" rel="noopener noreferrer nofollow" className="text-gray-400 hover:text-white text-xs flex items-center gap-1.5">
-                              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-[10px]" /> Live
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {d.experience?.length > 0 && (
-              <Card icon={faBriefcase} title="Experience">
-                <div className="flex flex-col gap-4">
-                  {d.experience.map((e, i) => (
-                    <div key={i} className="flex gap-3">
-                      <span className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-white font-semibold text-sm">
-                          {e.role}{e.organisation && <span className="text-gray-400 font-normal"> · {e.organisation}</span>}
-                        </p>
-                        {e.period && <p className="text-gray-500 text-xs mt-0.5">{e.period}</p>}
-                        {e.summary && <p className="text-gray-400 text-xs sm:text-sm mt-1.5 leading-relaxed">{e.summary}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-
-          {/* ── Right: skills, education, certifications, achievements ── */}
-          <div className="flex flex-col gap-4 sm:gap-5">
-            {d.skills?.length > 0 && (
-              <Card title="Skills">
-                <div className="flex flex-wrap gap-1.5">
-                  {d.skills.map((s, i) => (
-                    <span key={i} className="text-xs text-gray-200 bg-white/5 border border-white/8 px-2.5 py-1 rounded-lg">{s.name}</span>
-                  ))}
-                </div>
-                <p className="text-gray-600 text-[11px] mt-3">Listed by the student</p>
-              </Card>
-            )}
-
-            {edu && (
-              <Card icon={faGraduationCap} title="Education">
-                <p className="text-white font-semibold text-sm">{edu.course}{edu.specialization ? ` — ${edu.specialization}` : ''}</p>
-                {edu.school && <p className="text-gray-400 text-xs mt-1">{edu.school}</p>}
-                {(edu.year_level || edu.expected_graduation) && (
-                  <p className="text-gray-500 text-xs mt-1">
-                    {[edu.year_level, edu.expected_graduation && `Expected ${edu.expected_graduation}`].filter(Boolean).join(' · ')}
-                  </p>
-                )}
-                {edu.honors && <p className="text-amber-400 text-xs mt-2">{edu.honors}</p>}
-              </Card>
-            )}
-
-            {d.certifications?.length > 0 && (
-              <Card icon={faCertificate} title="Certifications">
-                <div className="flex flex-col gap-3">
-                  {d.certifications.map((c, i) => (
-                    <div key={i}>
-                      <p className="text-white text-sm font-medium">
-                        {safe(c.credential_url)
-                          ? <a href={safe(c.credential_url)} target="_blank" rel="noopener noreferrer nofollow" className="hover:text-blue-400 transition-colors">{c.title} <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="text-[9px] ml-0.5" /></a>
-                          : c.title}
-                      </p>
-                      <p className="text-gray-500 text-xs">{[c.issuer, monthYear(c.issued_date)].filter(Boolean).join(' · ')}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {d.achievements?.length > 0 && (
-              <Card icon={faTrophy} title="Achievements">
-                <div className="flex flex-col gap-3">
-                  {d.achievements.map((a, i) => (
-                    <div key={i}>
-                      <p className="text-white text-sm font-medium">{a.title}</p>
-                      <p className="text-gray-500 text-xs">{[a.category, monthYear(a.achieved_date)].filter(Boolean).join(' · ')}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        </div>
-
+        {/* Rows, not two long columns: every card in a row is the same height,
+            so there's never a gap under a short column. A row with a missing
+            section lets the others widen to fill it. */}
+        {projectsCard}
+        <Row cards={[experienceCard, educationCard]} />
+        <Row cards={[skillsCard, certificationsCard, achievementsCard]} />
         <footer className="text-center text-gray-600 text-xs pt-4">
           Built with <Link to="/" className="text-gray-400 hover:text-white">ProFolio</Link>
           {d.updated_at && <> · verified results as of {monthYear(d.updated_at)}</>}
