@@ -804,12 +804,7 @@ export default function LandingPage() {
               </a>
             </div>
           </Reveal>
-
-          <Reveal delay={1000}>
-            <p className="text-gray-600 text-[13px]">
-              Free for students · Faculty accounts approved by an administrator
-            </p>
-          </Reveal>
+          
         </div>
 
         {/* Outside the centred block, so it anchors to the section rather than
