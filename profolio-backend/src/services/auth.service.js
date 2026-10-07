@@ -264,4 +264,99 @@ const facebookSignIn = async ({ accessToken, role, intent }) => {
   return socialSignIn({ email: profile.email, full_name: cleanName(profile.name, profile.email), role, intent, provider: 'Facebook' });
 };
 
-module.exports = { register, login, googleSignIn, facebookSignIn };
+// ─── GitHub sign-in ─────────────────────────────────────────────────────────
+// The popup sends the user to GitHub, and GitHub sends them back to our
+// callback page with a one-time code. The code is useless without the client
+// secret, which only this server has — so a code that trades successfully was
+// made for THIS app. The token is then used once to read the user's name and
+// their verified email addresses, and is not kept.
+
+const GITHUB_API = 'https://api.github.com';
+
+const getGithubApp = () => {
+  const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = process.env;
+  if (!GITHUB_CLIENT_ID || !GITHUB_CLIENT_SECRET) {
+    throw { status: 503, message: 'GitHub sign-in is not set up on the server yet.' };
+  }
+  return { id: GITHUB_CLIENT_ID, secret: GITHUB_CLIENT_SECRET };
+};
+
+const isCallbackUrl = (u) => {
+  try {
+    const url = new URL(u);
+    return /^https?:$/.test(url.protocol) && url.pathname === '/github-callback.html' && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+};
+
+const githubGet = async (path, token) => {
+  const res = await fetch(`${GITHUB_API}${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'ProFolio', // GitHub rejects API calls without one
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || `GitHub replied ${res.status}`);
+  return body;
+};
+
+const verifyGithubCode = async (code, redirectUri) => {
+  if (typeof code !== 'string' || !code.trim() || code.length > 512) {
+    throw { status: 400, message: 'Missing GitHub sign-in code.' };
+  }
+
+  const app = getGithubApp();
+  let profile;
+  let emails;
+  try {
+    const res = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'ProFolio' },
+      // The same callback address the popup used. GitHub checks it against the
+      // addresses registered on the app, so a wrong one simply fails.
+      body: JSON.stringify({
+        client_id: app.id,
+        client_secret: app.secret,
+        code,
+        ...(isCallbackUrl(redirectUri) ? { redirect_uri: redirectUri } : {}),
+      }),
+    });
+    const token = await res.json().catch(() => ({}));
+    if (!res.ok || token.error || !token.access_token) {
+      throw new Error(token.error_description || token.error || `GitHub replied ${res.status}`);
+    }
+
+    [profile, emails] = await Promise.all([
+      githubGet('/user', token.access_token),
+      githubGet('/user/emails', token.access_token),
+    ]);
+  } catch (err) {
+    console.warn('⚠️  GitHub sign-in rejected:', err.message);
+    throw { status: 401, message: 'GitHub sign-in failed. Please try again.' };
+  }
+
+  // Only an address GitHub has verified counts. The primary one is preferred.
+  // GitHub's private "…@users.noreply.github.com" relay can't receive mail, so it is skipped.
+  const usable = (Array.isArray(emails) ? emails : [])
+    .filter((e) => e.verified && e.email && !/noreply\.github\.com$/i.test(e.email));
+  const pick = usable.find((e) => e.primary) || usable[0];
+  if (!pick) {
+    throw {
+      status: 400,
+      message: 'Your GitHub account has no verified email address. Add and verify one in GitHub (Settings \u2192 Emails), or sign in with Google or your email instead.',
+    };
+  }
+
+  return { email: pick.email, name: profile?.name || profile?.login };
+};
+
+const githubSignIn = async ({ code, redirectUri, role, intent }) => {
+  const { email, name } = await verifyGithubCode(code, redirectUri);
+  return socialSignIn({ email, full_name: cleanName(name, email), role, intent, provider: 'GitHub' });
+};
+
+module.exports = { register, login, googleSignIn, facebookSignIn, githubSignIn };

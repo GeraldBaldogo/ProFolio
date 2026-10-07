@@ -38,4 +38,14 @@ const facebook = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, google, facebook };
+const github = async (req, res, next) => {
+  try {
+    const { code, redirectUri, role, intent } = req.body || {};
+    const result = await authService.githubSignIn({ code, redirectUri, role, intent });
+    res.status(result.created ? 201 : 200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, google, facebook, github };

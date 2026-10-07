@@ -81,12 +81,12 @@ export default function PrivacyPage() {
           ]} />
         </Section>
 
-        <Section id="social" title="Signing in with Google or Facebook">
+        <Section id="social" title="Signing in with Google, Facebook or GitHub">
           <p>
-            If you choose “Continue with Google” or “Continue with Facebook”, we receive only your
-            <span className="text-gray-300"> name and email address</span>, to create or find your ProFolio
-            account. We do not receive your Google or Facebook password, we do not see your friends, photos
-            or posts, and we never post anything on your behalf.
+            If you choose “Continue with Google”, “Continue with Facebook” or “Continue with GitHub”, we
+            receive only your<span className="text-gray-300"> name and email address</span>, to create or find
+            your ProFolio account. We do not receive your password for those services, we do not see your
+            friends, photos, posts or code repositories, and we never post anything on your behalf.
           </p>
         </Section>
 

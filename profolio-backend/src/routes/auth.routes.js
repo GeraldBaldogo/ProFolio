@@ -7,6 +7,7 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/google', authController.google);
 router.post('/facebook', authController.facebook);
+router.post('/github', authController.github);
 
 router.get('/me', authenticate, (req, res) => {
   res.json({ 

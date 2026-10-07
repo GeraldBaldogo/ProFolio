@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Signing in… · ProFolio</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #060612;
+            color: #9ca3af;
+            font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+            text-align: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        p {
+            margin: 0;
+            max-width: 320px;
+        }
+    </style>
+</head>
+
+<body>
+    <p id="msg">Finishing GitHub sign-in…</p>
+    <script>
+        // GitHub sends the popup here after sign-in. This page passes the code
+        // back to the ProFolio tab that opened it, then closes. It does nothing
+        // else and never sends the code anywhere but this same site.
+        (function () {
+            var q = new URLSearchParams(window.location.search);
+            var data = {
+                type: 'profolio-github',
+                code: q.get('code'),
+                state: q.get('state'),
+                error: q.get('error'),
+                error_description: q.get('error_description'),
+            };
+
+            // Keep the code out of the address bar and history.
+            try { history.replaceState(null, '', window.location.pathname); } catch (e) { }
+
+            try {
+                if (window.opener && !window.opener.closed) window.opener.postMessage(data, window.location.origin);
+            } catch (e) { }
+            try {
+                var bc = new BroadcastChannel('profolio-github');
+                bc.postMessage(data);
+                bc.close();
+            } catch (e) { }
+
+            document.getElementById('msg').textContent = data.code
+                ? 'Signed in with GitHub. You can close this window.'
+                : 'GitHub sign-in was cancelled. You can close this window.';
+            setTimeout(function () { window.close(); }, 150);
+        })();
+    </script>
+</body>
+
+</html>
