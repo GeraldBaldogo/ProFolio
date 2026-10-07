@@ -462,6 +462,7 @@ const RegisterPage = () => {
           </div>
 
           <SocialSignIn
+            intent="register"
             role={form.role}
             disabled={loading}
             onSuccess={handleGoogle}

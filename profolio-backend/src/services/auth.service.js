@@ -130,13 +130,31 @@ const verifyGoogleCode = async (code) => {
 };
 
 // Used by every "Continue with …" button once the provider has told us who
-// the user is. If the email already has a ProFolio account, that account is
-// used (whatever its role). If not, a new account is made with the role picked
-// on the sign-up page — student unless they chose professor.
-const socialSignIn = async ({ email, full_name, role = 'student' }) => {
+// the user is. What happens depends on which page the button was on:
+//   intent 'register' – makes a NEW account with the role picked on the page.
+//                       If the email is already registered, says so instead.
+//   intent 'login'    – signs in to an EXISTING account. If there isn't one,
+//                       says so instead of quietly making a student account
+//                       (a professor would end up with the wrong role).
+// With no intent (an older frontend), it signs in or creates, as before.
+const socialSignIn = async ({ email, full_name, role = 'student', intent, provider }) => {
   email = email.toLowerCase();
 
   const existing = await userRepo.findByEmailAnyCase(email);
+
+  if (existing && intent === 'register') {
+    throw {
+      status: 409,
+      message: `${email} already has a ProFolio account. Go to Sign in and choose ${provider} there.`,
+    };
+  }
+  if (!existing && intent === 'login') {
+    throw {
+      status: 404,
+      message: `No ProFolio account uses ${email} yet. Create one first \u2014 choose Create one below, then ${provider}.`,
+    };
+  }
+
   if (existing) {
     assertCanSignIn(existing);
     return { user: publicUser(existing), token: signToken(existing) };
@@ -162,10 +180,10 @@ const cleanName = (raw, email) => {
   return (name || email.split('@')[0]).slice(0, 100);
 };
 
-const googleSignIn = async ({ code, role }) => {
+const googleSignIn = async ({ code, role, intent }) => {
   const payload = await verifyGoogleCode(code);
   const name = payload.name || [payload.given_name, payload.family_name].filter(Boolean).join(' ');
-  return socialSignIn({ email: payload.email, full_name: cleanName(name, payload.email), role });
+  return socialSignIn({ email: payload.email, full_name: cleanName(name, payload.email), role, intent, provider: 'Google' });
 };
 
 // ─── Facebook sign-in ───────────────────────────────────────────────────────
@@ -241,9 +259,9 @@ const verifyFacebookToken = async (accessToken) => {
   return profile;
 };
 
-const facebookSignIn = async ({ accessToken, role }) => {
+const facebookSignIn = async ({ accessToken, role, intent }) => {
   const profile = await verifyFacebookToken(accessToken);
-  return socialSignIn({ email: profile.email, full_name: cleanName(profile.name, profile.email), role });
+  return socialSignIn({ email: profile.email, full_name: cleanName(profile.name, profile.email), role, intent, provider: 'Facebook' });
 };
 
 module.exports = { register, login, googleSignIn, facebookSignIn };

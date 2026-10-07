@@ -20,8 +20,8 @@ const login = async (req, res, next) => {
 
 const google = async (req, res, next) => {
   try {
-    const { code, role } = req.body || {};
-    const result = await authService.googleSignIn({ code, role });
+    const { code, role, intent } = req.body || {};
+    const result = await authService.googleSignIn({ code, role, intent });
     res.status(result.created ? 201 : 200).json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -30,8 +30,8 @@ const google = async (req, res, next) => {
 
 const facebook = async (req, res, next) => {
   try {
-    const { accessToken, role } = req.body || {};
-    const result = await authService.facebookSignIn({ accessToken, role });
+    const { accessToken, role, intent } = req.body || {};
+    const result = await authService.facebookSignIn({ accessToken, role, intent });
     res.status(result.created ? 201 : 200).json({ success: true, data: result });
   } catch (err) {
     next(err);

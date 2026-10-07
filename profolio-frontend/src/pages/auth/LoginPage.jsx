@@ -293,7 +293,7 @@ const LoginPage = () => {
           </div>
 
           <SocialSignIn
-            role="student"
+            intent="login"
             disabled={loading}
             onSuccess={handleGoogle}
             onError={setError}

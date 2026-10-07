@@ -13,6 +13,7 @@ import { facebookConfigured, preloadFacebook, requestFacebookToken } from '../se
 // .env shows as switched off, so nobody clicks a button that does nothing.
 //
 // Props
+//   intent    – 'login' (existing accounts only) or 'register' (new accounts only)
 //   role      – only used when the provider makes a NEW account ('student' | 'evaluator')
 //   disabled  – true while the page's own form is submitting
 //   onSuccess – gets the backend's reply: { user, token } or { pending, message }
@@ -55,7 +56,7 @@ const PROVIDERS = [
 const baseBtn =
   'flex items-center justify-center gap-2 border border-white/10 bg-white/[0.03] text-gray-300 py-3 rounded-xl font-semibold transition-all'
 
-const SocialSignIn = ({ role, disabled = false, onSuccess, onError, gap = 'gap-3', textSize = 'text-[14px]' }) => {
+const SocialSignIn = ({ intent, role, disabled = false, onSuccess, onError, gap = 'gap-3', textSize = 'text-[14px]' }) => {
   const [busy, setBusy] = useState(null) // key of the provider in progress
   const alive = useRef(true)
 
@@ -74,7 +75,7 @@ const SocialSignIn = ({ role, disabled = false, onSuccess, onError, gap = 'gap-3
     try {
       // getCredential opens the popup straight away, still inside the click.
       const credential = await p.getCredential()
-      const res = await api.post(p.endpoint, { ...credential, role })
+      const res = await api.post(p.endpoint, { ...credential, role, intent })
       if (alive.current) onSuccess?.(res.data.data)
     } catch (err) {
       if (!alive.current || err?.cancelled) return
