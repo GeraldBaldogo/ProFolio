@@ -18,4 +18,24 @@ const login = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login };
+const google = async (req, res, next) => {
+  try {
+    const { code, role } = req.body || {};
+    const result = await authService.googleSignIn({ code, role });
+    res.status(result.created ? 201 : 200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const facebook = async (req, res, next) => {
+  try {
+    const { accessToken, role } = req.body || {};
+    const result = await authService.facebookSignIn({ accessToken, role });
+    res.status(result.created ? 201 : 200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, google, facebook };

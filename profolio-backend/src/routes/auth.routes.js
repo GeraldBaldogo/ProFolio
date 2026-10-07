@@ -5,6 +5,8 @@ const { authenticate } = require('../middleware/auth.middleware');
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/google', authController.google);
+router.post('/facebook', authController.facebook);
 
 router.get('/me', authenticate, (req, res) => {
   res.json({ 

@@ -10,6 +10,22 @@ const findByEmail = async (email) => {
   return data;
 };
 
+// Case-insensitive match, for sign-ins that come from Google: Google always
+// sends a lowercase address, but older accounts may have been typed with
+// capitals. % and _ are escaped so they're matched literally, not as wildcards.
+const findByEmailAnyCase = async (email) => {
+  const exact = await findByEmail(email);
+  if (exact) return exact;
+  const escaped = String(email).replace(/[\\%_]/g, (c) => '\\' + c);
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .ilike('email', escaped)
+    .limit(1);
+  if (error || !data?.length) return null;
+  return data[0];
+};
+
 const findById = async (id) => {
   const { data, error } = await supabase
     .from('users')
@@ -43,4 +59,4 @@ const updateStudentProfile = async (user_id, updates) => {
   return data;
 };
 
-module.exports = { findByEmail, findById, create, updateStudentProfile };
+module.exports = { findByEmail, findByEmailAnyCase, findById, create, updateStudentProfile };

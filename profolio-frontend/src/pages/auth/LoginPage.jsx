@@ -7,48 +7,20 @@ import {
   faArrowRight, faCircleNotch, faTriangleExclamation,
   faCircleCheck, faTerminal, faCircle, faImage,
 } from '@fortawesome/free-solid-svg-icons'
-import { faGithub, faGoogle, faFacebook } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
+import SocialSignIn from '../../components/SocialSignIn'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 // Same image the landing page uses for its hero, so the two pages feel like
 // one product. Swap for a real TCC photo whenever you have one.
 const SIDE_PHOTO = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1400&q=80'
 
-// ─── Social providers config ───────────────────────────────────────────────────
-// Each provider redirects to your Express OAuth route.
-// Backend should handle: GET /auth/google, /auth/facebook, /auth/github
-// and callback: GET /auth/google/callback, etc.
-const SOCIAL_PROVIDERS = [
-  {
-    key: 'google',
-    label: 'Google',
-    icon: faGoogle,
-    href: `${import.meta.env.VITE_API_URL}/auth/google`,
-    iconColor: '#EA4335',
-  },
-  {
-    key: 'facebook',
-    label: 'Facebook',
-    icon: faFacebook,
-    href: `${import.meta.env.VITE_API_URL}/auth/facebook`,
-    iconColor: '#1877F2',
-  },
-  {
-    key: 'github',
-    label: 'GitHub',
-    icon: faGithub,
-    href: `${import.meta.env.VITE_API_URL}/auth/github`,
-    iconColor: '#ffffff',
-  },
-]
-
 // What a student walks away with — same three claims as the landing hero.
 const PROMISES = [
   'Rubric-based scoring',
   'Anti-cheat monitored',
-  'Human-reviewed',
+  'Set by your professors',
 ]
 
 const validate = (f) => {
@@ -84,6 +56,24 @@ const LoginPage = () => {
     setFieldErrors(v => ({ ...v, [name]: found[name] }))
   }
 
+  const signIn = (user, token) => {
+    login(user, token)
+    if (user.role === 'student') navigate('/student/dashboard')
+    else if (user.role === 'evaluator') navigate('/evaluator/dashboard')
+    else if (user.role === 'admin') navigate('/admin/dashboard')
+    else navigate('/') // unknown role — don't strand them on this screen
+  }
+
+  // Google replies the same way as email login. A brand-new professor made
+  // from here would still need approval, so show that instead of signing in.
+  const handleGoogle = (data) => {
+    if (data?.pending || !data?.token) {
+      setError(data?.message || 'Your professor account is waiting for admin approval.')
+      return
+    }
+    signIn(data.user, data.token)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -101,11 +91,7 @@ const LoginPage = () => {
         email: form.email.trim().toLowerCase(),
       })
       const { user, token } = res.data.data
-      login(user, token)
-      if (user.role === 'student') navigate('/student/dashboard')
-      else if (user.role === 'evaluator') navigate('/evaluator/dashboard')
-      else if (user.role === 'admin') navigate('/admin/dashboard')
-      else navigate('/') // unknown role — don't strand them on this screen
+      signIn(user, token)
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.')
     } finally {
@@ -306,19 +292,12 @@ const LoginPage = () => {
             <div className="flex-1 h-px bg-white/8" />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {SOCIAL_PROVIDERS.map((p) => (
-              <a
-                key={p.key}
-                href={p.href}
-                aria-label={`Continue with ${p.label}`}
-                className="flex items-center justify-center gap-2 border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.07] text-gray-300 hover:text-white py-3 rounded-xl text-[14px] font-semibold transition-all"
-              >
-                <FontAwesomeIcon icon={p.icon} className="text-base" style={{ color: p.iconColor }} />
-                <span className="hidden sm:inline lg:hidden xl:inline">{p.label}</span>
-              </a>
-            ))}
-          </div>
+          <SocialSignIn
+            role="student"
+            disabled={loading}
+            onSuccess={handleGoogle}
+            onError={setError}
+          />
 
           {/* Register */}
           <p className="text-center text-sm text-gray-500 mt-8">

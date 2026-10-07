@@ -15,7 +15,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // A 401 from the sign-in endpoints just means "wrong password" or "Google
+    // said no" — let the page show the message instead of reloading it.
+    const url = error.config?.url || ''
+    const isSignIn = /^\/?auth\/(login|register|google)/.test(url)
+    if (error.response?.status === 401 && !isSignIn) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'

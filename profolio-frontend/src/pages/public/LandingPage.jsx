@@ -1416,6 +1416,7 @@ export default function LandingPage() {
               <div className="flex flex-col gap-2">
                 <Link to="/login" className="text-gray-500 hover:text-white text-[13px] transition-colors">Sign in</Link>
                 <Link to="/register" className="text-gray-500 hover:text-white text-[13px] transition-colors">Register</Link>
+                <Link to="/privacy" className="text-gray-500 hover:text-white text-[13px] transition-colors">Privacy</Link>
               </div>
             </div>
           </div>

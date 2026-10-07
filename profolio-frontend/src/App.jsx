@@ -5,6 +5,7 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import ShowcasePage from './pages/public/ShowcasePage'
 import ScoringPage from './pages/public/ScoringPage'
+import PrivacyPage from './pages/public/PrivacyPage'
 import StudentDashboard from './pages/student/StudentDashboard'
 import PortfolioBuilder from './pages/student/PortfolioBuilder'
 import ProtectedRoutes from './routes/ProtectedRoutes'
@@ -59,6 +60,7 @@ function App() {
       <Route path="/p/:slug" element={<ShowcasePage />} />
       {/* How every assessment is scored. Public, read from the backend rubric. */}
       <Route path="/scoring" element={<ScoringPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/student/dashboard" element={
         <ProtectedRoutes role="student"><StudentDashboard /></ProtectedRoutes>
       } />
