@@ -13,6 +13,7 @@ import ProtectedRoutes from './routes/ProtectedRoutes'
 import EvaluatorDashboard from './pages/evaluator/EvaluatorDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import StudentProfile from './pages/student/StudentProfile'
+import ProfileSetup from './pages/student/ProfileSetup'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminUsers from './pages/admin/AdminUsers'
 import RecommendationsPage from './pages/student/RecommendationsPage'
@@ -63,6 +64,9 @@ function App() {
       <Route path="/scoring" element={<ScoringPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/github-callback.html" element={<GithubCallback />} />
+      <Route path="/student/setup" element={
+        <ProtectedRoutes role="student" allowIncompleteProfile><ProfileSetup /></ProtectedRoutes>
+      } />
       <Route path="/student/dashboard" element={
         <ProtectedRoutes role="student"><StudentDashboard /></ProtectedRoutes>
       } />

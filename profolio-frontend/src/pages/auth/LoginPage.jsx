@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SocialSignIn from '../../components/SocialSignIn'
+import { destinationAfterSignIn } from '../../utils/profileSetup'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 // Same image the landing page uses for its hero, so the two pages feel like
@@ -56,12 +57,10 @@ const LoginPage = () => {
     setFieldErrors(v => ({ ...v, [name]: found[name] }))
   }
 
-  const signIn = (user, token) => {
+  // Students who haven't finished setting up their profile go there first.
+  const signIn = async (user, token) => {
     login(user, token)
-    if (user.role === 'student') navigate('/student/dashboard')
-    else if (user.role === 'evaluator') navigate('/evaluator/dashboard')
-    else if (user.role === 'admin') navigate('/admin/dashboard')
-    else navigate('/') // unknown role — don't strand them on this screen
+    navigate(await destinationAfterSignIn(user))
   }
 
   // Google replies the same way as email login. A brand-new professor made
@@ -91,7 +90,7 @@ const LoginPage = () => {
         email: form.email.trim().toLowerCase(),
       })
       const { user, token } = res.data.data
-      signIn(user, token)
+      await signIn(user, token)
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.')
     } finally {

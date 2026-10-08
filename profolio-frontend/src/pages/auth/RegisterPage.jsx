@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import SocialSignIn from '../../components/SocialSignIn'
+import { destinationAfterSignIn } from '../../utils/profileSetup'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 const SIDE_PHOTO = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1400&q=80'
@@ -78,12 +79,10 @@ const RegisterPage = () => {
     setFieldErrors(v => ({ ...v, [name]: found[name] }))
   }
 
-  const signIn = (user, token) => {
+  // Students who haven't finished setting up their profile go there first.
+  const signIn = async (user, token) => {
     login(user, token)
-    if (user.role === 'student') navigate('/student/dashboard')
-    else if (user.role === 'evaluator') navigate('/evaluator/dashboard')
-    else if (user.role === 'admin') navigate('/admin/dashboard')
-    else navigate('/')
+    navigate(await destinationAfterSignIn(user))
   }
 
   // Google sign-up uses the Student/Professor choice above. A new professor
@@ -126,7 +125,7 @@ const RegisterPage = () => {
         return
       }
 
-      signIn(data.user, data.token)
+      await signIn(data.user, data.token)
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.')
     } finally {
