@@ -146,12 +146,25 @@ const ProctoringCamera = ({
   const [screenState, setScreenState] = useState('idle')
   const [screenNote, setScreenNote] = useState('')
 
+  // The latest onViolation, read through a ref so reportViolation (and
+  // runDetection, which uses it) keep the same identity across renders.
+  //
+  // SQL, Bug Fix, Communication and Coding pass a new arrow function on every
+  // render, and their countdown re-renders the page every second. When
+  // runDetection changed with it, the detection interval below was cleared
+  // and restarted every second — so its 2-second tick never came, face
+  // detection never ran, and the label stayed on "Checking..." for the whole
+  // attempt. Typing and Flowchart passed a stable function, which is why only
+  // they worked.
+  const onViolationRef = useRef(onViolation)
+  onViolationRef.current = onViolation
+
   const reportViolation = useCallback((type) => {
     const now = Date.now()
     if (now - lastViolationRef.current[type] < VIOLATION_COOLDOWN_MS) return
     lastViolationRef.current[type] = now
-    onViolation?.(type)
-  }, [onViolation])
+    onViolationRef.current?.(type)
+  }, [])
 
   const stopScreenShare = useCallback(() => {
     screenStreamRef.current?.getTracks().forEach(t => t.stop())
