@@ -72,6 +72,11 @@ const validate = (step, f) => {
   return e
 }
 
+// The open dropdown list is drawn by the browser, and on some (Chrome on
+// Windows) it stays white even in dark mode while the options inherit white
+// text. Fixed colors on each option keep the list readable in every theme.
+const OPTION_STYLE = { color: '#0f172a', backgroundColor: '#ffffff' }
+
 const inputBase = 'w-full bg-white/[0.04] rounded-xl px-4 py-3 text-white text-[15px] placeholder-gray-600 outline-none transition-all border'
 const inputState = (err) => err
   ? 'border-rose-500/50 focus:border-rose-400'
@@ -329,8 +334,8 @@ const ProfileSetup = () => {
                 <Field id="year_level" label="Year level" error={errors.year_level}>
                   <select id="year_level" className={`${inputBase} ${inputState(errors.year_level)}`}
                     value={form.year_level} onChange={set('year_level')}>
-                    <option value="">Choose…</option>
-                    {YEAR_LEVELS.map((y) => <option key={y} value={y}>{y}</option>)}
+                    <option value="" style={OPTION_STYLE}>Choose…</option>
+                    {YEAR_LEVELS.map((y) => <option key={y} value={y} style={OPTION_STYLE}>{y}</option>)}
                   </select>
                 </Field>
                 <Field id="grad_month" label="Expected graduation" error={errors.expected_graduation}>
@@ -338,23 +343,23 @@ const ProfileSetup = () => {
                     <select id="grad_month" aria-label="Graduation month"
                       className={`${inputBase} ${inputState(errors.expected_graduation)}`}
                       value={gradMonth} onChange={(e) => setGrad(e.target.value, gradYear)}>
-                      <option value="">Month</option>
-                      {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      <option value="" style={OPTION_STYLE}>Month</option>
+                      {MONTHS.map((m) => <option key={m} value={m} style={OPTION_STYLE}>{m}</option>)}
                     </select>
                     <select aria-label="Graduation year"
                       className={`${inputBase} ${inputState(errors.expected_graduation)}`}
                       value={gradYear} onChange={(e) => setGrad(gradMonth, e.target.value)}>
-                      <option value="">Year</option>
-                      {gradYears.map((y) => <option key={y} value={y}>{y}</option>)}
+                      <option value="" style={OPTION_STYLE}>Year</option>
+                      {gradYears.map((y) => <option key={y} value={y} style={OPTION_STYLE}>{y}</option>)}
                     </select>
                   </div>
                 </Field>
               </div>
-              <Field id="specialization" label="Specialisation" optional>
+              <Field id="specialization" label="Specialization" optional>
                 <input id="specialization" className={`${inputBase} ${inputState()}`}
                   placeholder="e.g. Web Development" value={form.specialization} onChange={set('specialization')} />
               </Field>
-              <Field id="academic_honors" label="Honours" optional>
+              <Field id="academic_honors" label="Honors" optional>
                 <input id="academic_honors" className={`${inputBase} ${inputState()}`}
                   placeholder="e.g. Dean's Lister, 1st Semester 2025" value={form.academic_honors} onChange={set('academic_honors')} />
               </Field>

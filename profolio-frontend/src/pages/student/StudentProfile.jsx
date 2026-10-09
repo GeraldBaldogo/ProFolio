@@ -403,8 +403,8 @@ const StudentProfile = () => {
                     <div>
                       <label className={labelClass}>Year Level</label>
                       <select className={inputClass} value={form.year_level} onChange={e => setForm({ ...form, year_level: e.target.value })}>
-                        <option value="">Select year level</option>
-                        {yearLevels.map(y => <option key={y} value={y}>{y}</option>)}
+                        <option value="" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Select year level</option>
+                        {yearLevels.map(y => <option key={y} value={y} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>{y}</option>)}
                       </select>
                     </div>
                   </div>
