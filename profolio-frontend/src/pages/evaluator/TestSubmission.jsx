@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import FacultyReviewPanel from '../../components/FacultyReviewPanel'
+import SidebarTheme from '../../components/SidebarTheme'
 
 // Must match the other evaluator pages exactly. This page had no sidebar at
 // all, so opening Results made the whole navigation vanish.
@@ -152,7 +153,7 @@ const TestSubmissions = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -167,6 +168,8 @@ const TestSubmissions = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -209,7 +212,7 @@ const TestSubmissions = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -224,6 +227,8 @@ const TestSubmissions = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -276,7 +281,7 @@ const TestSubmissions = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -291,6 +296,8 @@ const TestSubmissions = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -360,13 +367,16 @@ const TestSubmissions = () => {
                 <div key={row.id} className="border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden">
 
                   {/* Summary row */}
-                  <div className="flex flex-wrap items-center gap-4 px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 px-4 sm:px-5 py-4">
                     <Avatar name={name} />
                     <div className="flex-1 min-w-0">
                       <p className="text-white text-sm font-semibold truncate">{name}</p>
                       <p className="text-gray-500 text-xs truncate">{row.users?.email}</p>
                     </div>
 
+                    {/* Flags and status. On a phone they drop to a second line so
+                        the student's name isn't squeezed to a couple of letters. */}
+                    <div className="order-last basis-full pl-[3.25rem] flex flex-wrap items-center gap-2 sm:order-none sm:basis-auto sm:pl-0 sm:gap-4">
                     {/* Flags — worth seeing before the score, since they change
                         how the score should be read */}
                     {result && (flags > 0 || meta.unproctored) && (
@@ -388,8 +398,9 @@ const TestSubmissions = () => {
                     <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${status.bg} ${status.border} ${status.color} flex-shrink-0`}>
                       <FontAwesomeIcon icon={status.icon} /> {status.label}
                     </span>
+                    </div>
 
-                    <div className="w-16 text-right flex-shrink-0">
+                    <div className="w-14 sm:w-16 text-right flex-shrink-0">
                       {result ? (
                         <>
                           <p className={`text-2xl font-black font-mono ${scoreColor(result.score)}`}>{result.score}</p>

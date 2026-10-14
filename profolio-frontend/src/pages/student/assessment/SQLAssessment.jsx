@@ -16,6 +16,7 @@ import AttemptAward from '../../../components/AttemptAward'
 import SchemaViewer from '../../../components/SchemaViewer'
 import { runSqlInBrowser, warmUpSql, signatureOf, signatureHash } from '../../../utils/sqlBrowser'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
+import ThemeToggle from '../../../components/ThemeToggle'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 const TIME_LIMITS = { easy: 600, medium: 900, hard: 1200 }
@@ -416,13 +417,14 @@ const SQLAssessment = () => {
         <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-lg flex items-center gap-2">
             <FontAwesomeIcon icon={faDatabase} className="text-emerald-400" />
             {test?.title || 'SQL Query Challenge'}
           </h1>
           <p className="text-gray-500 text-xs">Write SQL queries against a defined schema under time pressure.</p>
         </div>
+        <ThemeToggle />
       </div>
 
       {setupError && (

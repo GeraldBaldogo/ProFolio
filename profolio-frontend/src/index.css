@@ -602,3 +602,16 @@ html[data-fx-still] .lp-aurora { animation-play-state: paused; }
 
 /* Nothing of this belongs on paper (the CV prints on white) */
 @media print { .lp-backdrop { display: none !important; } }
+/* ── Mobile: no zoom on form fields ──────────────────────────────────────────
+   Phones (iPhone Safari in particular) zoom the whole page in when you tap a
+   field whose text is smaller than 16px, and leave it zoomed after you're
+   done typing. 16px on small screens stops that, without turning off pinch
+   zoom for people who need it. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

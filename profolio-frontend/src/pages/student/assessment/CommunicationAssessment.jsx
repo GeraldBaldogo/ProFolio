@@ -12,6 +12,7 @@ import ProctoringCamera from '../../../components/ProctoringCamera'
 import PracticeLevels from '../../../components/PracticeLevels'
 import AttemptAward from '../../../components/AttemptAward'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
+import ThemeToggle from '../../../components/ThemeToggle'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 const TIME_LIMITS = { easy: 5 * 60, medium: 8 * 60, hard: 12 * 60 }
@@ -266,13 +267,14 @@ const CommunicationAssessment = () => {
         <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-lg flex items-center gap-2">
             <FontAwesomeIcon icon={faComments} className="text-cyan-400" />
             {test?.title || 'Communication Skills'}
           </h1>
           <p className="text-gray-500 text-xs">Write professional responses to real-world workplace prompts.</p>
         </div>
+        <ThemeToggle />
       </div>
 
       {setupError && (

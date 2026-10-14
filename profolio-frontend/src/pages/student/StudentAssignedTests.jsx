@@ -13,6 +13,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
+import AvatarFill from '../../components/AvatarFill'
+import SidebarTheme from '../../components/SidebarTheme'
 // Must match the other student pages exactly, or the sidebar reorders itself
 // as the student moves between pages.
 const navItems = [
@@ -155,7 +157,7 @@ const StudentAssignedTests = () => {
         <div className="px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.full_name?.charAt(0).toUpperCase()}
+              <AvatarFill />
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
@@ -185,6 +187,8 @@ const StudentAssignedTests = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>

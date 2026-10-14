@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import ThemeToggle from '../../components/ThemeToggle'
 
 /*
  * "How scoring works" — public, at /scoring.
@@ -60,6 +61,7 @@ export default function ScoringPage() {
           className="ml-auto flex items-center gap-2 text-gray-400 hover:text-white text-xs sm:text-sm font-medium transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} className="text-xs" /> Back
         </button>
+        <ThemeToggle />
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-16">

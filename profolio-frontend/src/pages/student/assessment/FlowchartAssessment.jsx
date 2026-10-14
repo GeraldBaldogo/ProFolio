@@ -14,6 +14,7 @@ import AttemptAward from '../../../components/AttemptAward'
 import FlowchartEditor from '../../../components/FlowchartEditor'
 import { useProctoring } from '../../../hooks/useProctoring'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
+import ThemeToggle from '../../../components/ThemeToggle'
 
 const FlowchartAssessment = () => {
   const navigate = useNavigate()
@@ -309,7 +310,7 @@ const FlowchartAssessment = () => {
         <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
         </button>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-base sm:text-lg flex items-center gap-2 break-words">
             <FontAwesomeIcon icon={faDiagramProject} className="text-emerald-400" />
             {test?.title || 'Flowchart Assessment'}
@@ -317,11 +318,12 @@ const FlowchartAssessment = () => {
           <p className="text-gray-500 text-xs">Draw the flowchart on paper, take a photo, and upload it</p>
         </div>
         {totalViolations > 0 && (
-          <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 text-xs font-semibold">
+          <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 text-xs font-semibold">
             <FontAwesomeIcon icon={faShield} />
             {totalViolations} flag{totalViolations !== 1 ? 's' : ''}
           </div>
         )}
+        <ThemeToggle />
       </div>
 
       {testId && (

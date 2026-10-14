@@ -9,9 +9,11 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import { listConversations, startConversation } from '../../services/messaging.service'
+import { getSocket } from '../../services/socket'
 import ChatThread from '../../components/ChatThread'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import SidebarTheme from '../../components/SidebarTheme'
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/evaluator/dashboard' },
@@ -88,6 +90,36 @@ const EvaluatorMessagesPage = () => {
 
   const handleLogout = () => { logout(); navigate('/') }
 
+  // Keeps the list in step when a nickname changes, here or on the other
+  // person's screen.
+  const mergeConversation = (updated) => {
+    if (!updated?.id) return
+    setConversations((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)))
+  }
+
+  useEffect(() => {
+    const socket = getSocket()
+    socket.on('conversation_updated', mergeConversation)
+    return () => socket.off('conversation_updated', mergeConversation)
+  }, [])
+
+  // A message in a conversation this list doesn't have yet (the other person
+  // just started it) reloads the list, so it appears without a refresh.
+  useEffect(() => {
+    const socket = getSocket()
+    const onNotice = (notice) => {
+      if (conversations.some((c) => c.id === notice?.conversation_id)) return
+      listConversations()
+        .then((data) => {
+          setConversations(data || [])
+          setSelectedId((prev) => prev ?? data?.[0]?.id ?? null)
+        })
+        .catch(() => {})
+    }
+    socket.on('message_notification', onNotice)
+    return () => socket.off('message_notification', onNotice)
+  }, [conversations])
+
   // Tell the notification context which thread is on screen, so a message
   // arriving in it doesn't raise a badge — and so opening it clears one.
   useEffect(() => {
@@ -135,7 +167,7 @@ const EvaluatorMessagesPage = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -156,6 +188,8 @@ const EvaluatorMessagesPage = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -245,14 +279,14 @@ const EvaluatorMessagesPage = () => {
                   <button
                     key={c.id}
                     onClick={() => setSelectedId(c.id)}
-                    className={`text-left px-4 py-3 rounded-xl border transition-all flex-shrink-0 lg:w-full ${
+                    className={`text-left px-4 py-3 rounded-xl border transition-all flex-shrink-0 max-w-[15rem] lg:max-w-none lg:w-full ${
                       selectedId === c.id
                         ? 'border-amber-500/30 bg-amber-500/10'
                         : 'border-white/8 bg-white/[0.03] hover:border-white/20'
                     }`}
                   >
                     <p className="text-white text-sm font-semibold truncate">
-                      {c.student?.full_name || 'Student'}
+                      {c.student_nickname || c.student?.full_name || 'Student'}
                     </p>
                     <p className="text-gray-500 text-xs truncate">{c.student?.email}</p>
                   </button>
@@ -263,6 +297,8 @@ const EvaluatorMessagesPage = () => {
                 conversationId={selectedId}
                 currentUserId={user?.id}
                 otherUserName={studentName}
+                conversation={selected}
+                onConversationChange={mergeConversation}
               />
             </div>
           )}

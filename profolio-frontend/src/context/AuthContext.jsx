@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { disconnectSocket } from '../services/socket'
 
 const AuthContext = createContext(null)
 
@@ -18,6 +19,9 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const login = (userData, userToken) => {
+    // A connection opened for whoever was signed in before is closed; the next
+    // getSocket() opens a fresh one with this user's token.
+    disconnectSocket()
     setUser(userData)
     setToken(userToken)
     localStorage.setItem('user', JSON.stringify(userData))
@@ -39,6 +43,9 @@ export const AuthProvider = ({ children }) => {
     setToken(null)
     localStorage.removeItem('user')
     localStorage.removeItem('token')
+    // Close the live message connection too, so the next person to sign in
+    // on this tab doesn't inherit it.
+    disconnectSocket()
   }
 
   return (

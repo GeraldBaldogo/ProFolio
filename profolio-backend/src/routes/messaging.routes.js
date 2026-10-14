@@ -11,5 +11,6 @@ router.post('/conversations', c.startConversation);
 router.get('/conversations', c.listConversations);
 router.get('/conversations/:id/messages', c.getMessages);
 router.post('/conversations/:id/messages', c.sendMessage);
+router.patch('/conversations/:id/nickname', c.setNickname);
 
 module.exports = router;

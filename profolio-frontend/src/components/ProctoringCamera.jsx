@@ -113,13 +113,15 @@ const describeCameraError = (err) => {
   }
 }
 
-const DETECTION_INTERVAL_MS = 2000
+const DETECTION_INTERVAL_MS = 1000
 const VIOLATION_COOLDOWN_MS = 4000 // avoid spamming repeated violations for the same continuous issue
 const LOOK_AWAY_YAW_THRESHOLD = 25 // degrees, approximate — sideways
 const LOOK_DOWN_RATIO_THRESHOLD = 0.62 // nose sitting low in the face box — head tilted down
-// Two consecutive frames (~4s) before flagging. Glancing at the keyboard is
-// normal; sustained looking away is not.
-const LOOK_AWAY_STREAK = 2
+// Checked every second so the label keeps up with the student, but a flag
+// still needs about three seconds of the same thing. Glancing at the keyboard
+// is normal; sustained looking away is not.
+const LOOK_AWAY_STREAK = 3
+const NO_FACE_STREAK = 3
 
 const ProctoringCamera = ({
   onViolation,
@@ -140,8 +142,19 @@ const ProctoringCamera = ({
   // initializing | loading_models | ready | degraded | no_camera
   const [status, setStatus] = useState('initializing')
   const [faceState, setFaceState] = useState('checking')
+  // On phones and tablets the floating panels cover the Start button and the
+  // answer box, so they begin folded up there; a tap opens them.
+  const smallScreen = typeof window !== 'undefined' && window.innerWidth < 1024
   const [minimized, setMinimized] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(!smallScreen)
   const [cameraNote, setCameraNote] = useState('')
+  // On a computer the note opens so it gets read, then folds itself to the
+  // small "Camera off" pill so it never sits on top of a button.
+  useEffect(() => {
+    if (status !== 'no_camera' || !noteOpen) return undefined
+    const t = setTimeout(() => setNoteOpen(false), 10000)
+    return () => clearTimeout(t)
+  }, [status, noteOpen])
   // idle | requesting | sharing | stopped | unsupported
   const [screenState, setScreenState] = useState('idle')
   const [screenNote, setScreenNote] = useState('')
@@ -223,8 +236,14 @@ const ProctoringCamera = ({
     }
   }, [reportViolation])
 
+  // A slow computer can take longer than a second per check. Skipping a tick
+  // while one is still running stops checks piling up and lagging further.
+  const detectingRef = useRef(false)
+
   const runDetection = useCallback(async () => {
     if (!videoRef.current || !window.faceapi || videoRef.current.readyState < 2) return
+    if (detectingRef.current) return
+    detectingRef.current = true
 
     try {
       const detections = await window.faceapi
@@ -235,8 +254,9 @@ const ProctoringCamera = ({
         noFaceStreakRef.current += 1
         lookAwayStreakRef.current = 0
         setFaceState('no_face')
-        // require 2 consecutive misses (~4s) before flagging, to avoid false positives on blinks/lag
-        if (noFaceStreakRef.current >= 2) {
+        // About three seconds without a face before flagging, so a blink or a
+        // dropped frame doesn't cost marks.
+        if (noFaceStreakRef.current >= NO_FACE_STREAK) {
           reportViolation('no_face')
         }
         return
@@ -276,8 +296,8 @@ const ProctoringCamera = ({
       if (lookingAway) {
         lookAwayStreakRef.current += 1
         setFaceState('looking_away')
-        // A single glance shouldn't cost marks. Two consecutive frames means
-        // the head has been turned or lowered for roughly four seconds.
+        // A single glance shouldn't cost marks. Three consecutive checks means
+        // the head has been turned or lowered for roughly three seconds.
         if (lookAwayStreakRef.current >= LOOK_AWAY_STREAK) {
           reportViolation('looking_away')
         }
@@ -288,6 +308,8 @@ const ProctoringCamera = ({
       setFaceState('ok')
     } catch (err) {
       console.error('Detection error:', err)
+    } finally {
+      detectingRef.current = false
     }
   }, [reportViolation])
 
@@ -379,11 +401,35 @@ const ProctoringCamera = ({
     }
   })
 
+  // The very first face check is slow (the browser prepares the model on first
+  // use), which is most of the delay students noticed. Do that once while
+  // they're still on the start screen, without reporting anything.
+  const warmedRef = useRef(false)
+  useEffect(() => {
+    if (status !== 'ready' || warmedRef.current) return
+    let tries = 0
+    const warm = setInterval(async () => {
+      tries += 1
+      const v = videoRef.current
+      if (!v || !window.faceapi || v.readyState < 2) { if (tries > 20) clearInterval(warm); return }
+      clearInterval(warm)
+      warmedRef.current = true
+      try {
+        await window.faceapi
+          .detectAllFaces(v, new window.faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+          .withFaceLandmarks()
+      } catch { /* warm-up only */ }
+    }, 250)
+    return () => clearInterval(warm)
+  }, [status])
+
   useEffect(() => {
     if (status !== 'ready' || !active) {
       clearInterval(intervalRef.current)
       return
     }
+    // Check straight away rather than waiting a full interval for the first one.
+    runDetection()
     intervalRef.current = setInterval(runDetection, DETECTION_INTERVAL_MS)
     return () => clearInterval(intervalRef.current)
   }, [status, active, runDetection])
@@ -452,12 +498,32 @@ const ProctoringCamera = ({
   // which navigated the student away. This tells them what's wrong and lets
   // them carry on.
   if (status === 'no_camera') {
+    if (!noteOpen) {
+      return (
+        <button
+          type="button"
+          onClick={() => setNoteOpen(true)}
+          className="fixed bottom-4 left-4 z-40 flex items-center gap-2 border border-amber-500/30 bg-[#0a0a18]/95 backdrop-blur-xl rounded-full px-3 py-2 shadow-2xl text-amber-300 text-xs font-semibold"
+        >
+          <FontAwesomeIcon icon={faVideoSlash} className="text-amber-400" />
+          Camera off
+        </button>
+      )
+    }
     return (
-      <div className="fixed bottom-5 left-5 z-40 max-w-xs">
+      <div className="fixed bottom-4 left-4 right-4 sm:right-auto sm:bottom-5 sm:left-5 z-40 sm:max-w-xs">
         <div className="border border-amber-500/30 bg-[#0a0a18]/95 backdrop-blur-xl rounded-2xl p-4 shadow-2xl">
           <div className="flex items-center gap-2 mb-1.5">
             <FontAwesomeIcon icon={faVideoSlash} className="text-amber-400 text-sm" />
             <p className="text-amber-300 text-xs font-bold">Camera proctoring off</p>
+            <button
+              type="button"
+              onClick={() => setNoteOpen(false)}
+              aria-label="Fold this note"
+              className="ml-auto w-6 h-6 rounded-full text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm"
+            >
+              −
+            </button>
           </div>
           <p className="text-gray-400 text-[11px] leading-relaxed mb-2">{cameraNote}</p>
           <p className="text-gray-500 text-[11px] leading-relaxed">
@@ -479,7 +545,7 @@ const ProctoringCamera = ({
   const degraded = status === 'degraded'
 
   return (
-    <div className={`fixed bottom-5 left-5 z-40 transition-all ${minimized ? 'w-12 h-12' : 'w-44'}`}>
+    <div className={`fixed bottom-4 left-4 sm:bottom-5 sm:left-5 z-40 transition-all ${minimized ? 'w-12 h-12' : 'w-32 sm:w-44'}`}>
       <div className={`border bg-[#0a0a18]/95 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl ${
         degraded ? 'border-amber-500/30' : 'border-white/10'
       }`}>
@@ -498,7 +564,7 @@ const ProctoringCamera = ({
                 autoPlay
                 muted
                 playsInline
-                className="w-full h-32 object-cover scale-x-[-1]"
+                className="w-full h-24 sm:h-32 object-cover scale-x-[-1]"
               />
               <div className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${
                 faceState === 'ok' ? 'bg-emerald-400'

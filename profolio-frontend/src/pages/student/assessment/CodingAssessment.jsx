@@ -11,6 +11,7 @@ import ProctoringCamera from '../../../components/ProctoringCamera'
 import PracticeLevels from '../../../components/PracticeLevels'
 import AttemptAward from '../../../components/AttemptAward'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
+import ThemeToggle from '../../../components/ThemeToggle'
 
 const LANGUAGES = [
   'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'C#',
@@ -444,7 +445,7 @@ const CodingAssessment = () => {
         <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Back
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-lg flex items-center gap-2">
             <FontAwesomeIcon icon={faCode} className="text-violet-400" />
             {test?.title || 'Programming Challenge'}
@@ -455,6 +456,7 @@ const CodingAssessment = () => {
               : 'AI will generate a problem. No copy-paste, no tab switching.'}
           </p>
         </div>
+        <ThemeToggle />
       </div>
 
       {setupError && (
@@ -514,7 +516,7 @@ const CodingAssessment = () => {
               style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '16px' }}
             >
               {LANGUAGES.map(l => (
-                <option key={l} value={l} className="bg-[#0a0a18] text-white">{l}</option>
+                <option key={l} value={l} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>{l}</option>
               ))}
             </select>
           </div>

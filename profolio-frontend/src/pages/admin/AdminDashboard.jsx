@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import SidebarTheme from '../../components/SidebarTheme'
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/admin/dashboard' },
@@ -236,7 +237,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -264,6 +265,8 @@ const AdminDashboard = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/8">
+          <SidebarTheme />
+
           <button onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" />
@@ -419,7 +422,7 @@ const AdminDashboard = () => {
                       const off = u.is_active === false
                       return (
                         <div key={u.id}
-                          className={`flex flex-wrap items-center gap-4 px-5 py-4 transition-all ${
+                          className={`flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 px-4 sm:px-5 py-4 transition-all ${
                             off ? 'opacity-50' : 'hover:bg-white/[0.02]'
                           }`}>
                           <Avatar name={u.full_name} gradient={role.gradient} size="w-10 h-10" />
@@ -432,6 +435,8 @@ const AdminDashboard = () => {
                             <p className="text-gray-500 text-xs truncate">{u.email}</p>
                           </div>
 
+                          {/* On a phone the state, role and action sit under the name. */}
+                          <div className="order-last basis-full pl-[3.25rem] flex flex-wrap items-center gap-2 sm:order-none sm:basis-auto sm:pl-0 sm:gap-4">
                           {/* State — read-only, says what they ARE */}
                           <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border flex-shrink-0 ${
                             off
@@ -450,9 +455,9 @@ const AdminDashboard = () => {
                             className={`text-xs font-semibold px-2.5 py-2 rounded-xl border ${role.bg} ${role.border} ${role.color} outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex-shrink-0`}
                             style={{ backgroundColor: 'transparent' }}
                           >
-                            <option value="student" className="bg-[#0d1218]">Student</option>
-                            <option value="evaluator" className="bg-[#0d1218]">Professor</option>
-                            <option value="admin" className="bg-[#0d1218]">Admin</option>
+                            <option value="student" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Student</option>
+                            <option value="evaluator" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Professor</option>
+                            <option value="admin" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Admin</option>
                           </select>
 
                           {/* Action — says what it DOES, not what they are */}
@@ -469,6 +474,7 @@ const AdminDashboard = () => {
                               className={busy ? 'animate-spin' : ''} />
                             {off ? 'Reactivate' : 'Deactivate'}
                           </button>
+                          </div>
                         </div>
                       )
                     })}

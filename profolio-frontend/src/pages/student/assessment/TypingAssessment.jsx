@@ -11,6 +11,7 @@ import ProctoringCamera from '../../../components/ProctoringCamera'
 import KeyboardVisualizer from '../../../components/KeyboardVisualizer'
 import { useProctoring } from '../../../hooks/useProctoring'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
+import ThemeToggle from '../../../components/ThemeToggle'
 
 // Used only for free practice. When the page is opened from an assigned test,
 // the passage comes from the professor's config instead.
@@ -268,13 +269,14 @@ const TypingAssessment = () => {
         >
           <FontAwesomeIcon icon={faArrowLeft} /> Back
         </button>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-base sm:text-lg flex items-center gap-2 break-words">
             <FontAwesomeIcon icon={faKeyboard} className="text-cyan-400" />
             {test?.title || 'Speed Typing'}
           </h1>
           <p className="text-gray-500 text-xs">Type the text below as fast and accurately as you can</p>
         </div>
+        <ThemeToggle />
       </div>
 
       {/* Graded, not practice — worth saying plainly */}

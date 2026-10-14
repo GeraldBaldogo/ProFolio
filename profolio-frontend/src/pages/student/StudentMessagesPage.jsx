@@ -10,10 +10,13 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import { listConversations, startConversation } from '../../services/messaging.service'
+import { getSocket } from '../../services/socket'
 import ChatThread from '../../components/ChatThread'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
+import AvatarFill from '../../components/AvatarFill'
+import SidebarTheme from '../../components/SidebarTheme'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -96,6 +99,36 @@ const StudentMessagesPage = () => {
 
   const handleLogout = () => { logout(); navigate('/') }
 
+  // Keeps the list in step when a nickname changes, here or on the other
+  // person's screen.
+  const mergeConversation = (updated) => {
+    if (!updated?.id) return
+    setConversations((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)))
+  }
+
+  useEffect(() => {
+    const socket = getSocket()
+    socket.on('conversation_updated', mergeConversation)
+    return () => socket.off('conversation_updated', mergeConversation)
+  }, [])
+
+  // A message in a conversation this list doesn't have yet (the other person
+  // just started it) reloads the list, so it appears without a refresh.
+  useEffect(() => {
+    const socket = getSocket()
+    const onNotice = (notice) => {
+      if (conversations.some((c) => c.id === notice?.conversation_id)) return
+      listConversations()
+        .then((data) => {
+          setConversations(data || [])
+          setSelectedId((prev) => prev ?? data?.[0]?.id ?? null)
+        })
+        .catch(() => {})
+    }
+    socket.on('message_notification', onNotice)
+    return () => socket.off('message_notification', onNotice)
+  }, [conversations])
+
   // Tell the notification context which thread is on screen, so a message
   // arriving in it doesn't raise a badge — and so opening it clears one.
   useEffect(() => {
@@ -131,7 +164,7 @@ const StudentMessagesPage = () => {
         <div className="px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.full_name?.charAt(0).toUpperCase()}
+              <AvatarFill />
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
@@ -161,6 +194,8 @@ const StudentMessagesPage = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -252,14 +287,14 @@ const StudentMessagesPage = () => {
                   <button
                     key={c.id}
                     onClick={() => setSelectedId(c.id)}
-                    className={`text-left px-4 py-3 rounded-xl border transition-all flex-shrink-0 lg:w-full ${
+                    className={`text-left px-4 py-3 rounded-xl border transition-all flex-shrink-0 max-w-[15rem] lg:max-w-none lg:w-full ${
                       selectedId === c.id
                         ? 'border-blue-500/30 bg-blue-500/10'
                         : 'border-white/8 bg-white/[0.03] hover:border-white/20'
                     }`}
                   >
                     <p className="text-white text-sm font-semibold truncate">
-                      {c.professor?.full_name || 'Professor'}
+                      {c.professor_nickname || c.professor?.full_name || 'Professor'}
                     </p>
                     <p className="text-gray-500 text-xs truncate">{c.professor?.email}</p>
                   </button>
@@ -270,6 +305,8 @@ const StudentMessagesPage = () => {
                 conversationId={selectedId}
                 currentUserId={user?.id}
                 otherUserName={professorName}
+                conversation={selected}
+                onConversationChange={mergeConversation}
               />
             </div>
           )}

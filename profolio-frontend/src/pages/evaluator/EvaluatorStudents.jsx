@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import SidebarTheme from '../../components/SidebarTheme'
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/evaluator/dashboard' },
@@ -126,7 +127,7 @@ const EvaluatorStudents = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -147,6 +148,8 @@ const EvaluatorStudents = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -272,7 +275,7 @@ const EvaluatorStudents = () => {
                     return (
                       <div key={s.id} className="border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden">
 
-                        <div className="flex flex-wrap items-center gap-4 px-5 py-4">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 px-4 sm:px-5 py-4">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                             {s.full_name?.charAt(0)?.toUpperCase() || 'S'}
                           </div>
@@ -282,6 +285,9 @@ const EvaluatorStudents = () => {
                             <p className="text-gray-500 text-xs truncate">{s.email}</p>
                           </div>
 
+                          {/* On a phone the counts sit on a second line, so the
+                              name and email keep the full width. */}
+                          <div className="order-last basis-full pl-[3.25rem] flex flex-wrap items-center gap-3 sm:order-none sm:basis-auto sm:pl-0 sm:gap-4">
                           {s.overdue_count > 0 && (
                             <span className="text-xs font-semibold text-rose-400 border border-rose-500/25 bg-rose-500/10 px-2.5 py-1 rounded-full flex-shrink-0">
                               {s.overdue_count} overdue
@@ -306,6 +312,7 @@ const EvaluatorStudents = () => {
                               {s.average ?? '—'}
                             </p>
                             <p className="text-gray-600 text-[10px]">average</p>
+                          </div>
                           </div>
 
                           <button

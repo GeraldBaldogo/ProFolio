@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import SidebarTheme from '../../components/SidebarTheme'
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/admin/dashboard' },
@@ -132,7 +133,7 @@ const AdminUsers = () => {
             </div>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-4 flex flex-col gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -146,6 +147,8 @@ const AdminUsers = () => {
           })}
         </nav>
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" />
             Sign Out
@@ -208,10 +211,10 @@ const AdminUsers = () => {
                 <div className="relative">
                   <FontAwesomeIcon icon={faFilter} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
                   <select className={inputClass + ' pl-10 sm:w-44'} value={filterRole} onChange={e => setFilterRole(e.target.value)}>
-                    <option value="all">All Roles</option>
-                    <option value="student">Students</option>
-                    <option value="evaluator">Evaluators</option>
-                    <option value="admin">Admins</option>
+                    <option value="all" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>All Roles</option>
+                    <option value="student" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Students</option>
+                    <option value="evaluator" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Evaluators</option>
+                    <option value="admin" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Admins</option>
                   </select>
                 </div>
               </div>
@@ -232,7 +235,7 @@ const AdminUsers = () => {
                     {filtered.map((u, i) => {
                       const role = roleConfig[u.role] || roleConfig.student
                       return (
-                        <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-all">
+                        <div key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-white/[0.02] transition-all">
                           <div className={`w-10 h-10 bg-gradient-to-br ${u.role === 'admin' ? 'from-rose-500 to-pink-600' : u.role === 'evaluator' ? 'from-amber-500 to-orange-500' : 'from-blue-500 to-violet-500'} rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                             {u.full_name?.charAt(0).toUpperCase()}
                           </div>
@@ -240,6 +243,8 @@ const AdminUsers = () => {
                             <p className="text-white text-sm font-semibold truncate">{u.full_name}</p>
                             <p className="text-gray-500 text-xs truncate">{u.email}</p>
                           </div>
+                          {/* On a phone the controls sit under the name. */}
+                          <div className="order-last basis-full pl-[3.25rem] flex flex-wrap items-center gap-2 sm:order-none sm:basis-auto sm:pl-0 sm:gap-4">
                           <span className={`hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full border ${role.bg} ${role.border} ${role.color} flex-shrink-0`}>
                             {role.label}
                           </span>
@@ -250,9 +255,9 @@ const AdminUsers = () => {
                             onChange={e => updateRole(u.id, e.target.value)}
                             className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border ${role.bg} ${role.border} ${role.color} bg-transparent outline-none cursor-pointer flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
-                            <option value="student">Student</option>
-                            <option value="evaluator">Professor</option>
-                            <option value="admin">Admin</option>
+                            <option value="student" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Student</option>
+                            <option value="evaluator" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Professor</option>
+                            <option value="admin" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Admin</option>
                           </select>
                           <button
                             onClick={() => toggleStatus(u.id, !u.is_active)}
@@ -262,6 +267,7 @@ const AdminUsers = () => {
                           >
                             {u.is_active ? 'Active' : 'Inactive'}
                           </button>
+                          </div>
                         </div>
                       )
                     })}

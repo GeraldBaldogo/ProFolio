@@ -10,6 +10,7 @@ import api from '../../services/api'
 import { uploadProfilePhoto } from '../../services/photo.service'
 import { markProfileComplete } from '../../utils/profileSetup'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import ThemeToggle from '../../components/ThemeToggle'
 
 /*
  * First-time setup — /student/setup.
@@ -236,6 +237,7 @@ const ProfileSetup = () => {
           className="ml-auto flex items-center gap-2 text-gray-500 hover:text-white text-xs sm:text-sm transition-colors">
           <FontAwesomeIcon icon={faRightFromBracket} className="text-xs" /> Sign out
         </button>
+        <ThemeToggle />
       </header>
 
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pb-16">

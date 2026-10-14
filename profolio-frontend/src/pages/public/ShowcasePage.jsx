@@ -8,6 +8,7 @@ import {
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons'
 import { getPublicShowcase } from '../../services/showcase.service'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import ThemeToggle from '../../components/ThemeToggle'
 
 /*
  * The public portfolio page at /p/<slug> — what an employer opens from a
@@ -139,6 +140,7 @@ export default function ShowcasePage() {
       <Link to="/register" className="ml-auto text-gray-400 hover:text-white text-xs sm:text-sm font-medium transition-colors">
         Build your own
       </Link>
+      <ThemeToggle />
     </header>
   )
 

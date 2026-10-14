@@ -15,6 +15,8 @@ import api from '../../services/api'
 import { uploadProfilePhoto, removeProfilePhoto } from '../../services/photo.service'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
+import AvatarFill from '../../components/AvatarFill'
+import SidebarTheme from '../../components/SidebarTheme'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -192,7 +194,7 @@ const StudentProfile = () => {
         <div className="px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.full_name?.charAt(0).toUpperCase()}
+              <AvatarFill />
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
@@ -220,6 +222,8 @@ const StudentProfile = () => {
           })}
         </nav>
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" />
             Sign Out
@@ -230,7 +234,7 @@ const StudentProfile = () => {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
 
         {/* Topbar */}
         <header className="sticky top-0 z-30 bg-[#060612]/90 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-4 flex items-center gap-3">
@@ -264,7 +268,7 @@ const StudentProfile = () => {
               </div>
             )}
             <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.full_name?.charAt(0).toUpperCase()}
+              <AvatarFill />
             </div>
           </div>
         </header>
@@ -316,18 +320,18 @@ const StudentProfile = () => {
                     <h2 className="text-white font-black text-base sm:text-xl truncate">{user?.full_name}</h2>
                     <div className="flex items-center gap-1.5 mt-1">
                       <FontAwesomeIcon icon={faEnvelope} className="text-gray-500 text-xs flex-shrink-0" />
-                      <p className="text-gray-400 text-xs sm:text-sm truncate">{user?.email}</p>
+                      <p className="text-gray-400 text-xs sm:text-sm truncate min-w-0">{user?.email}</p>
                     </div>
                     {form.course && (
                       <div className="flex items-center gap-1.5 mt-1">
                         <FontAwesomeIcon icon={faGraduationCap} className="text-gray-500 text-xs flex-shrink-0" />
-                        <p className="text-gray-400 text-xs sm:text-sm truncate">{form.course} — {form.year_level}</p>
+                        <p className="text-gray-400 text-xs sm:text-sm truncate min-w-0">{form.course} — {form.year_level}</p>
                       </div>
                     )}
                     {form.school && (
                       <div className="flex items-center gap-1.5 mt-1">
                         <FontAwesomeIcon icon={faBuilding} className="text-gray-500 text-xs flex-shrink-0" />
-                        <p className="text-gray-400 text-xs sm:text-sm truncate">{form.school}</p>
+                        <p className="text-gray-400 text-xs sm:text-sm truncate min-w-0">{form.school}</p>
                       </div>
                     )}
                   </div>
@@ -528,15 +532,15 @@ const StudentProfile = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">Professional Title</p>
-                        <p className="text-white text-sm">{form.professional_title || <span className="text-gray-600 italic">Not set</span>}</p>
+                        <p className="text-white text-sm [overflow-wrap:anywhere]">{form.professional_title || <span className="text-gray-600 italic">Not set</span>}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">Contact Number</p>
-                        <p className="text-white text-sm">{form.phone || <span className="text-gray-600 italic">Not set</span>}</p>
+                        <p className="text-white text-sm [overflow-wrap:anywhere]">{form.phone || <span className="text-gray-600 italic">Not set</span>}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">City / Province</p>
-                        <p className="text-white text-sm">{form.location || <span className="text-gray-600 italic">Not set</span>}</p>
+                        <p className="text-white text-sm [overflow-wrap:anywhere]">{form.location || <span className="text-gray-600 italic">Not set</span>}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">Portfolio Website</p>
@@ -574,7 +578,7 @@ const StudentProfile = () => {
                   </div>
 
                   {/* Academic Info */}
-                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
+                  <div className="min-w-0 border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <FontAwesomeIcon icon={faGraduationCap} className="text-blue-400 text-sm" />
@@ -584,21 +588,21 @@ const StudentProfile = () => {
                     <div className="flex flex-col gap-3">
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">Course</p>
-                        <p className="text-white text-sm">{form.course || <span className="text-gray-600 italic">Not set</span>}</p>
+                        <p className="text-white text-sm [overflow-wrap:anywhere]">{form.course || <span className="text-gray-600 italic">Not set</span>}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">Year Level</p>
-                        <p className="text-white text-sm">{form.year_level || <span className="text-gray-600 italic">Not set</span>}</p>
+                        <p className="text-white text-sm [overflow-wrap:anywhere]">{form.year_level || <span className="text-gray-600 italic">Not set</span>}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">School</p>
-                        <p className="text-white text-sm">{form.school || <span className="text-gray-600 italic">Not set</span>}</p>
+                        <p className="text-white text-sm [overflow-wrap:anywhere]">{form.school || <span className="text-gray-600 italic">Not set</span>}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Career Info */}
-                  <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
+                  <div className="min-w-0 border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-8 h-8 bg-violet-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <FontAwesomeIcon icon={faBriefcase} className="text-violet-400 text-sm" />
@@ -608,7 +612,7 @@ const StudentProfile = () => {
                     <div className="flex flex-col gap-3">
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">Career Goal</p>
-                        <p className="text-white text-sm">{form.career_goal || <span className="text-gray-600 italic">Not set</span>}</p>
+                        <p className="text-white text-sm [overflow-wrap:anywhere]">{form.career_goal || <span className="text-gray-600 italic">Not set</span>}</p>
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs mb-0.5">GitHub</p>
@@ -633,7 +637,7 @@ const StudentProfile = () => {
               )}
 
               {/* Account Info */}
-              <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
+              <div className="min-w-0 border border-white/8 bg-white/[0.03] rounded-2xl p-4 sm:p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FontAwesomeIcon icon={faUser} className="text-emerald-400 text-sm" />

@@ -12,6 +12,8 @@ import { useNotifications } from '../../../context/NotificationContext'
 import api from '../../../services/api'
 import logo from '../../../assets/ProFolio_-_Logo-removebg-preview.png'
 
+import AvatarFill from '../../../components/AvatarFill'
+import SidebarTheme from '../../../components/SidebarTheme'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -137,7 +139,7 @@ export default function AssessmentDashboard() {
         <div className="px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.full_name?.charAt(0).toUpperCase()}
+              <AvatarFill />
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
@@ -165,6 +167,8 @@ export default function AssessmentDashboard() {
           })}
         </nav>
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -187,7 +191,7 @@ export default function AssessmentDashboard() {
           </div>
           <div className="ml-auto flex items-center gap-3 flex-shrink-0">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl hidden sm:flex items-center justify-center text-white font-bold text-sm">
-              {user?.full_name?.charAt(0).toUpperCase()}
+              <AvatarFill />
             </div>
           </div>
         </header>

@@ -16,6 +16,8 @@ import api from '../../services/api'
 import TitlesCard from '../../components/TitlesCard'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
+import AvatarFill from '../../components/AvatarFill'
+import SidebarTheme from '../../components/SidebarTheme'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -140,7 +142,7 @@ const StudentResults = () => {
         <div className="px-5 py-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {user?.full_name?.charAt(0).toUpperCase()}
+              <AvatarFill />
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
@@ -168,6 +170,8 @@ const StudentResults = () => {
           })}
         </nav>
         <div className="px-3 py-4 border-t border-white/5">
+          <SidebarTheme />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
             <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" /> Sign Out
           </button>
@@ -292,7 +296,7 @@ const StudentResults = () => {
                   return (
                     <div key={r.id} className="border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden">
 
-                      <div className="flex flex-wrap items-center gap-4 px-5 py-4">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 px-4 sm:px-5 py-4">
                         <div className={`w-10 h-10 bg-gradient-to-br ${meta.gradient} rounded-xl flex items-center justify-center flex-shrink-0`}>
                           <FontAwesomeIcon icon={meta.icon} className="text-white text-sm" />
                         </div>
@@ -318,6 +322,10 @@ const StudentResults = () => {
                           </p>
                         </div>
 
+                        {/* On a phone these sit on their own line under the title, so
+                            the title and date keep the full width. */}
+                        {(trend || flags > 0 || m.unproctored) && (
+                        <div className="order-last basis-full pl-[3.25rem] flex flex-wrap items-center gap-2 sm:order-none sm:basis-auto sm:pl-0 sm:gap-4">
                         {trend && (
                           <span className={`flex items-center gap-1.5 text-xs font-semibold flex-shrink-0 ${
                             trend.diff > 0 ? 'text-emerald-400' : trend.diff < 0 ? 'text-rose-400' : 'text-gray-500'
@@ -340,8 +348,10 @@ const StudentResults = () => {
                             <FontAwesomeIcon icon={faVideoSlash} /> No camera
                           </span>
                         )}
+                        </div>
+                        )}
 
-                        <div className="w-16 text-right flex-shrink-0">
+                        <div className="w-12 sm:w-16 text-right flex-shrink-0">
                           <p className={`text-2xl font-black ${scoreColor(r.score)}`}>{r.score}</p>
                         </div>
 

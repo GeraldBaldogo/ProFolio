@@ -55,13 +55,29 @@ const getConversationsForUser = async (user_id, role) => {
   return data;
 };
 
-const getMessages = async (conversation_id, limit = 100) => {
+// The LATEST messages, oldest first. Sorting ascending before the limit used
+// to return the first 100 ever sent, so in a long conversation new messages
+// stopped appearing after a refresh.
+const getMessages = async (conversation_id, limit = 200) => {
   const { data, error } = await supabase
     .from('messages')
     .select('*')
     .eq('conversation_id', conversation_id)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
     .limit(limit);
+  if (error) throw error;
+  return (data || []).reverse();
+};
+
+// Nicknames are per conversation and seen by both people in it, like
+// Messenger. They never replace anyone's real name outside the chat.
+const updateNicknames = async (id, fields) => {
+  const { data, error } = await supabase
+    .from('conversations')
+    .update(fields)
+    .eq('id', id)
+    .select('*')
+    .single();
   if (error) throw error;
   return data;
 };
@@ -94,4 +110,5 @@ module.exports = {
   getMessages,
   createMessage,
   markMessagesRead,
+  updateNicknames,
 };

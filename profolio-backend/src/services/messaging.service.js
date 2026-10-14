@@ -83,7 +83,36 @@ const sendMessage = async (conversation_id, user, content) => {
   return messagingRepo.createMessage(conversation_id, user.id, content.trim());
 };
 
+const NICKNAME_MAX = 40;
+
+// Either person in a conversation can set either nickname — their own or the
+// other person's — and both see it. An empty value clears it.
+const setNickname = async (conversation_id, user, { who, nickname }) => {
+  if (who !== 'student' && who !== 'professor') {
+    throw { status: 400, message: 'Say whose nickname to set: student or professor.' };
+  }
+  const conversation = await messagingRepo.getConversationById(conversation_id);
+  assertParticipant(conversation, user);
+
+  const clean = typeof nickname === 'string'
+    ? nickname.replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim()
+    : '';
+  if (clean.length > NICKNAME_MAX) {
+    throw { status: 400, message: `Nicknames can be up to ${NICKNAME_MAX} characters.` };
+  }
+
+  try {
+    return await messagingRepo.updateNicknames(conversation_id, { [`${who}_nickname`]: clean || null });
+  } catch (err) {
+    if (/column .*nickname/i.test(err?.message || '')) {
+      throw { status: 503, message: 'Nicknames aren\u2019t switched on yet. Run add_nicknames.sql in Supabase.' };
+    }
+    throw err;
+  }
+};
+
 module.exports = {
+  setNickname,
   startConversation,
   listConversations,
   getConversationMessages,

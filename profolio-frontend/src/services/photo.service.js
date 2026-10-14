@@ -35,6 +35,44 @@ export const readPhoto = (file) => new Promise((resolve, reject) => {
   img.src = url
 })
 
+// ── The signed-in student's photo, shared by every avatar on screen ─────────
+// Fetched once per sign-in and kept here, so the sidebar, the top bar and the
+// profile page all show the same picture, and an upload or removal anywhere
+// updates all of them at once.
+const store = { userId: null, photo: null, loaded: false, loading: null }
+const listeners = new Set()
+
+const publish = (userId, photo) => {
+  store.userId = userId
+  store.photo = photo || null
+  store.loaded = true
+  listeners.forEach((fn) => fn(store.photo))
+}
+
+export const subscribePhoto = (fn) => {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
+// The cached photo if it belongs to this user; undefined if not loaded yet.
+export const cachedPhoto = (userId) =>
+  store.loaded && store.userId === userId ? store.photo : undefined
+
+// Loads the photo once for this user; later calls reuse the same request.
+export const ensurePhoto = (userId) => {
+  if (cachedPhoto(userId) !== undefined) return Promise.resolve(store.photo)
+  if (store.loading && store.userId === userId) return store.loading
+  store.userId = userId
+  store.loaded = false
+  store.loading = getProfilePhoto()
+    .then((photo) => { if (store.userId === userId) publish(userId, photo); return photo })
+    .catch(() => null) // no photo is fine — the initial is shown instead
+    .finally(() => { store.loading = null })
+  return store.loading
+}
+
+const publishCurrent = (photo) => { if (store.userId) publish(store.userId, photo) }
+
 export const getProfilePhoto = async () => {
   const res = await api.get('/student/profile')
   return res.data?.data?.profile_photo || null
@@ -47,6 +85,7 @@ export const uploadProfilePhoto = async (file) => {
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Couldn\u2019t save your photo.')
   }
+  publishCurrent(photo)
   return photo
 }
 
@@ -56,4 +95,5 @@ export const removeProfilePhoto = async () => {
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Couldn\u2019t remove your photo.')
   }
+  publishCurrent(null)
 }
