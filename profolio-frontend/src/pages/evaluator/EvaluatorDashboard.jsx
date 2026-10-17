@@ -13,6 +13,7 @@ import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import SidebarTheme from '../../components/SidebarTheme'
+import { ArrowRight } from 'lucide-react'
 
 // A professor sets tests, reads the results, and talks to students. That's the
 // whole job — so that's the whole sidebar.
@@ -304,8 +305,8 @@ const EvaluatorDashboard = () => {
 
                     {tests.length > 5 && (
                       <Link to="/evaluator/tests"
-                        className="block px-5 py-3 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-colors">
-                        See all {tests.length} tests →
+                        className="flex items-center gap-1.5 px-5 py-3 text-amber-400 hover:text-amber-300 text-xs font-semibold transition-colors">
+                        See all {tests.length} tests <ArrowRight size={14} strokeWidth={2.25} aria-hidden="true" />
                       </Link>
                     )}
                   </div>

@@ -14,6 +14,7 @@ import logo from '../../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 import AvatarFill from '../../../components/AvatarFill'
 import SidebarTheme from '../../../components/SidebarTheme'
+import { ArrowRight } from 'lucide-react'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -205,10 +206,12 @@ export default function AssessmentDashboard() {
             <>
               {/* Where the rubric lives — every criterion and weight */}
               <Link to="/scoring"
-                className="flex items-center gap-3 border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-4 py-3 mb-4 transition-colors">
+                className="group flex items-center gap-3 border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-4 py-2.5 mb-4 transition-colors">
                 <span className="text-blue-400 text-sm font-semibold">How scoring works</span>
                 <span className="text-gray-500 text-xs hidden sm:inline">The rubric, weights and proficiency levels every assessment uses</span>
-                <span className="ml-auto text-gray-500 text-xs">&rarr;</span>
+                <span className="ml-auto flex-shrink-0 w-8 h-8 rounded-full bg-white/5 border border-white/8 flex items-center justify-center text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" aria-hidden="true">
+                  <ArrowRight size={15} strokeWidth={2.25} />
+                </span>
               </Link>
 
               {/* Overview cards */}
@@ -331,11 +334,11 @@ export default function AssessmentDashboard() {
                     proficiency level.
                   </p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                    <Link to="/student/assigned-tests" className="text-amber-400 hover:text-amber-300 text-xs font-semibold">
-                      See your assigned tests &rarr;
+                    <Link to="/student/assigned-tests" className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 text-xs font-semibold">
+                      See your assigned tests <ArrowRight size={13} strokeWidth={2.25} aria-hidden="true" />
                     </Link>
-                    <Link to="/scoring" className="text-gray-400 hover:text-white text-xs font-semibold">
-                      How scoring works &rarr;
+                    <Link to="/scoring" className="inline-flex items-center gap-1 text-gray-400 hover:text-white text-xs font-semibold">
+                      How scoring works <ArrowRight size={13} strokeWidth={2.25} aria-hidden="true" />
                     </Link>
                   </div>
                 </div>

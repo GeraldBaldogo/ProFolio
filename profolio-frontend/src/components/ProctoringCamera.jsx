@@ -4,6 +4,7 @@ import {
   faVideo, faVideoSlash, faDisplay, faTriangleExclamation, faSpinner,
   faUserGroup, faEyeSlash, faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons'
+import { Minus } from 'lucide-react'
 
 /**
  * ProctoringCamera — reusable webcam-based anti-cheat component.
@@ -155,6 +156,16 @@ const ProctoringCamera = ({
     const t = setTimeout(() => setNoteOpen(false), 10000)
     return () => clearTimeout(t)
   }, [status, noteOpen])
+  // On phones and tablets the floating pill/preview sits over the bottom of
+  // the page. Leave room below the content while it's on screen, so the
+  // answer box and the Submit button can always be scrolled clear of it.
+  useEffect(() => {
+    if (!smallScreen) return undefined
+    const body = document.body
+    const before = body.style.paddingBottom
+    body.style.paddingBottom = '5.5rem'
+    return () => { body.style.paddingBottom = before }
+  }, [smallScreen])
   // idle | requesting | sharing | stopped | unsupported
   const [screenState, setScreenState] = useState('idle')
   const [screenNote, setScreenNote] = useState('')
@@ -520,9 +531,9 @@ const ProctoringCamera = ({
               type="button"
               onClick={() => setNoteOpen(false)}
               aria-label="Fold this note"
-              className="ml-auto w-6 h-6 rounded-full text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center text-sm"
+              className="ml-auto w-6 h-6 rounded-full text-gray-400 hover:text-white hover:bg-white/10 flex items-center justify-center"
             >
-              −
+              <Minus size={14} strokeWidth={2.5} aria-hidden="true" />
             </button>
           </div>
           <p className="text-gray-400 text-[11px] leading-relaxed mb-2">{cameraNote}</p>
@@ -574,9 +585,10 @@ const ProctoringCamera = ({
               }`} />
               <button
                 onClick={() => setMinimized(true)}
-                className="absolute top-2 left-2 w-6 h-6 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white/70 hover:text-white text-xs transition-all"
+                aria-label="Minimize camera preview"
+                className="absolute top-2 left-2 w-6 h-6 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white/70 hover:text-white transition-all"
               >
-                −
+                <Minus size={14} strokeWidth={2.5} aria-hidden="true" />
               </button>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-2 border-t border-white/5">

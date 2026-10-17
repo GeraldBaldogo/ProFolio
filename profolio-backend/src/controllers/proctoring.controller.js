@@ -9,6 +9,13 @@ const logEvent = async (req, res, next) => {
   }
 };
 
+const startSession = async (req, res, next) => {
+  try {
+    const data = proctoringService.startSession(req.user.id, req.body || {});
+    res.status(201).json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 const getSessionReport = async (req, res, next) => {
   try {
     const report = await proctoringService.getSessionReport(req.params.session_id);
@@ -27,4 +34,4 @@ const getStudentFlagHistory = async (req, res, next) => {
   }
 };
 
-module.exports = { logEvent, getSessionReport, getStudentFlagHistory };
+module.exports = { logEvent, startSession, getSessionReport, getStudentFlagHistory };

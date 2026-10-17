@@ -1,3 +1,4 @@
+const attempt = require('../utils/attempt');
 const communicationService = require('../services/communication.service');
 
 // Async now, and told who's asking: the service checks which levels this
@@ -15,7 +16,8 @@ const getPrompt = async (req, res, next) => {
 const submitResult = async (req, res, next) => {
   try {
     const user_id = req.user.id;
-    const result = await communicationService.submitCommunicationResult(user_id, req.body);
+    const { body } = await attempt.settle(user_id, 'communication', req.body);
+    const result = await communicationService.submitCommunicationResult(user_id, body);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

@@ -15,7 +15,7 @@ const ThemeToggle = ({ className = '' }) => {
       onClick={toggleMode}
       aria-label={label}
       title={label}
-      className={`w-9 h-9 flex-shrink-0 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all ${className}`}
+      className={`w-9 h-9 flex-shrink-0 border border-white/8 bg-white/[0.03] rounded-xl flex items-center justify-center text-gray-400 hover:text-white transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 ${className}`}
     >
       {mode === 'dark' ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
     </button>

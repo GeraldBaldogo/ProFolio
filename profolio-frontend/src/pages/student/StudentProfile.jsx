@@ -17,6 +17,10 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 import AvatarFill from '../../components/AvatarFill'
 import SidebarTheme from '../../components/SidebarTheme'
+import Select from '../../components/ui/Select'
+import Combobox from '../../components/ui/Combobox'
+import { MonthPicker } from '../../components/ui/DatePicker'
+import { COURSES } from '../../utils/profileSetup'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -401,15 +405,13 @@ const StudentProfile = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={labelClass}>Course / Program</label>
-                      <input className={inputClass} placeholder="e.g. Bachelor of Science in IT"
-                        value={form.course} onChange={e => setForm({ ...form, course: e.target.value })} />
+                      <Combobox className={inputClass} options={COURSES} placeholder="e.g. Bachelor of Science in IT"
+                        value={form.course} onChange={v => setForm({ ...form, course: v })} aria-label="Course or program" />
                     </div>
                     <div>
                       <label className={labelClass}>Year Level</label>
-                      <select className={inputClass} value={form.year_level} onChange={e => setForm({ ...form, year_level: e.target.value })}>
-                        <option value="" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Select year level</option>
-                        {yearLevels.map(y => <option key={y} value={y} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>{y}</option>)}
-                      </select>
+                      <Select className={inputClass} value={form.year_level} onChange={v => setForm({ ...form, year_level: v })}
+                        options={yearLevels} placeholder="Select year level" aria-label="Year level" />
                     </div>
                   </div>
 
@@ -427,8 +429,8 @@ const StudentProfile = () => {
                     </div>
                     <div>
                       <label className={labelClass}>Expected Graduation</label>
-                      <input className={inputClass} placeholder="e.g. June 2027"
-                        value={form.expected_graduation} onChange={e => setForm({ ...form, expected_graduation: e.target.value })} />
+                      <MonthPicker className={inputClass} placeholder="Choose month and year"
+                        value={form.expected_graduation} onChange={v => setForm({ ...form, expected_graduation: v })} aria-label="Expected graduation" />
                     </div>
                   </div>
 

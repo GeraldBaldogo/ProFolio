@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faSpinner, faScaleBalanced, faShieldHalved, faBullseye, faRobot, faGaugeHigh, faArrowLeft,
-  faKeyboard, faCode, faBug, faDatabase, faDiagramProject, faComments, faTriangleExclamation,
+  faSpinner, faScaleBalanced, faShieldHalved, faBullseye, faRobot, faGaugeHigh, faKeyboard, faCode, faBug, faDatabase, faDiagramProject, faComments, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import ThemeToggle from '../../components/ThemeToggle'
+import BackButton from '../../components/BackButton'
 
 /*
  * "How scoring works" — public, at /scoring.
@@ -57,15 +57,14 @@ export default function ScoringPage() {
           <img src={logo} alt="" className="w-7 h-7 object-contain" />
           <span className="text-white font-black tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
         </Link>
-        <button onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = '/')}
-          className="ml-auto flex items-center gap-2 text-gray-400 hover:text-white text-xs sm:text-sm font-medium transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} className="text-xs" /> Back
-        </button>
-        <ThemeToggle />
+        <ThemeToggle className="ml-auto" />
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-16">
-        <div className="pt-4 sm:pt-8 pb-8 sm:pb-10 max-w-3xl">
+        <div className="pt-1 sm:pt-4 pb-8 sm:pb-10 max-w-3xl">
+          {/* Back sits with the page title, where people look for it — not
+              squeezed against the theme button in the top bar. */}
+          <BackButton onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = '/')} className="mb-5" />
           <p className="text-blue-400 text-xs font-bold uppercase tracking-[0.15em] mb-3">Standardised scoring</p>
           <h1 className="text-white font-bold text-3xl sm:text-5xl tracking-tight mb-4">How scoring works</h1>
           <p className="text-gray-400 text-sm sm:text-base leading-relaxed">

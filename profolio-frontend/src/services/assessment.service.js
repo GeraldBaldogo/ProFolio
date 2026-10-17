@@ -44,6 +44,28 @@ export const getTypingText = async (difficulty = 'easy') => {
   return data.data.text;
 };
 
+// The server picks the passage and signs it into the attempt.
+export const startTyping = async ({ session_token, test_id }) => {
+  const res = await fetch(`${API}/api/assessments/typing/start`, {
+    method: 'POST', headers: authHeader(),
+    body: JSON.stringify({ session_token, ...(test_id ? { test_id } : {}) })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data; // { typing_token, text, duration_seconds }
+};
+
+// Called on the first keystroke so the server can time the attempt itself.
+export const beginTyping = async (typing_token) => {
+  const res = await fetch(`${API}/api/assessments/typing/begin`, {
+    method: 'POST', headers: authHeader(),
+    body: JSON.stringify({ typing_token })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message);
+  return data.data.typing_token;
+};
+
 export const submitTypingResult = async (payload) => {
   const res = await fetch(`${API}/api/assessments/typing/submit`, {
     method: 'POST', headers: authHeader(),

@@ -12,6 +12,7 @@ import api from '../../services/api'
 import SocialSignIn from '../../components/SocialSignIn'
 import { destinationAfterSignIn } from '../../utils/profileSetup'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import { ArrowLeft } from 'lucide-react'
 
 // Same image the landing page uses for its hero, so the two pages feel like
 // one product. Swap for a real TCC photo whenever you have one.
@@ -307,8 +308,8 @@ const LoginPage = () => {
           </p>
 
           <div className="text-center mt-4">
-            <Link to="/" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
-              ← Back to home
+            <Link to="/" className="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-400 text-xs transition-colors">
+              <ArrowLeft size={13} strokeWidth={2.25} aria-hidden="true" /> Back to home
             </Link>
           </div>
         </div>

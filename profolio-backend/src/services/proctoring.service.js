@@ -1,4 +1,5 @@
 const proctoringRepo = require('../repositories/proctoring.repo');
+const attempt = require('../utils/attempt');
 
 const VALID_ASSESSMENT_TYPES = ['typing', 'programming', 'flowchart', 'sql', 'bugfix', 'communication'];
 const VALID_EVENT_TYPES = [
@@ -19,6 +20,15 @@ const logEvent = async (user_id, { session_id, assessment_type, event_type, even
   return proctoringRepo.createEvent({ session_id, user_id, assessment_type, event_type, event_data: event_data || null });
 };
 
+// Opens an attempt for the student. The id is signed by the server so it
+// cannot be invented or swapped when the result is submitted.
+const startSession = (user_id, { assessment_type }) => {
+  if (!VALID_ASSESSMENT_TYPES.includes(assessment_type)) {
+    throw { status: 400, message: `Invalid assessment_type. Must be one of: ${VALID_ASSESSMENT_TYPES.join(', ')}` };
+  }
+  return attempt.issue(user_id, assessment_type);
+};
+
 const getSessionReport = async (session_id) => {
   const [events, summary] = await Promise.all([
     proctoringRepo.getEventsBySession(session_id),
@@ -31,4 +41,4 @@ const getStudentFlagHistory = async (user_id) => {
   throw { status: 501, message: 'Flag history is not available yet.' };
 };
 
-module.exports = { logEvent, getSessionReport, getStudentFlagHistory };
+module.exports = { logEvent, startSession, getSessionReport, getStudentFlagHistory };

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faDisplay, faPenRuler, faDiagramProject, faCloudArrowUp, faCircleCheck,
+  faDisplay, faPenRuler, faDiagramProject, faCloudArrowUp, faCircleCheck,
   faSpinner, faImage, faRotateRight, faShield, faTriangleExclamation,
   faUserTie, faListCheck,
 } from '@fortawesome/free-solid-svg-icons'
@@ -15,6 +15,8 @@ import FlowchartEditor from '../../../components/FlowchartEditor'
 import { useProctoring } from '../../../hooks/useProctoring'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
 import ThemeToggle from '../../../components/ThemeToggle'
+import { Check, Minus, X, ArrowRight } from 'lucide-react'
+import BackButton from '../../../components/BackButton'
 
 const FlowchartAssessment = () => {
   const navigate = useNavigate()
@@ -23,7 +25,7 @@ const FlowchartAssessment = () => {
   const testId = params.get('test_id')
 
   const {
-    sessionId, logEvent, resetSession,
+    getSessionToken, logEvent, resetSession,
     cameraViolationCount, tabViolationCount
   } = useProctoring('flowchart')
 
@@ -159,7 +161,7 @@ const FlowchartAssessment = () => {
         problem_title: problem?.title || 'Flowchart Assessment',
         imageFile: file,
         camera_violation_count: cameraViolationCount,
-        session_id: sessionId,
+        session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId } : {}),
         ...(unproctored ? { unproctored: true, unproctored_reason: unproctored } : {}),
@@ -221,9 +223,7 @@ const FlowchartAssessment = () => {
         onScreenShareReady={setScreenShare}
       />
       <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0">
-          <FontAwesomeIcon icon={faArrowLeft} /> {testId ? 'Back to assigned tests' : 'Back to Assessments'}
-        </button>
+        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
       </div>
 
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-6 text-center mb-5">
@@ -256,7 +256,7 @@ const FlowchartAssessment = () => {
               : item.value === null ? 'bg-amber-500/20 text-amber-400'
               : 'bg-rose-500/20 text-rose-400'
             }`}>
-              {item.value === true ? '✓' : item.value === null ? '~' : '✗'}
+              {item.value === true ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : item.value === null ? <Minus size={12} strokeWidth={3} aria-hidden="true" /> : <X size={12} strokeWidth={3} aria-hidden="true" />}
             </div>
             <p className="text-gray-300 text-sm">{item.label}</p>
           </div>
@@ -287,8 +287,8 @@ const FlowchartAssessment = () => {
             <FontAwesomeIcon icon={faRotateRight} /> Try again
           </button>
         )}
-        <button onClick={goBack} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all">
-          {testId ? 'Back to assigned tests →' : 'View all results →'}
+        <button onClick={goBack} className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all">
+          {testId ? 'Back to assigned tests' : 'View all results'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -307,9 +307,7 @@ const FlowchartAssessment = () => {
       />
 
       <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0">
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
-        </button>
+        <BackButton onClick={goBack} iconOnlyOnPhone />
         <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-base sm:text-lg flex items-center gap-2 break-words">
             <FontAwesomeIcon icon={faDiagramProject} className="text-emerald-400" />

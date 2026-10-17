@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import ThemeToggle from '../../components/ThemeToggle'
+import { ChevronRight } from 'lucide-react'
+import BackButton from '../../components/BackButton'
 
 /*
  * Privacy policy and data-deletion instructions — public, at /privacy.
@@ -54,15 +54,14 @@ export default function PrivacyPage() {
           <img src={logo} alt="" className="w-7 h-7 object-contain" />
           <span className="text-white font-black tracking-tight">Pro<span className="text-blue-400">Folio</span></span>
         </Link>
-        <button onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = '/')}
-          className="ml-auto flex items-center gap-2 text-gray-400 hover:text-white text-xs sm:text-sm font-medium transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} className="text-xs" /> Back
-        </button>
-        <ThemeToggle />
+        <ThemeToggle className="ml-auto" />
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
-        <div className="pt-4 sm:pt-8">
+        <div className="pt-1 sm:pt-4">
+          {/* Back sits with the page title, where people look for it — not
+              squeezed against the theme button in the top bar. */}
+          <BackButton onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = '/')} className="mb-5" />
           <p className="text-blue-400 text-xs font-bold uppercase tracking-[0.15em] mb-3">Privacy</p>
           <h1 className="text-white font-bold text-3xl sm:text-4xl tracking-tight mb-3">Your data in ProFolio</h1>
           <p className="text-gray-500 text-sm">Last updated {UPDATED}</p>
@@ -118,8 +117,8 @@ export default function PrivacyPage() {
             and you will get a reply once it is done.
           </p>
           <p>
-            If you signed in with Facebook, you can also remove ProFolio from your Facebook account under
-            Settings &amp; privacy → Settings → Apps and websites. That stops ProFolio receiving anything
+            If you signed in with Facebook, you can also remove ProFolio from your Facebook account under{' '}
+            <span className="whitespace-nowrap">Settings &amp; privacy <ChevronRight size={13} strokeWidth={2.25} className="inline -mt-0.5" aria-label="then" /> Settings <ChevronRight size={13} strokeWidth={2.25} className="inline -mt-0.5" aria-label="then" /> Apps and websites</span>. That stops ProFolio receiving anything
             further from Facebook; to delete what ProFolio already stores, send the request above.
           </p>
         </Section>

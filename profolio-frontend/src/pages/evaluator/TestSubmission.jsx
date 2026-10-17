@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faSpinner, faTriangleExclamation, faRotateRight,
+  faSpinner, faTriangleExclamation, faRotateRight,
   faCircleCheck, faClock, faHourglassHalf, faShield, faVideoSlash,
   faRobot, faChevronDown, faUsers, faChartSimple,
   faHouse, faFlaskVial, faComments, faBars, faTimes, faRightFromBracket,
@@ -12,6 +12,7 @@ import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import FacultyReviewPanel from '../../components/FacultyReviewPanel'
 import SidebarTheme from '../../components/SidebarTheme'
+import BackButton from '../../components/BackButton'
 
 // Must match the other evaluator pages exactly. This page had no sidebar at
 // all, so opening Results made the whole navigation vanish.
@@ -313,10 +314,7 @@ const TestSubmissions = () => {
           <button className="lg:hidden text-gray-400 hover:text-white" aria-label="Open menu" onClick={() => setSidebarOpen(true)}>
             <FontAwesomeIcon icon={faBars} className="text-lg" />
           </button>
-          <button onClick={() => navigate('/evaluator/tests')} aria-label="Back to tests"
-            className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0">
-            <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden sm:inline">Back</span>
-          </button>
+          <BackButton onClick={() => navigate('/evaluator/tests')} iconOnlyOnPhone />
           <div className="min-w-0">
             <h1 className="text-white font-bold text-lg tracking-tight truncate">{test?.title}</h1>
             <p className="text-gray-500 text-xs truncate">Who answered, and how they did</p>

@@ -14,6 +14,7 @@ import { useNotifications } from '../../context/NotificationContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import SidebarTheme from '../../components/SidebarTheme'
+import { DateTimePicker } from '../../components/ui/DatePicker'
 
 // Must match EvaluatorDashboard, EvaluatorStudents and TestSubmission exactly.
 // Each page keeps its own copy, so a difference here makes the sidebar jump
@@ -75,7 +76,7 @@ const TEST_TYPES = [
           'CREATE TABLE employees (\n  employee_id INT PRIMARY KEY,\n  first_name VARCHAR(50),\n  department_id INT,\n  salary DECIMAL(10,2)\n);\n\n' +
           "INSERT INTO departments VALUES (1, 'IT'), (2, 'HR');\n" +
           "INSERT INTO employees VALUES\n  (1, 'Ana', 1, 35000),\n  (2, 'Ben', 2, 18000),\n  (3, 'Carla', 1, 22000);",
-        hint: 'CREATE TABLE for each table, then INSERT the rows students will query. Use six or more rows per table, varied enough that a wrong query gives a different result from a right one. Name link columns after the table they point to (department_id → departments) and the diagram draws the relationship for you.' },
+        hint: 'CREATE TABLE for each table, then INSERT the rows students will query. Use six or more rows per table, varied enough that a wrong query gives a different result from a right one. Name link columns after the table they point to (department_id references departments) and the diagram draws the relationship for you.' },
       { key: 'question', label: 'Question', type: 'textarea', rows: 3, required: true,
         placeholder: 'List the first_name of every employee earning more than 20000, highest salary first.',
         hint: 'Name the exact columns to return, or exactly what to change, so there is one correct result.' },
@@ -883,8 +884,7 @@ const ProfessorTests = () => {
             <div className="px-6 py-4 border-b border-white/5 flex flex-col gap-3">
               <div>
                 <label htmlFor="due_date" className={labelClass}>Due date</label>
-                <input id="due_date" type="datetime-local" className={inputClass}
-                  value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                <DateTimePicker id="due_date" className={inputClass} value={dueDate} onChange={setDueDate} aria-label="Due date" />
               </div>
 
               <div className="relative">

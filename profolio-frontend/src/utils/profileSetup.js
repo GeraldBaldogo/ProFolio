@@ -53,3 +53,11 @@ export const destinationAfterSignIn = async (user) => {
     return homeFor(user) // can't check right now — the route guard will try again
   }
 }
+
+// Shared by the setup wizard and the Profile page, so both offer the same
+// choices.
+export const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate']
+export const COURSES = [
+  'Bachelor of Science in Computer Science',
+  'Bachelor of Science in Information Technology',
+]

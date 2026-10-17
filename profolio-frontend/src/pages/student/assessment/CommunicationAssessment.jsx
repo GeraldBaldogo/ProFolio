@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faComments, faCircleCheck, faSpinner, faPlay,
+  faComments, faCircleCheck, faSpinner, faPlay,
   faTriangleExclamation, faPen, faChartBar, faUserTie, faRotateRight, faDisplay,
 } from '@fortawesome/free-solid-svg-icons'
 import api from '../../../services/api'
@@ -13,6 +13,8 @@ import PracticeLevels from '../../../components/PracticeLevels'
 import AttemptAward from '../../../components/AttemptAward'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
 import ThemeToggle from '../../../components/ThemeToggle'
+import { CircleCheck, TrendingUp, ArrowRight } from 'lucide-react'
+import BackButton from '../../../components/BackButton'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 const TIME_LIMITS = { easy: 5 * 60, medium: 8 * 60, hard: 12 * 60 }
@@ -47,7 +49,7 @@ const CommunicationAssessment = () => {
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
 
-  const { sessionId, violationCount, resetSession } = useProctoring('communication')
+  const { getSessionToken, logEvent, resetSession, cameraViolationCount, getViolationCounts } = useProctoring('communication')
 
   const [phase, setPhase] = useState('setup') // setup | challenge | result
   const [difficulty, setDifficulty] = useState('easy')
@@ -70,7 +72,8 @@ const CommunicationAssessment = () => {
   // easiest of them to have produced elsewhere, so it needs proctoring most.
   const [cameraReady, setCameraReady] = useState(false)
   const [unproctored, setUnproctored] = useState(null)
-  const [cameraViolations, setCameraViolations] = useState(0)
+  // Camera flags go through useProctoring now, so they reach the server too.
+  const cameraViolations = cameraViolationCount
 
   const [screenShare, setScreenShare] = useState(null)
   const [screenError, setScreenError] = useState('')
@@ -200,10 +203,10 @@ const CommunicationAssessment = () => {
         prompt_text: prompt?.prompt,
         response_text: timedOut && !response ? '(no submission — time ran out)' : response,
         time_taken_seconds: timeTaken,
-        violation_count: violationCount + cameraViolations,
-        camera_violation_count: cameraViolations,
+        violation_count: getViolationCounts().violation_count,
+        camera_violation_count: getViolationCounts().camera_violation_count,
         unproctored: !!unproctored,
-        session_id: sessionId,
+        session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId, rubric: prompt?.rubric || [] } : {}),
       })
@@ -257,16 +260,14 @@ const CommunicationAssessment = () => {
 
       <ProctoringCamera
         active={phase === 'challenge'}
-        onViolation={() => setCameraViolations(v => v + 1)}
+        onViolation={logEvent}
         onReady={() => setCameraReady(true)}
         onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
         onScreenShareReady={setScreenShare}
       />
 
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
-        </button>
+        <BackButton onClick={goBack} iconOnlyOnPhone />
         <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-lg flex items-center gap-2">
             <FontAwesomeIcon icon={faComments} className="text-cyan-400" />
@@ -387,9 +388,7 @@ const CommunicationAssessment = () => {
   if (phase === 'result') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> {testId ? 'Back to assigned tests' : 'Back to Assessments'}
-        </button>
+        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
       </div>
 
       {/* Score */}
@@ -421,7 +420,7 @@ const CommunicationAssessment = () => {
       {/* Strengths */}
       {result?.strengths && (
         <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-5 mb-4">
-          <p className="text-emerald-400 text-xs font-semibold mb-2">✓ Strengths</p>
+          <p className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold mb-2"><CircleCheck size={14} strokeWidth={2.25} aria-hidden="true" /> Strengths</p>
           <p className="text-gray-300 text-sm leading-relaxed">{result.strengths}</p>
         </div>
       )}
@@ -429,7 +428,7 @@ const CommunicationAssessment = () => {
       {/* Improvements */}
       {result?.improvements && (
         <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-5 mb-4">
-          <p className="text-amber-400 text-xs font-semibold mb-2">↑ Areas to Improve</p>
+          <p className="flex items-center gap-1.5 text-amber-400 text-xs font-semibold mb-2"><TrendingUp size={14} strokeWidth={2.25} aria-hidden="true" /> Areas to Improve</p>
           <p className="text-gray-300 text-sm leading-relaxed">{result.improvements}</p>
         </div>
       )}
@@ -458,8 +457,8 @@ const CommunicationAssessment = () => {
             Try again
           </button>
         )}
-        <button onClick={goBack} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all">
-          {testId ? 'Back to assigned tests →' : 'View all results →'}
+        <button onClick={goBack} className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all">
+          {testId ? 'Back to assigned tests' : 'View all results'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -471,7 +470,7 @@ const CommunicationAssessment = () => {
 
       <ProctoringCamera
         active={true}
-        onViolation={() => setCameraViolations(v => v + 1)}
+        onViolation={logEvent}
         onReady={() => setCameraReady(true)}
         onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
         onScreenShareReady={setScreenShare}

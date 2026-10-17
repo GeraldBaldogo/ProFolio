@@ -13,6 +13,8 @@ router.use(authenticate);
 
 // Typing
 router.get('/typing/text', c.getTypingText);
+router.post('/typing/start', c.startTyping);
+router.post('/typing/begin', c.beginTyping);
 router.post('/typing/submit', c.submitTyping);
 
 // Programming

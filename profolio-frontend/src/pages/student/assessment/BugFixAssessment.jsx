@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faBug, faShield, faTriangleExclamation,
+  faBug, faShield, faTriangleExclamation,
   faCircleCheck, faSpinner, faPlay, faCode, faLightbulb,
   faUserTie, faRotateRight, faVialCircleCheck, faDisplay,
 } from '@fortawesome/free-solid-svg-icons'
@@ -14,6 +14,8 @@ import PracticeLevels from '../../../components/PracticeLevels'
 import AttemptAward from '../../../components/AttemptAward'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
 import ThemeToggle from '../../../components/ThemeToggle'
+import { CircleCheck, CircleMinus, CircleX, ArrowRight } from 'lucide-react'
+import BackButton from '../../../components/BackButton'
 
 const LANGUAGES = [
   'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'C#', 'PHP', 'Ruby', 'Go',
@@ -45,7 +47,7 @@ const BugFixAssessment = () => {
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
 
-  const { sessionId, resetSession, tabViolationCount, getViolationCounts } = useProctoring('bugfix')
+  const { getSessionToken, logEvent, resetSession, tabViolationCount, cameraViolationCount, getViolationCounts } = useProctoring('bugfix')
 
   const [phase, setPhase] = useState('setup') // setup | challenge | result
   const [language, setLanguage] = useState('Python')
@@ -70,7 +72,8 @@ const BugFixAssessment = () => {
   // were fully proctored. On a graded assessment that gap is indefensible.
   const [cameraReady, setCameraReady] = useState(false)
   const [unproctored, setUnproctored] = useState(null)
-  const [cameraViolations, setCameraViolations] = useState(0)
+  // Camera flags go through useProctoring now, so they reach the server too.
+  const cameraViolations = cameraViolationCount
 
   const [screenShare, setScreenShare] = useState(null)
   const [screenError, setScreenError] = useState('')
@@ -340,11 +343,11 @@ const BugFixAssessment = () => {
         description: challenge?.description || '',
         original_buggy_code: challenge?.buggy_code || '',
         fixed_code: timedOut && !fixedCode ? '(no submission — time ran out)' : fixedCode,
-        violation_count: counts.violation_count + cameraViolations,
-        camera_violation_count: cameraViolations,
+        violation_count: counts.violation_count,
+        camera_violation_count: counts.camera_violation_count,
         unproctored: !!unproctored,
         time_taken_seconds: timeTaken,
-        session_id: sessionId,
+        session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId } : {}),
       })
@@ -395,16 +398,14 @@ const BugFixAssessment = () => {
 
       <ProctoringCamera
         active={phase === 'challenge'}
-        onViolation={() => setCameraViolations(v => v + 1)}
+        onViolation={logEvent}
         onReady={() => setCameraReady(true)}
         onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
         onScreenShareReady={setScreenShare}
       />
 
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
-        </button>
+        <BackButton onClick={goBack} iconOnlyOnPhone />
         <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-lg flex items-center gap-2">
             <FontAwesomeIcon icon={faBug} className="text-rose-400" />
@@ -544,9 +545,7 @@ const BugFixAssessment = () => {
   if (phase === 'result') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> {testId ? 'Back to assigned tests' : 'Back to Assessments'}
-        </button>
+        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
       </div>
 
       {/* Score */}
@@ -566,11 +565,11 @@ const BugFixAssessment = () => {
       {/* Bugs fixed badge */}
       {result?.bugs_fixed && (
         <div className={`border rounded-2xl p-4 mb-4 text-center ${bugsFixedColor[result.bugs_fixed]}`}>
-          <p className="text-sm font-bold capitalize">
-            {result.bugs_fixed === 'all' ? '✓ All bugs fixed!'
-            : result.bugs_fixed === 'most' ? '~ Most bugs fixed'
-            : result.bugs_fixed === 'some' ? '~ Some bugs fixed'
-            : '✗ No bugs fixed'}
+          <p className="flex items-center justify-center gap-2 text-sm font-bold capitalize">
+            {result.bugs_fixed === 'all' ? <><CircleCheck size={16} strokeWidth={2.25} aria-hidden="true" /> All bugs fixed!</>
+            : result.bugs_fixed === 'most' ? <><CircleMinus size={16} strokeWidth={2.25} aria-hidden="true" /> Most bugs fixed</>
+            : result.bugs_fixed === 'some' ? <><CircleMinus size={16} strokeWidth={2.25} aria-hidden="true" /> Some bugs fixed</>
+            : <><CircleX size={16} strokeWidth={2.25} aria-hidden="true" /> No bugs fixed</>}
           </p>
         </div>
       )}
@@ -598,9 +597,9 @@ const BugFixAssessment = () => {
         )}
         <button
           onClick={goBack}
-          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all"
+          className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all"
         >
-          {testId ? 'Back to assigned tests →' : 'View all results →'}
+          {testId ? 'Back to assigned tests' : 'View all results'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -612,7 +611,7 @@ const BugFixAssessment = () => {
 
       <ProctoringCamera
         active={true}
-        onViolation={() => setCameraViolations(v => v + 1)}
+        onViolation={logEvent}
         onReady={() => setCameraReady(true)}
         onCameraUnavailable={(reason) => { setCameraReady(true); setUnproctored(reason) }}
         onScreenShareReady={setScreenShare}

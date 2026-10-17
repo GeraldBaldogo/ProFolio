@@ -17,6 +17,7 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 import AvatarFill from '../../components/AvatarFill'
 import SidebarTheme from '../../components/SidebarTheme'
+import { DatePicker } from '../../components/ui/DatePicker'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -298,8 +299,8 @@ const PortfolioBuilder = () => {
             <div><label className={labelClass}>Issuer</label><input className={inputClass} placeholder="e.g. Amazon Web Services" value={formData.issuer || ''} onChange={e => setFormData({ ...formData, issuer: e.target.value })} /></div>
             <div><label className={labelClass}>Credential URL</label><input className={inputClass} placeholder="https://..." value={formData.credential_url || ''} onChange={e => setFormData({ ...formData, credential_url: e.target.value })} /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={labelClass}>Date Issued</label><input type="date" className={inputClass} value={formData.issued_date || ''} onChange={e => setFormData({ ...formData, issued_date: e.target.value })} /></div>
-              <div><label className={labelClass}>Expiry Date</label><input type="date" className={inputClass} value={formData.expiry_date || ''} onChange={e => setFormData({ ...formData, expiry_date: e.target.value })} /></div>
+              <div><label className={labelClass}>Date Issued</label><DatePicker className={inputClass} value={formData.issued_date || ''} onChange={v => setFormData({ ...formData, issued_date: v })} aria-label="Date issued" /></div>
+              <div><label className={labelClass}>Expiry Date</label><DatePicker className={inputClass} value={formData.expiry_date || ''} onChange={v => setFormData({ ...formData, expiry_date: v })} aria-label="Expiry date" /></div>
             </div>
           </div>
         )
@@ -310,8 +311,8 @@ const PortfolioBuilder = () => {
             <div><label className={labelClass}>Role / Position *</label><input className={inputClass} placeholder="e.g. Web Development Intern" value={formData.role || ''} onChange={e => setFormData({ ...formData, role: e.target.value })} /></div>
             <div><label className={labelClass}>Description</label><textarea className={inputClass + ' resize-none h-24'} placeholder="Describe your responsibilities..." value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={labelClass}>Start Date</label><input type="date" className={inputClass} value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} /></div>
-              <div><label className={labelClass}>End Date</label><input type="date" className={inputClass} value={formData.end_date || ''} onChange={e => setFormData({ ...formData, end_date: e.target.value })} disabled={formData.is_current} /></div>
+              <div><label className={labelClass}>Start Date</label><DatePicker className={inputClass} value={formData.start_date || ''} onChange={v => setFormData({ ...formData, start_date: v })} aria-label="Start date" /></div>
+              <div><label className={labelClass}>End Date</label><DatePicker className={inputClass} value={formData.end_date || ''} onChange={v => setFormData({ ...formData, end_date: v })} aria-label="End date" disabled={formData.is_current} placeholder={formData.is_current ? 'Present' : 'Choose a date'} /></div>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={formData.is_current || false} onChange={e => setFormData({ ...formData, is_current: e.target.checked, end_date: '' })} className="accent-blue-500" />
@@ -326,7 +327,7 @@ const PortfolioBuilder = () => {
             <div><label className={labelClass}>Description</label><textarea className={inputClass + ' resize-none h-24'} placeholder="Describe your achievement..." value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={labelClass}>Category</label><input className={inputClass} placeholder="e.g. Competition, Academic" value={formData.category || ''} onChange={e => setFormData({ ...formData, category: e.target.value })} /></div>
-              <div><label className={labelClass}>Date</label><input type="date" className={inputClass} value={formData.achieved_date || ''} onChange={e => setFormData({ ...formData, achieved_date: e.target.value })} /></div>
+              <div><label className={labelClass}>Date</label><DatePicker className={inputClass} value={formData.achieved_date || ''} onChange={v => setFormData({ ...formData, achieved_date: v })} aria-label="Date" /></div>
             </div>
           </div>
         )
@@ -464,19 +465,21 @@ const PortfolioBuilder = () => {
               {/* The public page for employers — off until the student turns it on */}
               <ShareShowcaseCard />
 
-              {/* Section tabs — scrollable on mobile */}
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+              {/* Section tabs. On a phone they wrap onto a second line instead of
+                  scrolling sideways, so every tab and its name stays in view. */}
+              <div role="tablist" aria-label="Portfolio sections" className="flex flex-wrap gap-2">
                 {SECTIONS.map((section) => {
                   const count = { projects, skills, certifications, experiences, achievements }[section.key]?.length || 0
                   return (
                     <button
                       key={section.key}
+                      role="tab"
+                      aria-selected={activeSection === section.key}
                       onClick={() => { setActiveSection(section.key); setShowForm(false) }}
-                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${activeSection === section.key ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'border border-white/8 bg-white/[0.03] text-gray-400 hover:text-white hover:bg-white/[0.06]'}`}
+                      className={`flex flex-grow sm:flex-grow-0 justify-center items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${activeSection === section.key ? 'bg-blue-500/15 text-white border border-blue-500/20' : 'border border-white/8 bg-white/[0.03] text-gray-400 hover:text-white hover:bg-white/[0.06]'}`}
                     >
                       <FontAwesomeIcon icon={section.icon} className={`text-xs ${activeSection === section.key ? 'text-blue-400' : ''}`} />
-                      {/* Hide label on very small screens, show icon only */}
-                      <span className="hidden xs:inline sm:inline">{section.label}</span>
+                      <span>{section.label}</span>
                       <span className={`text-xs px-1.5 py-0.5 rounded-md ${activeSection === section.key ? 'bg-blue-500/20 text-blue-300' : 'bg-white/5 text-gray-600'}`}>
                         {count}
                       </span>

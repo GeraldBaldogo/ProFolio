@@ -11,6 +11,13 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import SidebarTheme from '../../components/SidebarTheme'
+import Select from '../../components/ui/Select'
+
+const ROLE_OPTIONS = [
+  { value: 'student', label: 'Student' },
+  { value: 'evaluator', label: 'Professor' },
+  { value: 'admin', label: 'Admin' },
+]
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/admin/dashboard' },
@@ -209,13 +216,9 @@ const AdminUsers = () => {
                     value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
                 <div className="relative">
-                  <FontAwesomeIcon icon={faFilter} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-                  <select className={inputClass + ' pl-10 sm:w-44'} value={filterRole} onChange={e => setFilterRole(e.target.value)}>
-                    <option value="all" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>All Roles</option>
-                    <option value="student" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Students</option>
-                    <option value="evaluator" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Evaluators</option>
-                    <option value="admin" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Admins</option>
-                  </select>
+                  <FontAwesomeIcon icon={faFilter} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 text-sm z-10 pointer-events-none" />
+                  <Select className={inputClass + ' pl-10 sm:w-44'} value={filterRole} onChange={setFilterRole} aria-label="Filter by role"
+                    options={[{ value: 'all', label: 'All Roles' }, { value: 'student', label: 'Students' }, { value: 'evaluator', label: 'Evaluators' }, { value: 'admin', label: 'Admins' }]} />
                 </div>
               </div>
 
@@ -248,17 +251,15 @@ const AdminUsers = () => {
                           <span className={`hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full border ${role.bg} ${role.border} ${role.color} flex-shrink-0`}>
                             {role.label}
                           </span>
-                          <select
+                          <Select
+                            small
                             value={u.role}
                             disabled={u.id === user?.id}
-                            title={u.id === user?.id ? 'You can\u2019t change your own role' : undefined}
-                            onChange={e => updateRole(u.id, e.target.value)}
-                            className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border ${role.bg} ${role.border} ${role.color} bg-transparent outline-none cursor-pointer flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            <option value="student" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Student</option>
-                            <option value="evaluator" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Professor</option>
-                            <option value="admin" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Admin</option>
-                          </select>
+                            onChange={v => updateRole(u.id, v)}
+                            aria-label={u.id === user?.id ? 'You can\u2019t change your own role' : `Role for ${u.full_name}`}
+                            options={ROLE_OPTIONS}
+                            className={`text-xs font-semibold pl-2.5 py-1.5 rounded-lg border ${role.bg} ${role.border} ${role.color} outline-none flex-shrink-0`}
+                          />
                           <button
                             onClick={() => toggleStatus(u.id, !u.is_active)}
                             disabled={u.id === user?.id}

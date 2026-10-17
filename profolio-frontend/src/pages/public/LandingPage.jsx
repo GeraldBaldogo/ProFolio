@@ -11,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import ThemePicker from '../../components/ThemePicker'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import { ArrowRight } from 'lucide-react'
 
 const PHOTOS = {
   teaching: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
@@ -232,11 +233,11 @@ const CvDocument = ({ className = '' }) => (
     <div className="lpcv-paper" aria-label="Example CV">
       <div className="lpcv-head">
         <div className="lpcv-head-text">
-          <p className="lpcv-name">Maria Santos</p>
-          <p className="lpcv-title">Aspiring Backend Developer</p>
-          <p className="lpcv-contact">maria.santos@email.com</p>
-          <p className="lpcv-contact">0917 555 0142 · Quezon City</p>
-          <p className="lpcv-contact">github.com/msantos</p>
+          <p className="lpcv-name">Gerald Baldogo</p>
+          <p className="lpcv-title">Aspiring Frontend Developer</p>
+          <p className="lpcv-contact">gerald.baldogo@email.com</p>
+          <p className="lpcv-contact">0912 345 6789 · Tanay, Rizal</p>
+          <p className="lpcv-contact">github.com/geraldbaldogo</p>
         </div>
         <div className="lpcv-photo" aria-hidden="true"><span /><span /></div>
       </div>
@@ -915,7 +916,7 @@ export default function LandingPage() {
                       <div>
                         <p className="text-gray-500 text-[9px] font-bold uppercase tracking-[0.15em] mb-1">Test cases</p>
                         <div className="bg-white/[0.04] rounded-lg px-3 py-2 font-mono">
-                          <p className="text-gray-500 text-[10px]">in <span className="text-cyan-300">[[1,3],[2,6]]</span> → out <span className="text-emerald-300">[[1,6]]</span></p>
+                          <p className="text-gray-500 text-[10px]">in <span className="text-cyan-300">[[1,3],[2,6]]</span> <ArrowRight size={10} strokeWidth={2.5} className="inline -mt-px" aria-hidden="true" /> out <span className="text-emerald-300">[[1,6]]</span></p>
                         </div>
                       </div>
                     </div>

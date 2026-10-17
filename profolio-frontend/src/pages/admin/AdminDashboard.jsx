@@ -12,6 +12,13 @@ import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import SidebarTheme from '../../components/SidebarTheme'
+import Select from '../../components/ui/Select'
+
+const ROLE_OPTIONS = [
+  { value: 'student', label: 'Student' },
+  { value: 'evaluator', label: 'Professor' },
+  { value: 'admin', label: 'Admin' },
+]
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/admin/dashboard' },
@@ -447,18 +454,15 @@ const AdminDashboard = () => {
                           </span>
 
                           {/* Role */}
-                          <select
+                          <Select
+                            small
                             value={u.role}
                             disabled={busy || isSelf}
-                            onChange={e => updateRole(u, e.target.value)}
+                            onChange={v => updateRole(u, v)}
                             aria-label={`Role for ${u.full_name}`}
-                            className={`text-xs font-semibold px-2.5 py-2 rounded-xl border ${role.bg} ${role.border} ${role.color} outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex-shrink-0`}
-                            style={{ backgroundColor: 'transparent' }}
-                          >
-                            <option value="student" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Student</option>
-                            <option value="evaluator" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Professor</option>
-                            <option value="admin" style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>Admin</option>
-                          </select>
+                            options={ROLE_OPTIONS}
+                            className={`text-xs font-semibold pl-2.5 py-2 rounded-xl border ${role.bg} ${role.border} ${role.color} outline-none flex-shrink-0`}
+                          />
 
                           {/* Action — says what it DOES, not what they are */}
                           <button

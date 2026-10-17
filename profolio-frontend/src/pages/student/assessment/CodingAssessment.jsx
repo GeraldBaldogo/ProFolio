@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faCode, faShield, faTriangleExclamation, faDisplay,
+  faCode, faShield, faTriangleExclamation, faDisplay,
   faCircleCheck, faSpinner, faPlay, faUserTie, faRotateRight, faAward, faSeedling,
 } from '@fortawesome/free-solid-svg-icons'
 import { generateChallenge, submitCodingResult } from '../../../services/assessment.service'
@@ -12,6 +12,10 @@ import PracticeLevels from '../../../components/PracticeLevels'
 import AttemptAward from '../../../components/AttemptAward'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
 import ThemeToggle from '../../../components/ThemeToggle'
+import { ArrowRight } from 'lucide-react'
+import BackButton from '../../../components/BackButton'
+import Select from '../../../components/ui/Select'
+import { useProctoring } from '../../../hooks/useProctoring'
 
 const LANGUAGES = [
   'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'C#',
@@ -81,6 +85,9 @@ const CodingAssessment = () => {
 
   const timerRef = useRef(null)
   const violationsRef = useRef(0)
+  // Logs every flag to the server under a server-issued attempt. This page
+  // keeps its own listeners and counters, so the hook's are switched off.
+  const { getSessionToken, logEvent: logFlag, resetSession } = useProctoring('programming', { autoListen: false })
   const startTimeRef = useRef(null)
 
   // Anti-cheat: tab visibility
@@ -90,6 +97,7 @@ const CodingAssessment = () => {
       if (document.hidden) {
         violationsRef.current += 1
         setViolations(violationsRef.current)
+        logFlag('tab_blur')
         setWarningType('tab')
         setShowWarning(true)
       }
@@ -145,6 +153,7 @@ const CodingAssessment = () => {
   const handleCameraViolation = (type) => {
     cameraViolationsRef.current += 1
     setCameraViolations(cameraViolationsRef.current)
+    logFlag(type || 'no_face')
     setWarningType(type || 'camera')
     setShowWarning(true)
   }
@@ -177,6 +186,7 @@ const CodingAssessment = () => {
   }
 
   const beginTimer = (limitSeconds) => {
+    resetSession() // every challenge is its own server-side attempt
     setSecsLeft(limitSeconds)
     startTimeRef.current = Date.now()
     setPhase('challenge')
@@ -383,6 +393,7 @@ const CodingAssessment = () => {
         violation_count: violationsRef.current,
         camera_violation_count: cameraViolationsRef.current,
         time_taken_seconds: timeTaken,
+        session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId } : {}),
         ...(unproctored ? { unproctored: true, unproctored_reason: unproctored } : {}),
@@ -442,9 +453,7 @@ const CodingAssessment = () => {
       />
 
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
-        </button>
+        <BackButton onClick={goBack} iconOnlyOnPhone />
         <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-lg flex items-center gap-2">
             <FontAwesomeIcon icon={faCode} className="text-violet-400" />
@@ -509,16 +518,13 @@ const CodingAssessment = () => {
         <>
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Choose Language</p>
-            <select
+            <Select
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 hover:border-white/20 focus:border-violet-500/50 focus:bg-violet-500/5 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-all cursor-pointer appearance-none"
-              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '16px' }}
-            >
-              {LANGUAGES.map(l => (
-                <option key={l} value={l} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>{l}</option>
-              ))}
-            </select>
+              onChange={setLanguage}
+              options={LANGUAGES}
+              aria-label="Programming language"
+              className="w-full bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-4 py-2.5 text-white text-sm outline-none transition-all"
+            />
           </div>
 
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-6">
@@ -592,9 +598,7 @@ const CodingAssessment = () => {
   if (phase === 'result') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <button onClick={goBack} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors">
-          <FontAwesomeIcon icon={faArrowLeft} /> {testId ? 'Back to assigned tests' : 'Back to Assessments'}
-        </button>
+        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
       </div>
 
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-6 text-center mb-6">
@@ -638,9 +642,9 @@ const CodingAssessment = () => {
         )}
         <button
           onClick={() => navigate(testId ? '/student/assigned-tests' : '/student/assessment/flowchart')}
-          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all"
+          className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all"
         >
-          {testId ? 'Back to assigned tests →' : 'Next: Flowchart →'}
+          {testId ? 'Back to assigned tests' : 'Next: Flowchart'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -783,11 +787,13 @@ const CodingAssessment = () => {
               e.preventDefault()
               violationsRef.current += 1
               setViolations(violationsRef.current)
+              logFlag('copy_paste', { action: 'paste' })
             }}
             onCopy={(e) => {
               e.preventDefault()
               violationsRef.current += 1
               setViolations(violationsRef.current)
+              logFlag('copy_paste', { action: 'copy' })
             }}
             placeholder={`# Write your ${language} solution here...`}
             className="flex-1 bg-transparent text-gray-200 font-mono text-sm p-4 resize-none outline-none leading-7 min-h-[320px]"

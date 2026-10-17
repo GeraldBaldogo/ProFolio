@@ -1,3 +1,4 @@
+const attempt = require('../utils/attempt');
 const assessmentService = require('../services/assessment.service');
 const progressService = require('../services/progress.service');
 const titlesService = require('../services/titles.service');
@@ -6,6 +7,20 @@ const submitTyping = async (req, res, next) => {
   try {
     const result = await assessmentService.submitTypingResult(req.user.id, req.body);
     res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
+
+const startTyping = async (req, res, next) => {
+  try {
+    const data = await assessmentService.startTyping(req.user.id, req.body || {});
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const beginTyping = async (req, res, next) => {
+  try {
+    const data = await assessmentService.beginTyping(req.user.id, req.body || {});
+    res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
@@ -25,7 +40,9 @@ const generateChallenge = async (req, res, next) => {
 
 const submitCoding = async (req, res, next) => {
   try {
-    const result = await assessmentService.submitCodingResult(req.user.id, req.body);
+    // Server-issued attempt id and server-counted flags replace what the browser sent.
+    const { body } = await attempt.settle(req.user.id, 'programming', req.body);
+    const result = await assessmentService.submitCodingResult(req.user.id, body);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -39,7 +56,9 @@ const generateFlowchartProblem = async (req, res, next) => {
 
 const submitFlowchart = async (req, res, next) => {
   try {
-    const result = await assessmentService.submitFlowchartResult(req.user.id, req.body);
+    // Server-issued attempt id and server-counted flags replace what the browser sent.
+    const { body } = await attempt.settle(req.user.id, 'flowchart', req.body);
+    const result = await assessmentService.submitFlowchartResult(req.user.id, body);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -53,7 +72,9 @@ const generateSQLChallenge = async (req, res, next) => {
 
 const submitSQL = async (req, res, next) => {
   try {
-    const result = await assessmentService.submitSQLResult(req.user.id, req.body);
+    // Server-issued attempt id and server-counted flags replace what the browser sent.
+    const { body } = await attempt.settle(req.user.id, 'sql', req.body);
+    const result = await assessmentService.submitSQLResult(req.user.id, body);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -67,7 +88,9 @@ const generateBugFixChallenge = async (req, res, next) => {
 
 const submitBugFix = async (req, res, next) => {
   try {
-    const result = await assessmentService.submitBugFixResult(req.user.id, req.body);
+    // Server-issued attempt id and server-counted flags replace what the browser sent.
+    const { body } = await attempt.settle(req.user.id, 'bugfix', req.body);
+    const result = await assessmentService.submitBugFixResult(req.user.id, body);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -125,7 +148,7 @@ const getTitles = async (req, res, next) => {
 
 module.exports = {
   getProgress, getTitles,
-  submitTyping, getTypingText,
+  submitTyping, startTyping, beginTyping, getTypingText,
   generateChallenge, submitCoding,
   generateFlowchartProblem, submitFlowchart,
   generateSQLChallenge, submitSQL,

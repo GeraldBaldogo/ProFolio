@@ -2,26 +2,23 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faDisplay, faKeyboard, faRotateRight, faCircleCheck, faSpinner,
+  faDisplay, faKeyboard, faRotateRight, faCircleCheck, faSpinner,
   faShield, faTriangleExclamation, faUserTie,
 } from '@fortawesome/free-solid-svg-icons'
-import { submitTypingResult } from '../../../services/assessment.service'
+import { submitTypingResult, startTyping, beginTyping } from '../../../services/assessment.service'
 import { getTestById } from '../../../services/test.service'
 import ProctoringCamera from '../../../components/ProctoringCamera'
 import KeyboardVisualizer from '../../../components/KeyboardVisualizer'
 import { useProctoring } from '../../../hooks/useProctoring'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
 import ThemeToggle from '../../../components/ThemeToggle'
+import { ArrowRight } from 'lucide-react'
+import BackButton from '../../../components/BackButton'
 
-// Used only for free practice. When the page is opened from an assigned test,
-// the passage comes from the professor's config instead.
-const SAMPLE_TEXTS = [
-  "The best way to predict the future is to create it. Programming is not just about writing code, it is about solving problems and thinking logically.",
-  "Software development requires patience, creativity, and attention to detail. Every line of code you write is a step toward building something meaningful.",
-  "A good programmer is someone who always looks both ways before crossing a one-way street. Clean code always looks like it was written by someone who cares.",
-]
-
-const randomSample = () => SAMPLE_TEXTS[Math.floor(Math.random() * SAMPLE_TEXTS.length)]
+// The passage, the clock and the score all live on the server now. This page
+// shows the passage it was given, sends the first-keystroke signal, and at the
+// end sends only what was typed. WPM, accuracy and time shown during the test
+// are a live preview; the saved result is the server's own calculation.
 
 const TypingAssessment = () => {
   const navigate = useNavigate()
@@ -29,14 +26,15 @@ const TypingAssessment = () => {
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
 
-  const { sessionId, logEvent, resetSession, cameraViolationCount, tabViolationCount, getViolationCounts } = useProctoring('typing')
+  const { getSessionToken, logEvent, resetSession, cameraViolationCount, tabViolationCount, getViolationCounts } = useProctoring('typing')
 
   // The professor's test, if there is one.
   const [test, setTest] = useState(null)
   const [loadingTest, setLoadingTest] = useState(!!testId)
   const [testError, setTestError] = useState('')
 
-  const [sampleText, setSampleText] = useState(randomSample)
+  const [sampleText, setSampleText] = useState('')
+  const [passageError, setPassageError] = useState('')
   const [typed, setTyped] = useState('')
   const [started, setStarted] = useState(false)
   const [finished, setFinished] = useState(false)
@@ -65,6 +63,9 @@ const TypingAssessment = () => {
   const wpmRef = useRef(0)
   const accRef = useRef(100)
   const elapsedRef = useRef(0)
+  const typedRef = useRef('')
+  const typingTokenRef = useRef(null)   // the server's signed attempt, with the passage
+  const beginRef = useRef(null)         // the first-keystroke request
 
   useEffect(() => {
     return () => clearInterval(timerRef.current)
@@ -80,9 +81,7 @@ const TypingAssessment = () => {
       .then((t) => {
         if (cancelled) return
         setTest(t)
-        const passage = t?.config?.text_passage
-        if (passage) setSampleText(passage)
-        else setTestError('This test has no passage set. Ask your professor to check it.')
+        if (!t?.config?.text_passage) setTestError('This test has no passage set. Ask your professor to check it.')
       })
       .catch((err) => {
         if (!cancelled) setTestError(err.message || 'Couldn\u2019t load this test.')
@@ -93,6 +92,25 @@ const TypingAssessment = () => {
 
     return () => { cancelled = true }
   }, [testId])
+
+  // Ask the server for this attempt's passage. It remembers which one it gave,
+  // so the result can only be scored against it.
+  const preparePassage = async () => {
+    setPassageError('')
+    setSampleText('')
+    typingTokenRef.current = null
+    beginRef.current = null
+    try {
+      const session_token = await getSessionToken()
+      const data = await startTyping({ session_token, test_id: testId })
+      typingTokenRef.current = data.typing_token
+      setSampleText(data.text)
+    } catch (err) {
+      setPassageError(err.message || 'Couldn\u2019t load the passage. Check your connection and reload.')
+    }
+  }
+
+  useEffect(() => { preparePassage() }, [testId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The professor can cap the attempt in seconds.
   const limitSeconds = test?.config?.duration_seconds || null
@@ -123,8 +141,14 @@ const TypingAssessment = () => {
     const value = e.target.value
     if (finished) return
 
+    if (!sampleText || !typingTokenRef.current) return
+
     if (!started) {
       setStarted(true)
+      // Tell the server the attempt has begun; its clock, not this one, times the result.
+      beginRef.current = beginTyping(typingTokenRef.current)
+        .then((t) => { typingTokenRef.current = t })
+        .catch((err) => console.error('Typing: begin failed —', err.message))
       const now = Date.now()
       setStartTime(now)
       timerRef.current = setInterval(() => {
@@ -141,6 +165,7 @@ const TypingAssessment = () => {
     }
 
     setTyped(value)
+    typedRef.current = value
 
     let correct = 0
     for (let i = 0; i < value.length; i++) {
@@ -150,9 +175,9 @@ const TypingAssessment = () => {
     setAccuracy(acc)
     accRef.current = acc
 
+    // Same formula the server uses: five characters count as one word.
     const elapsedMin = (Date.now() - (startTime || Date.now())) / 1000 / 60
-    const words = value.trim().split(/\s+/).length
-    const currentWpm = elapsedMin > 0 ? Math.round(words / elapsedMin) : 0
+    const currentWpm = elapsedMin > 0 ? Math.round((value.length / 5) / elapsedMin) : 0
     setWpm(currentWpm)
     wpmRef.current = currentWpm
   }
@@ -173,24 +198,28 @@ const TypingAssessment = () => {
     handleSubmit(wpmRef.current, accRef.current, elapsedRef.current)
   }
 
-  const handleSubmit = async (finalWpm, finalAcc, finalTime) => {
+  // Sends only what was typed. The server times the attempt, checks the text
+  // against the passage it handed out, and counts the flags it logged.
+  const handleSubmit = async () => {
     setSubmitting(true)
     setSubmitError('')
     try {
-      const counts = getViolationCounts() // ref-backed, always current even mid-tick
+      await beginRef.current
+      const counts = getViolationCounts() // the server's own count wins if higher
       const data = await submitTypingResult({
-        wpm: finalWpm,
-        accuracy: finalAcc,
-        time_seconds: finalTime,
+        typing_token: typingTokenRef.current,
+        typed_text: typedRef.current,
         camera_violation_count: counts.camera_violation_count,
         violation_count: counts.violation_count,
-        session_id: sessionId,
-        // Ties the result to the professor's test and closes the assignment.
-        // Left out entirely for free practice.
-        ...(testId ? { test_id: testId } : {}),
         ...(unproctored ? { unproctored: true, unproctored_reason: unproctored } : {}),
       })
       setResult(data)
+      // Show the server's figures, not the live preview's.
+      if (data?.metadata) {
+        setWpm(data.metadata.wpm)
+        setAccuracy(data.metadata.accuracy)
+        setElapsed(data.metadata.time_seconds)
+      }
       screenShare?.stop()
     } catch (err) {
       // Previously this was console.error only, which left the student on a
@@ -202,8 +231,9 @@ const TypingAssessment = () => {
   }
 
   const handleReset = () => {
-    resetSession() // fresh session_id + violation counts for the new attempt
+    resetSession() // fresh server attempt + violation counts
     setTyped('')
+    typedRef.current = ''
     setStarted(false)
     setFinished(false)
     setStartTime(null)
@@ -212,15 +242,15 @@ const TypingAssessment = () => {
     setAccuracy(100)
     setResult(null)
     setSubmitError('')
-    // Practice gets a new passage; a graded test keeps the professor's.
-    if (!testId) setSampleText(randomSample())
     clearInterval(timerRef.current)
+    preparePassage() // a new passage (practice) or the same one (test), under the new attempt
     textareaRef.current?.focus()
   }
 
   const totalViolations = cameraViolationCount + tabViolationCount
 
   const renderText = () => {
+    if (!sampleText) return <span className="text-gray-500">{passageError ? 'The passage couldn\u2019t be loaded.' : 'Loading the passage\u2026'}</span>
     return sampleText.split('').map((char, i) => {
       let color = 'text-gray-500'
       if (i < typed.length) {
@@ -263,12 +293,7 @@ const TypingAssessment = () => {
 
       {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4 mb-6">
-        <button
-          onClick={goBack}
-          className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors flex-shrink-0"
-        >
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
-        </button>
+        <BackButton onClick={goBack} iconOnlyOnPhone />
         <div className="min-w-0 flex-1">
           <h1 className="text-white font-bold text-base sm:text-lg flex items-center gap-2 break-words">
             <FontAwesomeIcon icon={faKeyboard} className="text-cyan-400" />
@@ -299,6 +324,17 @@ const TypingAssessment = () => {
         <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
           <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 flex-shrink-0" />
           <p className="text-rose-400 text-sm">{testError}</p>
+        </div>
+      )}
+
+      {passageError && (
+        <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 flex-shrink-0" />
+          <p className="text-rose-400 text-sm flex-1">{passageError}</p>
+          <button onClick={preparePassage}
+            className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-rose-300 hover:text-white border border-rose-500/30 rounded-lg px-3 py-1.5">
+            <FontAwesomeIcon icon={faRotateRight} /> Retry
+          </button>
         </div>
       )}
 
@@ -398,8 +434,10 @@ const TypingAssessment = () => {
             value={typed}
             onChange={handleType}
             onPaste={handlePasteAttempt}
-            disabled={!cameraReady}
-            placeholder={cameraReady ? 'Start typing here...' : 'Waiting for camera...'}
+            onDrop={(e) => e.preventDefault()}
+            maxLength={sampleText.length || undefined}
+            disabled={!cameraReady || !sampleText}
+            placeholder={!sampleText ? 'Loading the passage...' : cameraReady ? 'Start typing here...' : 'Waiting for camera...'}
             rows={3}
             className="w-full bg-[#0a0a18] border border-white/8 rounded-2xl p-4 text-white font-mono text-sm resize-none outline-none focus:border-blue-500/40 transition-colors placeholder:text-gray-700 mb-3 disabled:opacity-40"
             autoFocus
@@ -466,6 +504,11 @@ const TypingAssessment = () => {
                   {testId ? 'Test submitted!' : 'Assessment Complete!'}
                 </p>
                 <p className="text-gray-500 text-sm">Skill score: <span className="text-white font-bold">{result.score}/100</span></p>
+                {result.metadata && (
+                  <p className="text-gray-500 text-xs mt-1">
+                    {result.metadata.wpm} WPM · {result.metadata.accuracy}% accuracy · {result.metadata.time_seconds}s, measured by the server
+                  </p>
+                )}
                 {totalViolations > 0 && (
                   <p className="text-rose-400 text-xs mt-1">{totalViolations} violation{totalViolations > 1 ? 's' : ''} recorded</p>
                 )}
@@ -485,7 +528,7 @@ const TypingAssessment = () => {
                   onClick={goBack}
                   className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all"
                 >
-                  {testId ? 'Back to assigned tests →' : 'Next assessment →'}
+                  {testId ? 'Back to assigned tests' : 'Next assessment'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
                 </button>
               </div>
             </div>

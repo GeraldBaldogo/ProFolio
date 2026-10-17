@@ -7,6 +7,10 @@ const { requireRole } = require('../middleware/role.middleware');
 // Student (or anyone taking a test) logs a proctoring event during an attempt
 router.post('/events', authenticate, proctoringController.logEvent);
 
+// Student opens an attempt; the server-signed id is what flags are logged
+// under and what the result must be submitted with.
+router.post('/sessions', authenticate, proctoringController.startSession);
+
 // Professor/admin reviews flags for a specific test session
 router.get(
   '/sessions/:session_id',

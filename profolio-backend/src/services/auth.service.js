@@ -252,7 +252,7 @@ const verifyFacebookToken = async (accessToken) => {
     throw {
       status: 400,
       message: emailPermission === 'granted'
-        ? 'Your Facebook account has no confirmed email address. Add one in Facebook (Accounts Center \u2192 Personal details \u2192 Contact info), or sign in with Google or your email instead.'
+        ? 'Your Facebook account has no confirmed email address. Add one in Facebook under Accounts Center, then Personal details, then Contact info, or sign in with Google or your email instead.'
         : 'Facebook didn\u2019t share your email address. Try again and keep \u201cEmail address\u201d switched on when Facebook asks, or sign in with Google or your email instead.',
     };
   }
@@ -347,7 +347,7 @@ const verifyGithubCode = async (code, redirectUri) => {
   if (!pick) {
     throw {
       status: 400,
-      message: 'Your GitHub account has no verified email address. Add and verify one in GitHub (Settings \u2192 Emails), or sign in with Google or your email instead.',
+      message: 'Your GitHub account has no verified email address. Add and verify one in GitHub under Settings, then Emails, or sign in with Google or your email instead.',
     };
   }
 

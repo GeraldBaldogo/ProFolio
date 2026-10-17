@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -8,7 +8,10 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
 import { uploadProfilePhoto } from '../../services/photo.service'
-import { markProfileComplete } from '../../utils/profileSetup'
+import { markProfileComplete, YEAR_LEVELS, COURSES } from '../../utils/profileSetup'
+import Select from '../../components/ui/Select'
+import Combobox from '../../components/ui/Combobox'
+import { MonthPicker, parseMonthYear } from '../../components/ui/DatePicker'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import ThemeToggle from '../../components/ThemeToggle'
 
@@ -27,12 +30,6 @@ const STEPS = [
   { key: 'goals', title: 'Goals & links', hint: 'Optional — you can add these later.', icon: faCompass },
 ]
 
-const YEAR_LEVELS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate']
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const COURSES = [
-  'Bachelor of Science in Computer Science',
-  'Bachelor of Science in Information Technology',
-]
 
 const EMPTY = {
   full_name: '', professional_title: '', phone: '', location: '',
@@ -50,10 +47,25 @@ const withScheme = (v) => {
   return /^https?:\/\//i.test(t) ? t : `https://${t}`
 }
 
+// Same rule the server applies to names, checked here on step 1 so the
+// message appears under the name box instead of after the last step.
+// \p{L} covers letters with accents too (ñ in Peñaredondo, é, ü, …).
+const NAME = /^[\p{L}\s.,'’-]+$/u
+const NAME_RULE = 'Use letters only — no numbers or symbols.'
+
+// Which step each field lives on, so an error the server sends back for a
+// field opens that field's step instead of showing up at the end.
+const FIELD_STEP = {
+  full_name: 0, phone: 0, location: 0,
+  school: 1, course: 1, year_level: 1, expected_graduation: 1,
+  github_url: 2, linkedin_url: 2, portfolio_url: 2,
+}
+
 const validate = (step, f) => {
   const e = {}
   if (step === 0) {
     if (f.full_name.trim().length < 2) e.full_name = 'Enter your full name.'
+    else if (!NAME.test(f.full_name.trim())) e.full_name = NAME_RULE
     if (!f.phone.trim()) e.phone = 'Enter a phone number.'
     else if (!PHONE.test(f.phone.trim())) e.phone = 'That doesn’t look like a phone number.'
     if (!f.location.trim()) e.location = 'Enter your city or province.'
@@ -73,10 +85,6 @@ const validate = (step, f) => {
   return e
 }
 
-// The open dropdown list is drawn by the browser, and on some (Chrome on
-// Windows) it stays white even in dark mode while the options inherit white
-// text. Fixed colors on each option keep the list readable in every theme.
-const OPTION_STYLE = { color: '#0f172a', backgroundColor: '#ffffff' }
 
 const inputBase = 'w-full bg-white/[0.04] rounded-xl px-4 py-3 text-white text-[15px] placeholder-gray-600 outline-none transition-all border'
 const inputState = (err) => err
@@ -112,8 +120,6 @@ const ProfileSetup = () => {
   const photoInput = useRef(null)
   const headingRef = useRef(null)
 
-  const thisYear = new Date().getFullYear()
-  const baseYears = useMemo(() => Array.from({ length: 7 }, (_, i) => String(thisYear - 1 + i)), [thisYear])
 
   // Pre-fill with whatever is already saved (e.g. a returning student, or the
   // name that came from Google).
@@ -147,14 +153,9 @@ const ProfileSetup = () => {
     setError('')
   }
 
-  // Stored as one string like "June 2027"; shown as two dropdowns.
-  const gradMonth = MONTHS.find((m) => form.expected_graduation.toLowerCase().startsWith(m.toLowerCase())) || ''
-  const gradYear = form.expected_graduation.match(/\d{4}/)?.[0] || ''
-  // Keep an already-saved year in the list even if it's outside the usual range.
-  const gradYears = gradYear && !baseYears.includes(gradYear) ? [gradYear, ...baseYears] : baseYears
-
-  const setGrad = (month, year) => {
-    setForm((f) => ({ ...f, expected_graduation: [month, year].filter(Boolean).join(' ') }))
+  // Stored as one string like "June 2027", picked from a month calendar.
+  const setGrad = (value) => {
+    setForm((f) => ({ ...f, expected_graduation: value }))
     setErrors((v) => ({ ...v, expected_graduation: undefined }))
   }
 
@@ -177,8 +178,8 @@ const ProfileSetup = () => {
     e?.preventDefault()
     const found = validate(step, form)
     // Month picked without a year (or the reverse) isn't a full date yet.
-    if (step === 1 && form.expected_graduation && !(gradMonth && gradYear)) {
-      found.expected_graduation = 'Choose both the month and the year.'
+    if (step === 1 && form.expected_graduation && !parseMonthYear(form.expected_graduation)) {
+      found.expected_graduation = 'Choose a month and year.'
     }
     if (Object.keys(found).length) {
       setErrors(found)
@@ -209,7 +210,20 @@ const ProfileSetup = () => {
       markProfileComplete(user.id)
       navigate('/student/dashboard', { replace: true })
     } catch (err) {
-      setError(err.response?.data?.message || 'Couldn’t save your profile. Please try again.')
+      const message = err.response?.data?.message || 'Couldn’t save your profile. Please try again.'
+      // If the server names a field (or the message is clearly about one),
+      // go back to that field's step and show the message under it.
+      const field = err.response?.data?.field && FIELD_STEP[err.response.data.field] !== undefined
+        ? err.response.data.field
+        : /\bname\b/i.test(message) ? 'full_name'
+        : /phone/i.test(message) ? 'phone'
+        : null
+      if (field) {
+        setErrors({ [field]: message })
+        setStep(FIELD_STEP[field])
+      } else {
+        setError(message)
+      }
     } finally {
       setSaving(false)
     }
@@ -326,35 +340,20 @@ const ProfileSetup = () => {
                   placeholder="e.g. Tomas Claudio Colleges" value={form.school} onChange={set('school')} />
               </Field>
               <Field id="course" label="Course" error={errors.course}>
-                <input id="course" list="course-options" className={`${inputBase} ${inputState(errors.course)}`}
-                  placeholder="e.g. Bachelor of Science in Computer Science" value={form.course} onChange={set('course')} />
-                <datalist id="course-options">
-                  {COURSES.map((c) => <option key={c} value={c} />)}
-                </datalist>
+                <Combobox id="course" className={`${inputBase} ${inputState(errors.course)}`} options={COURSES}
+                  placeholder="e.g. Bachelor of Science in Computer Science" value={form.course}
+                  onChange={(v) => set('course')({ target: { value: v } })} />
               </Field>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field id="year_level" label="Year level" error={errors.year_level}>
-                  <select id="year_level" className={`${inputBase} ${inputState(errors.year_level)}`}
-                    value={form.year_level} onChange={set('year_level')}>
-                    <option value="" style={OPTION_STYLE}>Choose…</option>
-                    {YEAR_LEVELS.map((y) => <option key={y} value={y} style={OPTION_STYLE}>{y}</option>)}
-                  </select>
+                  <Select id="year_level" className={`${inputBase} ${inputState(errors.year_level)}`}
+                    value={form.year_level} onChange={(v) => set('year_level')({ target: { value: v } })}
+                    options={YEAR_LEVELS} placeholder="Choose…" invalid={!!errors.year_level} aria-label="Year level" />
                 </Field>
                 <Field id="grad_month" label="Expected graduation" error={errors.expected_graduation}>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select id="grad_month" aria-label="Graduation month"
-                      className={`${inputBase} ${inputState(errors.expected_graduation)}`}
-                      value={gradMonth} onChange={(e) => setGrad(e.target.value, gradYear)}>
-                      <option value="" style={OPTION_STYLE}>Month</option>
-                      {MONTHS.map((m) => <option key={m} value={m} style={OPTION_STYLE}>{m}</option>)}
-                    </select>
-                    <select aria-label="Graduation year"
-                      className={`${inputBase} ${inputState(errors.expected_graduation)}`}
-                      value={gradYear} onChange={(e) => setGrad(gradMonth, e.target.value)}>
-                      <option value="" style={OPTION_STYLE}>Year</option>
-                      {gradYears.map((y) => <option key={y} value={y} style={OPTION_STYLE}>{y}</option>)}
-                    </select>
-                  </div>
+                  <MonthPicker id="grad_month" className={`${inputBase} ${inputState(errors.expected_graduation)}`}
+                    value={form.expected_graduation} onChange={setGrad} invalid={!!errors.expected_graduation}
+                    placeholder="Choose month and year" aria-label="Expected graduation" />
                 </Field>
               </div>
               <Field id="specialization" label="Specialization" optional>

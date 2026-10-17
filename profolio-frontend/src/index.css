@@ -615,3 +615,35 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     font-size: 16px !important;
   }
 }
+
+/* ── Dropdowns ───────────────────────────────────────────────────────────
+   The browser's own arrow sits jammed against the right edge in its own
+   little box, and looks different in every browser. Every <select> gets the
+   same quiet chevron instead, with room to breathe. Sizes are in em so the
+   small role pickers in Admin get a proportionally smaller arrow. Slate-400
+   reads on both the light and the dark surfaces. */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8em center;
+  background-size: 1.15em 1.15em;
+  padding-right: 2.4em !important;
+  cursor: pointer;
+}
+select:not([multiple]):not([size]):disabled { cursor: not-allowed; opacity: 0.6; }
+select::-ms-expand { display: none; }
+
+/* ── Pickers (components/ui) ─────────────────────────────────────────────
+   Highlight, selection and today-marker colours for Select, Combobox,
+   MonthPicker and DatePicker. They follow the light/dark theme and the
+   chosen accent colour. */
+.pf-hover        { background-color: var(--app-card-hover); }
+.pf-pick         { background-color: rgb(var(--accent-rgb)); color: #fff !important; font-weight: 600; }
+[data-theme="light"] .pf-pick { background-color: var(--accent-600, rgb(var(--accent-rgb))); }
+.pf-pick-soft    { background-color: rgba(var(--accent-rgb), 0.14); color: var(--accent-400) !important; }
+[data-theme="light"] .pf-pick-soft { color: var(--accent-600) !important; }
+.pf-today        { box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.55); }
+.pf-trigger-open { border-color: rgba(var(--accent-rgb), 0.55) !important; }

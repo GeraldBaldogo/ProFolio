@@ -12,6 +12,7 @@ import api from '../../services/api'
 import SocialSignIn from '../../components/SocialSignIn'
 import { destinationAfterSignIn } from '../../utils/profileSetup'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
+import { ArrowLeft } from 'lucide-react'
 
 const SIDE_PHOTO = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=1400&q=80'
 
@@ -176,8 +177,8 @@ const RegisterPage = () => {
           </Link>
 
           <div className="mt-4">
-            <Link to="/" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
-              ← Back to home
+            <Link to="/" className="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-400 text-xs transition-colors">
+              <ArrowLeft size={13} strokeWidth={2.25} aria-hidden="true" /> Back to home
             </Link>
           </div>
         </div>
@@ -478,8 +479,8 @@ const RegisterPage = () => {
           </p>
 
           <div className="text-center mt-2">
-            <Link to="/" className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
-              ← Back to home
+            <Link to="/" className="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-400 text-xs transition-colors">
+              <ArrowLeft size={13} strokeWidth={2.25} aria-hidden="true" /> Back to home
             </Link>
           </div>
         </div>

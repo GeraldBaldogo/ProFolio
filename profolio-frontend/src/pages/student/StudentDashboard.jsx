@@ -17,6 +17,7 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 import AvatarFill from '../../components/AvatarFill'
 import SidebarTheme from '../../components/SidebarTheme'
+import { ArrowRight } from 'lucide-react'
 // Ordered to follow what a student actually does: work set for them, their own
 // practice, what came of it, then what they walk away with.
 const navItems = [
@@ -300,9 +301,9 @@ const StudentDashboard = () => {
                   {openTests.length > 3 && (
                     <Link
                       to="/student/assigned-tests"
-                      className="block px-5 py-3 text-amber-400 hover:text-amber-300 text-xs font-semibold border-t border-amber-500/10 transition-colors"
+                      className="flex items-center gap-1.5 px-5 py-3 text-amber-400 hover:text-amber-300 text-xs font-semibold border-t border-amber-500/10 transition-colors"
                     >
-                      See all {openTests.length} assigned tests →
+                      See all {openTests.length} assigned tests <ArrowRight size={14} strokeWidth={2.25} aria-hidden="true" />
                     </Link>
                   )}
                 </div>

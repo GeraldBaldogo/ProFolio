@@ -15,6 +15,7 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 import AvatarFill from '../../components/AvatarFill'
 import SidebarTheme from '../../components/SidebarTheme'
+import { CircleCheck, TriangleAlert } from 'lucide-react'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -355,13 +356,13 @@ const OriginalityCheck = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {result.human_signals && (
                       <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-2xl p-4 sm:p-5">
-                        <p className="text-emerald-400 text-xs font-semibold mb-2">✓ Human Signals</p>
+                        <p className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold mb-2"><CircleCheck size={14} strokeWidth={2.25} aria-hidden="true" /> Human Signals</p>
                         <p className="text-gray-300 text-xs leading-relaxed">{result.human_signals}</p>
                       </div>
                     )}
                     {result.ai_signals && (
                       <div className="border border-rose-500/20 bg-rose-500/5 rounded-2xl p-4 sm:p-5">
-                        <p className="text-rose-400 text-xs font-semibold mb-2">⚠ AI Signals</p>
+                        <p className="flex items-center gap-1.5 text-rose-400 text-xs font-semibold mb-2"><TriangleAlert size={14} strokeWidth={2.25} aria-hidden="true" /> AI Signals</p>
                         <p className="text-gray-300 text-xs leading-relaxed">{result.ai_signals}</p>
                       </div>
                     )}
