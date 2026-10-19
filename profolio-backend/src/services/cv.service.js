@@ -6,6 +6,11 @@ const titlesService = require('./titles.service');
 
 const ASSESSMENT_TYPES = ['typing', 'programming', 'flowchart', 'sql', 'bugfix', 'communication'];
 
+// Only PASSED professor-set tests become CV evidence. Like a board exam, a
+// competency is claimed only once it is actually passed; a failed attempt is
+// left off the CV entirely rather than shown as "failed".
+const CV_PASS_MARK = 75;
+
 const TYPE_LABELS = {
   typing: 'Typing speed and accuracy',
   programming: 'Programming',
@@ -225,17 +230,19 @@ const generateCV = async (user_id, excludeInput) => {
   const assessments = {};
   for (const type of ASSESSMENT_TYPES) {
     const result = await assessmentRepo.getLatestGradedByType(user_id, type);
-    assessments[type] = result?.is_graded ? result : null;
+    // Assigned (is_graded) AND passed (>= CV_PASS_MARK). A below-pass attempt is
+    // left off the CV — not labelled "failed", simply not claimed.
+    assessments[type] = (result?.is_graded && Number(result.score) >= CV_PASS_MARK) ? result : null;
   }
 
   const gradedCount = ASSESSMENT_TYPES.filter((t) => assessments[t]).length;
 
-  // Nothing to write a CV from. Refusing here is kinder than generating a
-  // document full of invented competence and letting a student send it out.
+  // Nothing passed, nothing to put on the CV. Refusing here is kinder — and
+  // more honest — than generating a document full of "Beginning"-level entries.
   if (gradedCount === 0) {
     throw {
       status: 400,
-      message: 'Your CV is built from tests your professor set. Complete at least one assigned test first — practice attempts don\u2019t count.',
+      message: 'Your CV is built from professor-set tests you have passed. Pass at least one assigned test first — practice attempts and failed attempts don\u2019t count.',
     };
   }
 
