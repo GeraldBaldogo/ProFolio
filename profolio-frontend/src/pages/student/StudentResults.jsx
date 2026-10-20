@@ -32,6 +32,10 @@ const navItems = [
   { label: 'Profile', icon: faUser, path: '/student/profile' },
 ]
 
+// Assessment types whose retake is AI-generated (a NEW problem at the same
+// level), and the page that runs it. Typing and communication are not here.
+const RETAKE_ROUTE = { programming: 'coding', sql: 'sql', bugfix: 'bugfix', flowchart: 'flowchart' }
+
 const TYPE_META = {
   typing: { label: 'Typing Speed', icon: faKeyboard, accent: 'text-blue-400', gradient: 'from-blue-500 to-cyan-500' },
   programming: { label: 'Coding Challenge', icon: faCode, accent: 'text-violet-400', gradient: 'from-violet-500 to-purple-600' },
@@ -92,6 +96,13 @@ const StudentResults = () => {
   const visible = useMemo(
     () => filter === 'all' ? sorted : sorted.filter(r => r.type === filter),
     [sorted, filter]
+  )
+
+  // Assigned tests the student has already PASSED (any attempt >= 75). A retake
+  // is offered only for a failed assigned test that has no passing attempt yet.
+  const passedTestIds = useMemo(
+    () => new Set(sorted.filter(r => r.test_id && r.score >= 75).map(r => r.test_id)),
+    [sorted]
   )
 
   // Comparing each attempt to the one before it in the same type is the whole
@@ -450,6 +461,18 @@ const StudentResults = () => {
 
                           {!m.feedback && !m.strengths && (
                             <p className="text-gray-600 text-xs">No written feedback was recorded for this attempt.</p>
+                          )}
+
+                          {/* Retake: only for a failed assigned test with no passing
+                              attempt yet. Opens a NEW AI-generated problem at the same
+                              level; the result counts against this test. */}
+                          {r.test_id && RETAKE_ROUTE[r.type] && r.score !== null && r.score < 75 && !passedTestIds.has(r.test_id) && (
+                            <Link
+                              to={`/student/assessment/${RETAKE_ROUTE[r.type]}?retake_of=${r.test_id}`}
+                              className="inline-flex items-center gap-2 self-start px-4 h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all"
+                            >
+                              <FontAwesomeIcon icon={faRotateRight} /> Retake &mdash; new AI problem, same level
+                            </Link>
                           )}
                         </div>
                       )}

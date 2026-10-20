@@ -154,17 +154,19 @@ const SQLAssessment = () => {
   const [params] = useSearchParams()
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
+  const retakeOf = params.get('retake_of')
 
   const { getSessionToken, logEvent, resetSession, tabViolationCount, cameraViolationCount, getViolationCounts } = useProctoring('sql')
 
   const [phase, setPhase] = useState('setup') // setup | challenge | result
-  const [difficulty, setDifficulty] = useState('easy')
+  const [difficulty, setDifficulty] = useState(params.get('level') || 'easy')
   const [generating, setGenerating] = useState(false)
   const [setupError, setSetupError] = useState('')
 
   // The professor's test, if there is one.
   const [test, setTest] = useState(null)
   const [loadingTest, setLoadingTest] = useState(!!testId)
+  const [retakeMinutes, setRetakeMinutes] = useState(null)
 
   const [challenge, setChallenge] = useState(null)
   const [sqlCode, setSqlCode] = useState('')
@@ -248,6 +250,22 @@ const SQLAssessment = () => {
     return () => { cancelled = true }
   }, [testId])
 
+  // Retake: pull the professor's level and time limit from the original test;
+  // the AI then generates a NEW problem at that level.
+  useEffect(() => {
+    if (!retakeOf) return
+    let cancelled = false
+    getTestById(retakeOf)
+      .then((t) => {
+        if (cancelled || !t) return
+        const cfg = t.config || {}
+        if (cfg.level) setDifficulty(cfg.level)
+        if (t.time_limit_minutes) setRetakeMinutes(t.time_limit_minutes)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [retakeOf])
+
   const beginTimer = (limitSeconds) => {
     setSecsLeft(limitSeconds)
     startTimeRef.current = Date.now()
@@ -274,7 +292,7 @@ const SQLAssessment = () => {
     try {
       const data = await generateSQLChallenge({ difficulty })
       setChallenge(data)
-      beginTimer(TIME_LIMITS[difficulty])
+      beginTimer(retakeOf && retakeMinutes ? retakeMinutes * 60 : TIME_LIMITS[difficulty])
     } catch (err) {
       // Previously an alert(), which can't be styled or retried.
       setSetupError(err.message || 'Couldn\u2019t generate a challenge. Check your connection.')
@@ -337,6 +355,7 @@ const SQLAssessment = () => {
         session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId } : {}),
+        ...(retakeOf ? { retake_of: retakeOf } : {}),
       })
       setResult(data)
       screenShare?.stop()
@@ -389,7 +408,7 @@ const SQLAssessment = () => {
     setRunState({ status: 'done', run, match })
   }
 
-  const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
+  const goBack = () => navigate(testId ? '/student/assigned-tests' : retakeOf ? '/student/results' : '/student/assessment')
 
   // Don't let them start before the professor's question has arrived.
   // The background stops moving while the timed part is running
@@ -455,6 +474,26 @@ const SQLAssessment = () => {
                 {test?.time_limit_minutes ? `${test.time_limit_minutes} min` : '15 min'}
               </span>
             </p>
+          </div>
+        </>
+      ) : retakeOf ? (
+        // ── Retake: AI generates a NEW problem at the SAME locked level ──
+        <>
+          <div className="border border-blue-500/20 bg-blue-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <FontAwesomeIcon icon={faRotateRight} className="text-blue-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-blue-300 text-sm font-semibold">Retake of a failed assigned test</p>
+              <p className="text-gray-400 text-xs mt-1">
+                The AI will generate a <span className="text-gray-300">new problem</span> at the
+                same level &mdash; nothing is reused. Your result is recorded against the original test.
+              </p>
+            </div>
+          </div>
+          <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
+            <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+              <span>Level: <span className="text-white capitalize">{difficulty}</span></span>
+              <span>Time limit: <span className="text-white">{retakeMinutes || TIME_LIMITS[difficulty] / 60} minutes</span></span>
+            </div>
           </div>
         </>
       ) : (
@@ -526,7 +565,7 @@ const SQLAssessment = () => {
         {generating ? (
           <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Generating challenge...</>
         ) : (
-          <><FontAwesomeIcon icon={faPlay} /> {testId ? 'Start test' : 'Start Challenge'}</>
+          <><FontAwesomeIcon icon={faPlay} /> {testId ? 'Start test' : retakeOf ? 'Start retake' : 'Start Challenge'}</>
         )}
       </button>
     </div>
@@ -536,7 +575,7 @@ const SQLAssessment = () => {
   if (phase === 'result') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
+        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : retakeOf ? 'Back to My Results' : 'Back to Assessments'} />
       </div>
 
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-6 text-center mb-5">
@@ -613,10 +652,10 @@ const SQLAssessment = () => {
           </button>
         )}
         <button
-          onClick={() => navigate(testId ? '/student/assigned-tests' : '/student/assessment/bugfix')}
+          onClick={() => navigate(testId ? '/student/assigned-tests' : retakeOf ? '/student/results' : '/student/assessment/bugfix')}
           className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all"
         >
-          {testId ? 'Back to assigned tests' : 'Next: Bug Fix'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
+          {testId ? 'Back to assigned tests' : retakeOf ? 'Back to My Results' : 'Next: Bug Fix'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
     </div>

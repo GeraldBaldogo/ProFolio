@@ -23,6 +23,7 @@ const FlowchartAssessment = () => {
   const [params] = useSearchParams()
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
+  const retakeOf = params.get('retake_of')
 
   const {
     getSessionToken, logEvent, resetSession,
@@ -164,6 +165,8 @@ const FlowchartAssessment = () => {
         session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId } : {}),
+        // Retake: counts the AI-generated attempt against the failed assigned test.
+        ...(retakeOf ? { retake_of: retakeOf } : {}),
         ...(unproctored ? { unproctored: true, unproctored_reason: unproctored } : {}),
       })
       setResult(data)
@@ -190,7 +193,7 @@ const FlowchartAssessment = () => {
   }
 
   const totalViolations = cameraViolationCount + tabViolationCount
-  const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
+  const goBack = () => navigate(testId ? '/student/assigned-tests' : retakeOf ? '/student/results' : '/student/assessment')
 
   // ── LOADING ───────────────────────────────────────────────────────────────
   // The background stops moving while the timed part is running
@@ -223,7 +226,7 @@ const FlowchartAssessment = () => {
         onScreenShareReady={setScreenShare}
       />
       <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
+        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : retakeOf ? 'Back to My Results' : 'Back to Assessments'} />
       </div>
 
       <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-6 text-center mb-5">
@@ -288,7 +291,7 @@ const FlowchartAssessment = () => {
           </button>
         )}
         <button onClick={goBack} className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all">
-          {testId ? 'Back to assigned tests' : 'View all results'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
+          {testId ? 'Back to assigned tests' : retakeOf ? 'Back to My Results' : 'View all results'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
     </div>

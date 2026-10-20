@@ -43,6 +43,11 @@ const getLatestGradedByType = async (user_id, type) => {
     .eq('user_id', user_id)
     .eq('type', type)
     .not('test_id', 'is', null)
+    // Highest passing attempt counts. A student may be given a makeup/retake as a
+    // NEW professor-set test of the same type (same complexity, new questions);
+    // the best score across those assigned attempts is what reaches the CV, so a
+    // later weaker attempt never erases an earlier stronger one.
+    .order('score', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(1);
  
@@ -123,4 +128,16 @@ const getGradedResults = async (user_id) => {
   });
 };
 
-module.exports = { saveResult, getResultsByUser, getLatestByType, getLatestGradedByType, getPracticeScores, getGradedResults };
+// Every attempt a student has made against one assigned test (including any
+// AI-generated retakes recorded against it), used to decide retake eligibility.
+const getAttemptsForTest = async (user_id, test_id) => {
+  const { data, error } = await supabase
+    .from('assessment_results')
+    .select('*')
+    .eq('user_id', user_id)
+    .eq('test_id', test_id);
+  if (error) throw { status: 500, message: error.message };
+  return data || [];
+};
+
+module.exports = { saveResult, getResultsByUser, getLatestByType, getLatestGradedByType, getPracticeScores, getGradedResults, getAttemptsForTest };

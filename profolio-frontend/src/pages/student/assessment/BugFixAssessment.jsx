@@ -46,18 +46,20 @@ const BugFixAssessment = () => {
   const [params] = useSearchParams()
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
+  const retakeOf = params.get('retake_of')
 
   const { getSessionToken, logEvent, resetSession, tabViolationCount, cameraViolationCount, getViolationCounts } = useProctoring('bugfix')
 
   const [phase, setPhase] = useState('setup') // setup | challenge | result
-  const [language, setLanguage] = useState('Python')
-  const [difficulty, setDifficulty] = useState('easy')
+  const [language, setLanguage] = useState(params.get('language') ? normaliseLanguage(params.get('language')) : 'Python')
+  const [difficulty, setDifficulty] = useState(params.get('level') || 'easy')
   const [generating, setGenerating] = useState(false)
   const [setupError, setSetupError] = useState('')
 
   // The professor's test, if there is one.
   const [test, setTest] = useState(null)
   const [loadingTest, setLoadingTest] = useState(!!testId)
+  const [retakeMinutes, setRetakeMinutes] = useState(null)
 
   const [challenge, setChallenge] = useState(null)
   const [fixedCode, setFixedCode] = useState('')
@@ -137,6 +139,23 @@ const BugFixAssessment = () => {
     return () => { cancelled = true }
   }, [testId])
 
+  // Retake: pull the professor's language, level and time limit from the test;
+  // the AI then generates a NEW problem at that same setting.
+  useEffect(() => {
+    if (!retakeOf) return
+    let cancelled = false
+    getTestById(retakeOf)
+      .then((t) => {
+        if (cancelled || !t) return
+        const cfg = t.config || {}
+        if (cfg.language) setLanguage(normaliseLanguage(cfg.language))
+        if (cfg.level) setDifficulty(cfg.level)
+        if (t.time_limit_minutes) setRetakeMinutes(t.time_limit_minutes)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [retakeOf])
+
   const beginTimer = (limitSeconds) => {
     setSecsLeft(limitSeconds)
     startTimeRef.current = Date.now()
@@ -164,7 +183,7 @@ const BugFixAssessment = () => {
       const data = await generateBugFixChallenge({ language, difficulty })
       setChallenge(data)
       setFixedCode(data.buggy_code || '')
-      beginTimer(TIME_LIMITS[difficulty])
+      beginTimer(retakeOf && retakeMinutes ? retakeMinutes * 60 : TIME_LIMITS[difficulty])
     } catch (err) {
       // Previously an alert(), which can't be styled or retried.
       setSetupError(err.message || 'Couldn\u2019t generate a challenge. Check your connection.')
@@ -350,6 +369,7 @@ const BugFixAssessment = () => {
         session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId } : {}),
+        ...(retakeOf ? { retake_of: retakeOf } : {}),
       })
       setResult(data)
       screenShare?.stop()
@@ -377,7 +397,7 @@ const BugFixAssessment = () => {
     none: 'text-rose-400 border-rose-500/20 bg-rose-500/5',
   }
 
-  const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
+  const goBack = () => navigate(testId ? '/student/assigned-tests' : retakeOf ? '/student/results' : '/student/assessment')
 
   // Don't let them start before the professor's code has arrived.
   // The background stops moving while the timed part is running
@@ -447,6 +467,27 @@ const BugFixAssessment = () => {
                   {test?.time_limit_minutes ? `${test.time_limit_minutes} min` : '15 min'}
                 </span>
               </span>
+            </div>
+          </div>
+        </>
+      ) : retakeOf ? (
+        // ── Retake: AI generates a NEW problem at the SAME locked level ──
+        <>
+          <div className="border border-blue-500/20 bg-blue-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <FontAwesomeIcon icon={faRotateRight} className="text-blue-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-blue-300 text-sm font-semibold">Retake of a failed assigned test</p>
+              <p className="text-gray-400 text-xs mt-1">
+                The AI will generate a <span className="text-gray-300">new problem</span> at the
+                same level &mdash; nothing is reused. Your result is recorded against the original test.
+              </p>
+            </div>
+          </div>
+          <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
+            <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+              <span>Language: <span className="text-white">{language}</span></span>
+              <span>Level: <span className="text-white capitalize">{difficulty}</span></span>
+              <span>Time limit: <span className="text-white">{retakeMinutes || TIME_LIMITS[difficulty] / 60} minutes</span></span>
             </div>
           </div>
         </>
@@ -535,7 +576,7 @@ const BugFixAssessment = () => {
         {generating ? (
           <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Generating challenge...</>
         ) : (
-          <><FontAwesomeIcon icon={faPlay} /> {testId ? 'Start test' : 'Start Challenge'}</>
+          <><FontAwesomeIcon icon={faPlay} /> {testId ? 'Start test' : retakeOf ? 'Start retake' : 'Start Challenge'}</>
         )}
       </button>
     </div>
@@ -545,7 +586,7 @@ const BugFixAssessment = () => {
   if (phase === 'result') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
+        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : retakeOf ? 'Back to My Results' : 'Back to Assessments'} />
       </div>
 
       {/* Score */}

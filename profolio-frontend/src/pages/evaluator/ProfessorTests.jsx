@@ -15,6 +15,7 @@ import api from '../../services/api'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import SidebarTheme from '../../components/SidebarTheme'
 import { DateTimePicker } from '../../components/ui/DatePicker'
+import Select from '../../components/ui/Select'
 
 // Must match EvaluatorDashboard, EvaluatorStudents and TestSubmission exactly.
 // Each page keeps its own copy, so a difference here makes the sidebar jump
@@ -29,6 +30,11 @@ const navItems = [
 // Mirrors VALID_TYPES and REQUIRED_CONFIG_FIELDS in test.service.js. If that
 // list changes on the server, change it here too — the server is the one that
 // actually enforces it; this just avoids a pointless round trip.
+const LANGUAGES = [
+  'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'C#',
+  'Go', 'Rust', 'PHP', 'Ruby', 'Swift', 'Kotlin',
+]
+
 const TEST_TYPES = [
   {
     value: 'typing', label: 'Speed typing', icon: faKeyboard, accent: 'text-blue-400',
@@ -48,7 +54,7 @@ const TEST_TYPES = [
         placeholder: 'Write a function that…' },
       { key: 'starter_code', label: 'Starter code', type: 'textarea', rows: 6, mono: true, required: true,
         placeholder: 'def solve(nums):\n    pass' },
-      { key: 'language', label: 'Language', type: 'text', required: true, placeholder: 'python' },
+      { key: 'language', label: 'Language', type: 'select', required: true, placeholder: 'Choose a language', options: LANGUAGES },
       { key: 'test_cases', label: 'Test cases', type: 'testcases',
         hint: 'Optional. Each pair is one input and the output it should produce.' },
     ],
@@ -59,7 +65,7 @@ const TEST_TYPES = [
     fields: [
       { key: 'buggy_code', label: 'Buggy code', type: 'textarea', rows: 7, mono: true, required: true,
         placeholder: 'def average(total, count):\n    return total / count' },
-      { key: 'language', label: 'Language', type: 'text', required: true, placeholder: 'python' },
+      { key: 'language', label: 'Language', type: 'select', required: true, placeholder: 'Choose a language', options: LANGUAGES },
       { key: 'test_cases', label: 'Test cases', type: 'testcases',
         hint: 'Optional. These are what the fixed code has to pass.' },
     ],
@@ -815,6 +821,15 @@ const ProfessorTests = () => {
                         value={form.config[fd.key] ?? ''}
                         onChange={e => setConfig(fd.key, e.target.value)}
                         placeholder={fd.placeholder}
+                      />
+                    ) : fd.type === 'select' ? (
+                      <Select
+                        id={fd.key}
+                        value={form.config[fd.key] ?? ''}
+                        onChange={(v) => setConfig(fd.key, v)}
+                        options={fd.options || []}
+                        placeholder={fd.placeholder || 'Choose…'}
+                        className={inputClass}
                       />
                     ) : (
                       <input
