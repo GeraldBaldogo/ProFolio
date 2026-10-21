@@ -6,6 +6,7 @@ import {
   faCircleCheck, faClock, faHourglassHalf, faShield, faVideoSlash,
   faRobot, faChevronDown, faUsers, faChartSimple,
   faHouse, faFlaskVial, faComments, faBars, faTimes, faRightFromBracket,
+  faWandMagicSparkles,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
@@ -117,6 +118,42 @@ const TestSubmissions = () => {
   }, [rows])
 
   const handleLogout = () => { logout(); navigate('/') }
+
+  // Students who failed this test (best score below 75). A remedial test itself
+  // never offers its own remedial.
+  const isRemedialTest = !!test?.config?.remedial_of
+  const failedCount = useMemo(() => {
+    const best = new Map()
+    for (const r of rows) {
+      const s = r.result?.score
+      if (s === null || s === undefined) continue
+      if (!best.has(r.student_id) || s > best.get(r.student_id)) best.set(r.student_id, s)
+    }
+    return [...best.values()].filter(s => s < 75).length
+  }, [rows])
+
+  const [remedialBusy, setRemedialBusy] = useState(false)
+  const [remedialMsg, setRemedialMsg] = useState('')
+
+  const assignRemedialToFailed = async () => {
+    if (remedialBusy) return
+    setRemedialBusy(true)
+    setRemedialMsg('')
+    try {
+      const res = await api.post(`/tests/${testId}/remedial-failed`)
+      const d = res.data.data || {}
+      setRemedialMsg(
+        d.assigned > 0
+          ? `Assigned a new AI remedial to ${d.assigned} student${d.assigned > 1 ? 's' : ''} who failed. It’s now in their Assigned Tests.`
+          : (d.message || 'No one to assign a remedial to right now.')
+      )
+      fetchAll()
+    } catch (err) {
+      setRemedialMsg(err.response?.data?.message || 'Couldn’t build the remedial just now. Please try again.')
+    } finally {
+      setRemedialBusy(false)
+    }
+  }
 
   const answerFor = (row) => {
     const type = row.result?.type
@@ -340,6 +377,28 @@ const TestSubmissions = () => {
             </div>
           ))}
         </div>
+
+        {/* Remedial for those who failed */}
+        {!isRemedialTest && failedCount > 0 && (
+          <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-amber-300 text-sm font-semibold">
+                {failedCount} student{failedCount > 1 ? 's' : ''} didn&apos;t pass this test
+              </p>
+              <p className="text-gray-400 text-xs mt-0.5">
+                Build one fresh AI remedial (same level) and assign it to everyone who failed — it lands in their Assigned Tests.
+              </p>
+              {remedialMsg && <p className="text-gray-300 text-xs mt-1">{remedialMsg}</p>}
+            </div>
+            <button
+              onClick={assignRemedialToFailed}
+              disabled={remedialBusy}
+              className="flex-shrink-0 flex items-center justify-center gap-2 bg-violet-500 hover:bg-violet-400 disabled:opacity-50 text-white text-sm font-bold px-4 py-2.5 rounded-2xl transition-colors">
+              <FontAwesomeIcon icon={remedialBusy ? faSpinner : faWandMagicSparkles} className={remedialBusy ? 'animate-spin' : ''} />
+              {remedialBusy ? 'Building…' : 'Assign AI remedial to those who failed'}
+            </button>
+          </div>
+        )}
 
         {/* Rows */}
         {rows.length === 0 ? (

@@ -15,6 +15,9 @@ router.get('/my-students', authenticate, requireRole('evaluator'), testControlle
 router.get('/assigned/mine', authenticate, requireRole('student'), testController.getMyAssignedTests);
 router.get('/my-professors', authenticate, requireRole('student'), testController.getMyProfessors);
 
+// ── Professor: draft a test by chatting with the AI (returns a draft only) ──
+router.post('/assistant', authenticate, requireRole('evaluator'), testController.assistantDraft);
+
 // ── Professor: create and manage tests ──
 router.post('/', authenticate, requireRole('evaluator'), testController.createTest);
 router.patch('/:id', authenticate, requireRole('evaluator'), testController.updateTest);
@@ -22,6 +25,7 @@ router.delete('/:id', authenticate, requireRole('evaluator'), testController.del
 
 // ── Professor: assign, and see who was assigned ──
 router.post('/:id/assign', authenticate, requireRole('evaluator'), testController.assignTest);
+router.post('/:id/remedial-failed', authenticate, requireRole('evaluator'), testController.assignRemedialToFailed);
 router.get('/:id/assignments', authenticate, requireRole('evaluator'), testController.getAssignmentsForTest);
 
 // The professor's final word on an AI-scored submission: confirm or adjust

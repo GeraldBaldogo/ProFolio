@@ -6,6 +6,7 @@ const { assertNotOverdue } = require('./test.service');
 const progress = require('./progress.service');
 const { findTopic } = require('../utils/curriculum');
 const { verifiedTitle } = require('../utils/titles');
+const remedial = require('./remedial.service');
 
 // ─── PROMPTS ──────────────────────────────────────────────────────────────────
 // Used for free practice only. When a professor assigns a communication test,
@@ -31,17 +32,37 @@ const getCommunicationPrompt = async (user_id, { difficulty = 'easy', topic: req
 
 // ─── SUBMIT ──────────────────────────────────────────────────────────────────
 
+// A retake is a brand-new attempt at an *assigned* test the student already
+// took and did not pass. It must not be a backdoor to inflate a score that
+// already passed, nor a way to grade a test that was never assigned.
+const RETAKE_PASS_MARK = 75;
+const assertRetakeEligible = async (user_id, retake_of, type) => {
+  const all = await assessmentRepo.getResultsByUser(user_id);
+  const sameType = (all || []).filter((a) => a.test_id === retake_of && a.type === type);
+  if (!sameType.length)
+    throw { status: 403, message: 'You can only retake an assigned test you have already taken.' };
+  if (sameType.some((a) => Number(a.score) >= RETAKE_PASS_MARK))
+    throw { status: 400, message: 'You have already passed this assessment — no retake needed.' };
+};
+
 const submitCommunicationResult = async (
   user_id,
   {
     difficulty = 'easy', prompt_id, prompt_title, prompt_text, response_text, time_taken_seconds,
     violation_count = 0, camera_violation_count = 0, session_id = null,
     test_id = null, rubric = [],
-    unproctored = false, unproctored_reason = null
+    unproctored = false, unproctored_reason = null,
+    retake_of = null
   }
 ) => {
   if (!response_text || response_text.trim().length < 10)
     throw { status: 400, message: 'response_text is required and must be meaningful.' };
+
+  // A retake carries no test_id (it is not the original assignment) but is
+  // graded against the original test so it counts toward the CV. It may only
+  // be started for an assigned test the student took and did not yet pass.
+  const isRetake = !!retake_of && !test_id;
+  if (isRetake) await assertRetakeEligible(user_id, retake_of, 'communication');
 
   // A student may only submit against a test that was actually assigned to
   // them, and only once. Without this, anyone could post a test_id and attach
@@ -63,10 +84,15 @@ const submitCommunicationResult = async (
   let topicKey = null;
   let criteria;
 
-  if (test_id) {
-    const test = await testRepo.findById(test_id);
+  if (test_id || isRetake) {
+    // An assigned test and a retake both use the PROFESSOR'S own prompt and
+    // rubric — same prompt, same level. A retake just grades against the
+    // original test id instead of carrying one of its own.
+    const test = await testRepo.findById(test_id || retake_of);
     const cfg = test?.config || {};
     prompt_text = cfg.prompt || prompt_text;
+    if (!prompt_text) throw { status: 400, message: 'This test has no prompt set. Ask your professor to check it.' };
+    if (cfg.level) difficulty = cfg.level;
     const testRubric = Array.isArray(cfg.rubric) && cfg.rubric.length ? cfg.rubric : rubric;
     criteria = Array.isArray(testRubric) && testRubric.length
       ? testRubric.join(', ')
@@ -141,11 +167,13 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
     type: 'communication',
     score: finalScore,
     session_id,
-    test_id,
+    test_id: isRetake ? retake_of : test_id,
     metadata: {
       criteria: normalizeCriteria('communication', criterionScores),
       difficulty,
       topic: topicKey,
+      retake: isRetake,
+      retake_of: isRetake ? retake_of : null,
       prompt_id,
       prompt_title,
       prompt_text,
@@ -174,10 +202,14 @@ Score the student strictly and fairly. Respond with JSON only, no markdown:
     await testRepo.updateAssignmentStatus(test_id, user_id, 'submitted');
   }
 
+  // Second chance: a failed assigned test (deadline still open) auto-gets a
+  // fresh AI remedial assigned to the student. Fire-and-forget — never awaited.
+  remedial.maybeAssignRemedial({ student_id: user_id, test_id: isRetake ? retake_of : test_id, score: finalScore, isRetake });
+
   let title_awarded = null;
   let practice_rank = null;
-  if (test_id) {
-    const test = await testRepo.findById(test_id);
+  if (test_id || isRetake) {
+    const test = await testRepo.findById(test_id || retake_of);
     const award = verifiedTitle('communication', test?.config?.level, finalScore);
     title_awarded = award && { label: award.label, level: award.level, test_level: test?.config?.level || 'easy' };
   } else {

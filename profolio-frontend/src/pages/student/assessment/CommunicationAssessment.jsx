@@ -48,6 +48,10 @@ const CommunicationAssessment = () => {
   const [params] = useSearchParams()
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
+  // Set when the student arrives from My Results to retake a test they didn't
+  // pass. A retake is a fresh prompt at the professor's level and counts toward
+  // the CV, but it is not the original assignment, so it carries no test_id.
+  const retakeOf = params.get('retake_of')
 
   const { getSessionToken, logEvent, resetSession, cameraViolationCount, getViolationCounts } = useProctoring('communication')
 
@@ -58,7 +62,10 @@ const CommunicationAssessment = () => {
 
   // The professor's test, if there is one.
   const [test, setTest] = useState(null)
-  const [loadingTest, setLoadingTest] = useState(!!testId)
+  const [loadingTest, setLoadingTest] = useState(!!testId || !!retakeOf)
+  // The professor's time limit, carried into the retake so it matches the
+  // original test's conditions rather than the generic per-level default.
+  const [retakeMinutes, setRetakeMinutes] = useState(null)
 
   const [prompt, setPrompt] = useState(null)
   const [response, setResponse] = useState('')
@@ -120,6 +127,41 @@ const CommunicationAssessment = () => {
 
     return () => { cancelled = true }
   }, [testId])
+
+  // Retake: use the PROFESSOR'S own prompt — same prompt, same level — so the
+  // retake is exactly the test they took, just graded against the original.
+  useEffect(() => {
+    if (!retakeOf) return
+    let cancelled = false
+
+    getTestById(retakeOf)
+      .then((t) => {
+        if (cancelled) return
+        setTest(t)
+        const cfg = t?.config || {}
+        if (cfg.level) setDifficulty(cfg.level)
+        if (t?.time_limit_minutes) setRetakeMinutes(t.time_limit_minutes)
+        if (!cfg.prompt) {
+          setSetupError('This test has no prompt set. Ask your professor to check it.')
+          return
+        }
+        setPrompt({
+          id: null,
+          title: t.title,
+          prompt: cfg.prompt,
+          criteria: Array.isArray(cfg.rubric) ? cfg.rubric.join(', ') : '',
+          rubric: Array.isArray(cfg.rubric) ? cfg.rubric : [],
+        })
+      })
+      .catch((err) => {
+        if (!cancelled) setSetupError(err.message || 'Couldn’t load this retake.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTest(false)
+      })
+
+    return () => { cancelled = true }
+  }, [retakeOf])
 
   const handleResponseChange = (e) => {
     const val = e.target.value
@@ -185,6 +227,31 @@ const CommunicationAssessment = () => {
     beginTimer(test?.time_limit_minutes ? test.time_limit_minutes * 60 : TIME_LIMITS.medium)
   }
 
+  // Retake: proctored like the real test (screen share required). The prompt is
+  // the professor's own, already loaded above — same prompt, same level.
+  const startRetake = async () => {
+    setScreenError('')
+
+    if (!screenShare) {
+      setScreenError('Proctoring is still starting up. Please wait a moment and try again.')
+      return
+    }
+    if (screenShare.state === 'unsupported') {
+      setScreenError('Screen sharing is not available on this device. Please take this on a laptop or desktop computer.')
+      return
+    }
+    if (screenShare.state !== 'sharing') {
+      const granted = await screenShare.request()
+      if (!granted) {
+        setScreenError(screenShare.note || 'Screen sharing is required before this retake can begin.')
+        return
+      }
+    }
+
+    resetSession()
+    beginTimer((retakeMinutes || (test?.time_limit_minutes) || 8) * 60)
+  }
+
   const handleSubmit = async (timedOut = false) => {
     clearInterval(timerRef.current)
     if (submitting || result) return
@@ -209,6 +276,8 @@ const CommunicationAssessment = () => {
         session_token: await getSessionToken(),
         // Ties the result to the professor's test and closes the assignment.
         ...(testId ? { test_id: testId, rubric: prompt?.rubric || [] } : {}),
+        // A retake carries no test_id but is graded against the original.
+        ...(retakeOf ? { retake_of: retakeOf } : {}),
       })
       setResult(res.data.data)
       screenShare?.stop()
@@ -239,7 +308,7 @@ const CommunicationAssessment = () => {
     clearInterval(timerRef.current)
   }
 
-  const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
+  const goBack = () => navigate(retakeOf ? '/student/results' : testId ? '/student/assigned-tests' : '/student/assessment')
 
   // Don't let them start before the professor's prompt has arrived.
   // The background stops moving while the timed part is running
@@ -321,6 +390,58 @@ const CommunicationAssessment = () => {
             </div>
           )}
         </>
+      ) : retakeOf ? (
+        // ── Retake: the professor's own prompt — same prompt, same level ──
+        <>
+          <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <FontAwesomeIcon icon={faRotateRight} className="text-amber-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-amber-300 text-sm font-semibold">Retake — this one counts</p>
+              <p className="text-gray-400 text-xs mt-1">
+                The <span className="text-gray-300 font-semibold">same prompt your professor set</span>{' '}
+                ({difficulty} level). Pass it and it replaces your earlier score and goes on your CV.
+                You can keep retaking until you pass.
+              </p>
+            </div>
+          </div>
+
+          <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Your prompt</p>
+            <p className="text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">{prompt?.prompt}</p>
+            <p className="text-gray-500 text-xs">
+              Time limit:{' '}
+              <span className="text-white">
+                {retakeMinutes || test?.time_limit_minutes || 8} min
+              </span>
+            </p>
+          </div>
+
+          {prompt?.rubric?.length > 0 ? (
+            <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-6">
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">You&apos;ll be marked on</p>
+              <div className="grid grid-cols-2 gap-2">
+                {prompt.rubric.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 text-gray-400 text-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0" />
+                    <span className="capitalize">{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-6">
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Evaluated On</p>
+              <div className="grid grid-cols-2 gap-2">
+                {['Clarity', 'Professionalism', 'Structure', 'Grammar'].map((c) => (
+                  <div key={c} className="flex items-center gap-2 text-gray-400 text-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    {c}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         // ── Free practice: difficulty ──
         <>
@@ -350,7 +471,7 @@ const CommunicationAssessment = () => {
         </>
       )}
 
-      {testId && (
+      {(testId || retakeOf) && (
         <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
           <FontAwesomeIcon icon={faDisplay} className="text-amber-400 mt-0.5" />
           <div>
@@ -373,13 +494,13 @@ const CommunicationAssessment = () => {
       )}
 
       <button
-        onClick={testId ? startAssignedTest : startChallenge}
-        disabled={loading || (testId && !prompt)}
+        onClick={testId ? startAssignedTest : retakeOf ? startRetake : startChallenge}
+        disabled={loading || ((testId || retakeOf) && !prompt)}
         className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-white font-bold py-3 rounded-2xl transition-all"
       >
         {loading
           ? <><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Loading prompt...</>
-          : <><FontAwesomeIcon icon={faPlay} /> {testId ? 'Start test' : 'Start Challenge'}</>}
+          : <><FontAwesomeIcon icon={faPlay} /> {testId ? 'Start test' : retakeOf ? 'Start retake' : 'Start Challenge'}</>}
       </button>
     </div>
   )
@@ -388,7 +509,7 @@ const CommunicationAssessment = () => {
   if (phase === 'result') return (
     <div className="min-h-screen bg-[#060612] font-sans px-6 py-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-4 mb-8">
-        <BackButton onClick={goBack} label={testId ? 'Back to assigned tests' : 'Back to Assessments'} />
+        <BackButton onClick={goBack} label={retakeOf ? 'Back to My Results' : testId ? 'Back to assigned tests' : 'Back to Assessments'} />
       </div>
 
       {/* Score */}
@@ -450,15 +571,30 @@ const CommunicationAssessment = () => {
         <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{response}</p>
       </div>
 
+      {/* Didn't pass → offer the retake right here, so the student doesn't have
+          to go to My Results first to find it. */}
+      {result && result.score < 75 && (testId || retakeOf) && (
+        <div className="border border-amber-500/30 bg-amber-500/10 rounded-2xl p-5 mb-4">
+          <p className="text-amber-300 text-sm font-semibold mb-1">You didn&apos;t pass this time — you can retake it now</p>
+          <p className="text-gray-400 text-xs mb-3">You need 75 to pass. Retake it right here — the same prompt, same level — no need to go back. You can keep retaking until you pass; the highest passing score is the one that counts toward your CV.</p>
+          <button
+            onClick={() => { window.location.href = `/student/assessment/communication?retake_of=${testId || retakeOf}` }}
+            className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-all"
+          >
+            <FontAwesomeIcon icon={faRotateRight} /> Retake now — same prompt, same level
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-3">
         {/* A graded test is one attempt — the server rejects a second submit */}
-        {!testId && (
+        {!testId && !retakeOf && (
           <button onClick={resetAll} className="flex-1 border border-white/8 text-gray-400 hover:text-white text-sm py-3 rounded-2xl transition-all">
             Try again
           </button>
         )}
         <button onClick={goBack} className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold text-sm py-3 rounded-2xl transition-all">
-          {testId ? 'Back to assigned tests' : 'View all results'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
+          {testId ? 'Back to assigned tests' : retakeOf ? 'Back to My Results' : 'View all results'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
         </button>
       </div>
     </div>

@@ -11,6 +11,7 @@ const progress = require('./progress.service');
 const { verifiedTitle } = require('../utils/titles');
 const crypto = require('crypto');
 const attempt = require('../utils/attempt');
+const remedial = require('./remedial.service');
 
 // Wraps a student's submission in a fenced block with a one-time marker and
 // tells the grader to treat everything inside as data, never as instructions.
@@ -156,6 +157,16 @@ const typingPassage = async (claims) => {
     if (!text) throw { status: 400, message: 'This test has no passage set. Ask your professor to check it.' };
     return { text, limit: test?.config?.duration_seconds || null };
   }
+  // Retake: the SAME passage and duration the professor set, so the retake is
+  // exactly the same level — same length, same text, same time. For typing
+  // this is fully fair: speed and accuracy are a motor skill, and the passage
+  // is on screen to be copied anyway, so re-typing it is no easier.
+  if (claims.rt) {
+    const orig = await testRepo.findById(claims.rt);
+    const text = orig?.config?.text_passage;
+    if (!text) throw { status: 400, message: 'This retake has no passage set. Ask your professor to check the test.' };
+    return { text, limit: orig?.config?.duration_seconds || null };
+  }
   const text = PRACTICE_TEXTS[claims.pi];
   if (!text) throw { status: 400, message: 'This attempt could not be verified. Reload the page and start again.' };
   return { text, limit: null };
@@ -163,13 +174,33 @@ const typingPassage = async (claims) => {
 
 // start → the server picks the passage and signs it into the attempt, so the
 // result can only be scored against the text it actually handed out.
-const startTyping = async (user_id, { session_token, test_id = null }) => {
+const startTyping = async (user_id, { session_token, test_id = null, retake_of = null }) => {
   const claims = attempt.verify(session_token, user_id, 'typing');
   await attempt.assertNotSubmitted(claims.sid);
-  if (test_id) await resolveTest(user_id, test_id);
-  const pi = test_id ? null : Math.floor(Math.random() * PRACTICE_TEXTS.length);
-  const token = attempt.extend(claims, test_id ? { tid: test_id } : { pi });
-  const { text, limit } = await typingPassage(test_id ? { tid: test_id } : { pi });
+
+  // A retake carries no test_id (it is not the original assignment) but is
+  // graded against the original test so it counts toward the CV. The passage
+  // choice is decided and signed HERE, so the result can only be scored
+  // against the exact text the server handed out.
+  const isRetake = !!retake_of && !test_id;
+  let extra;
+  if (isRetake) {
+    await assertRetakeEligible(user_id, retake_of, 'typing');
+    // The retake re-uses the professor's own passage (same level, same text,
+    // same duration); only the eligibility and grading differ from a fresh
+    // assigned attempt. typingPassage reads the passage from the original test.
+    // rlvl is carried for the saved metadata only, not for passage selection.
+    const orig = await testRepo.findById(retake_of);
+    extra = { rt: retake_of, rlvl: orig?.config?.level || 'easy' };
+  } else if (test_id) {
+    await resolveTest(user_id, test_id);
+    extra = { tid: test_id };
+  } else {
+    extra = { pi: Math.floor(Math.random() * PRACTICE_TEXTS.length) };
+  }
+
+  const token = attempt.extend(claims, extra);
+  const { text, limit } = await typingPassage(extra);
   return { typing_token: token, text, duration_seconds: limit };
 };
 
@@ -178,7 +209,7 @@ const startTyping = async (user_id, { session_token, test_id = null }) => {
 const beginTyping = async (user_id, { typing_token }) => {
   const claims = attempt.verify(typing_token, user_id, 'typing');
   if (claims.began) return { typing_token };
-  if (claims.pi === undefined && !claims.tid) throw { status: 400, message: 'Start the test before typing.' };
+  if (claims.pi === undefined && !claims.tid && !claims.rt) throw { status: 400, message: 'Start the test before typing.' };
   return { typing_token: attempt.extend(claims, { began: Date.now() }) };
 };
 
@@ -192,6 +223,7 @@ const submitTypingResult = async (user_id, body = {}) => {
   await attempt.assertNotSubmitted(claims.sid);
 
   const test_id = claims.tid || null;
+  const isRetake = !!claims.rt;
   await resolveTest(user_id, test_id);
   const { text: passage, limit } = await typingPassage(claims);
 
@@ -224,19 +256,26 @@ const submitTypingResult = async (user_id, body = {}) => {
     type: 'typing',
     score,
     session_id: claims.sid,
-    test_id,
+    // A retake is saved against the ORIGINAL test so it reaches the CV, even
+    // though it carried no test_id of its own.
+    test_id: isRetake ? claims.rt : test_id,
     metadata: {
-      wpm, accuracy, time_seconds, difficulty: 'easy',
+      wpm, accuracy, time_seconds, difficulty: claims.rlvl || 'easy',
       characters_typed: typed.length, characters_correct: correct,
       passage_length: passage.length,
       violation_count, camera_violation_count,
       penalty_applied: penalty,
       server_scored: true,
+      retake: isRetake,
+      retake_of: isRetake ? claims.rt : null,
       unproctored: !!unproctored, unproctored_reason,
     }
   });
 
+  // Only the original assignment is ever closed. A retake carries no test_id,
+  // so this no-ops for it — the original stays as it was.
   await closeAssignment(user_id, test_id);
+  remedial.maybeAssignRemedial({ student_id: user_id, test_id: isRetake ? claims.rt : test_id, score, isRetake });
   return result;
 };
 
@@ -380,6 +419,9 @@ Respond with JSON only, no markdown:
   // a verified title from the test's level and the score. On practice, the
   // practice rank as it now stands — never a verified title.
   const award = await awardFor(user_id, 'programming', isRetake ? retake_of : test_id, finalScore);
+  // Second chance: a failed assigned test (deadline still open) auto-gets a
+  // fresh AI remedial assigned to the student. Fire-and-forget — never awaited.
+  remedial.maybeAssignRemedial({ student_id: user_id, test_id: isRetake ? retake_of : test_id, score: finalScore, isRetake });
 
   return { ...result, feedback: aiResult.feedback, correctness: aiResult.correctness, ...award };
 };
@@ -503,6 +545,7 @@ Respond with JSON only, no markdown:
   await closeAssignment(user_id, test_id);
 
   const award = await awardFor(user_id, 'flowchart', isRetake ? retake_of : test_id, finalScore);
+  remedial.maybeAssignRemedial({ student_id: user_id, test_id: isRetake ? retake_of : test_id, score: finalScore, isRetake });
 
   return { ...result, feedback: aiResult.feedback, logical_flow: aiResult.logical_flow, ...award };
 };
@@ -791,6 +834,7 @@ Respond with JSON only, no markdown:
   await closeAssignment(user_id, test_id);
 
   const award = await awardFor(user_id, 'sql', isRetake ? retake_of : test_id, finalScore);
+  remedial.maybeAssignRemedial({ student_id: user_id, test_id: isRetake ? retake_of : test_id, score: finalScore, isRetake });
 
   return {
     ...result,
@@ -924,6 +968,7 @@ Respond with JSON only, no markdown:
   await closeAssignment(user_id, test_id);
 
   const award = await awardFor(user_id, 'bugfix', isRetake ? retake_of : test_id, finalScore);
+  remedial.maybeAssignRemedial({ student_id: user_id, test_id: isRetake ? retake_of : test_id, score: finalScore, isRetake });
 
   return { ...result, feedback: aiResult.feedback, bugs_fixed: aiResult.bugs_fixed, ...award };
 };

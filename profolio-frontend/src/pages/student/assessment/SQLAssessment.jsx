@@ -644,9 +644,24 @@ const SQLAssessment = () => {
         </div>
       )}
 
+      {/* Didn't pass → offer the retake right here, so the student doesn't have
+          to go to My Results first to find it. */}
+      {result && result.score < 75 && (testId || retakeOf) && (
+        <div className="border border-amber-500/30 bg-amber-500/10 rounded-2xl p-5 mb-4">
+          <p className="text-amber-300 text-sm font-semibold mb-1">You didn&apos;t pass this time — you can retake it now</p>
+          <p className="text-gray-400 text-xs mb-3">You need 75 to pass. Retake it right here with a new problem at the same level — no need to go back. You can keep retaking until you pass; the highest passing score is the one that counts toward your CV.</p>
+          <button
+            onClick={() => { window.location.href = `/student/assessment/sql?retake_of=${testId || retakeOf}` }}
+            className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-all"
+          >
+            <FontAwesomeIcon icon={faRotateRight} /> Retake now — new problem, same level
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-3">
         {/* A graded test is one attempt — the server rejects a second submit */}
-        {!testId && (
+        {!testId && !retakeOf && (
           <button onClick={() => { setResult(null); setSqlCode(''); setPhase('setup') }} className="flex-1 border border-white/8 text-gray-400 hover:text-white text-sm py-3 rounded-2xl transition-all">
             Try again
           </button>

@@ -34,7 +34,7 @@ const navItems = [
 
 // Assessment types whose retake is AI-generated (a NEW problem at the same
 // level), and the page that runs it. Typing and communication are not here.
-const RETAKE_ROUTE = { programming: 'coding', sql: 'sql', bugfix: 'bugfix', flowchart: 'flowchart' }
+const RETAKE_ROUTE = { programming: 'coding', sql: 'sql', bugfix: 'bugfix', flowchart: 'flowchart', typing: 'typing', communication: 'communication' }
 
 const TYPE_META = {
   typing: { label: 'Typing Speed', icon: faKeyboard, accent: 'text-blue-400', gradient: 'from-blue-500 to-cyan-500' },

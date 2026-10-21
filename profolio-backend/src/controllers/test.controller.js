@@ -1,9 +1,28 @@
 const testService = require('../services/test.service');
+const testAssistant = require('../services/testAssistant.service');
+const remedial = require('../services/remedial.service');
+
+// Assign a fresh AI remedial to everyone who failed this test.
+const assignRemedialToFailed = async (req, res, next) => {
+  try {
+    const result = await remedial.assignRemedialToFailed(req.user.id, req.params.id);
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+};
 
 const createTest = async (req, res, next) => {
   try {
     const test = await testService.createTest(req.user.id, req.body);
     res.status(201).json({ success: true, data: test });
+  } catch (err) { next(err); }
+};
+
+// "Build with AI" chat. Returns only a draft for the professor to review — it
+// never creates or assigns a test, so it is safe to call freely.
+const assistantDraft = async (req, res, next) => {
+  try {
+    const result = await testAssistant.draftTest(req.user.id, req.body || {});
+    res.json({ success: true, data: result });
   } catch (err) { next(err); }
 };
 
@@ -102,6 +121,8 @@ const reviewResult = async (req, res, next) => {
 
 module.exports = {
   reviewResult,
+  assistantDraft,
+  assignRemedialToFailed,
   createTest,
   updateTest,
   deleteTest,

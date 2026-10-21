@@ -45,10 +45,14 @@ export const getTypingText = async (difficulty = 'easy') => {
 };
 
 // The server picks the passage and signs it into the attempt.
-export const startTyping = async ({ session_token, test_id }) => {
+export const startTyping = async ({ session_token, test_id, retake_of }) => {
   const res = await fetch(`${API}/api/assessments/typing/start`, {
     method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ session_token, ...(test_id ? { test_id } : {}) })
+    body: JSON.stringify({
+      session_token,
+      ...(test_id ? { test_id } : {}),
+      ...(retake_of ? { retake_of } : {}),
+    })
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.message);

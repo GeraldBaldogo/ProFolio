@@ -7,7 +7,7 @@ import {
   faPlus, faXmark, faSave, faRotateRight, faPen, faTrash,
   faKeyboard, faCode, faDiagramProject, faDatabase, faBug, faComments,
   faFlaskVial, faUsers, faEye, faEyeSlash, faMagnifyingGlass,
-  faChartSimple,
+  faChartSimple, faWandMagicSparkles, faPaperPlane,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
@@ -118,6 +118,33 @@ const TEST_TYPES = [
 ]
 
 const typeOf = (v) => TEST_TYPES.find(t => t.value === v) || TEST_TYPES[0]
+
+// Topic presets the professor can pick for an AI-built test (they can also type
+// their own). Kept per type so the suggestions make sense for each.
+const TOPIC_PRESETS = {
+  typing: ['Programming basics', 'Computer science terms', 'Workplace email', 'General knowledge'],
+  programming: ['Loops', 'Conditionals', 'Arrays / lists', 'Strings', 'Functions', 'Recursion', 'Sorting'],
+  bugfix: ['Off-by-one errors', 'Loop logic', 'Null / undefined', 'Wrong operator', 'Type errors'],
+  sql: ['SELECT & WHERE', 'JOINs', 'GROUP BY & aggregates', 'ORDER BY', 'Subqueries'],
+  flowchart: ['Login process', 'ATM withdrawal', 'Order checkout', 'Grading system', 'Number guessing game'],
+  communication: ['Explain a concept simply', 'Professional email', 'Incident report', 'Client update'],
+}
+
+const LEVELS = [
+  { value: 'easy', label: 'Easy', note: '1st year · up to Trainee' },
+  { value: 'medium', label: 'Medium', note: '2nd year · up to Associate' },
+  { value: 'hard', label: 'Hard', note: '3rd–4th year · up to Junior' },
+]
+
+// The main content field per type, used to preview an AI draft at a glance.
+const DRAFT_PRIMARY = {
+  typing: 'text_passage',
+  programming: 'problem_statement',
+  bugfix: 'buggy_code',
+  sql: 'question',
+  flowchart: 'scenario_description',
+  communication: 'prompt',
+}
 
 const EMPTY_FORM = {
   type: 'typing',
@@ -252,6 +279,133 @@ const ProfessorTests = () => {
     setEditing(null)
     setForm(EMPTY_FORM)
     setFormError('')
+    setShowForm(true)
+  }
+
+  // ── AI test builder (opened from a test) ───────────────────────────────────
+  // The professor opens a test and chats with the AI, which builds a NEW test
+  // BASED ON that one — same type and level, fresh content. The result only
+  // ever pre-fills the normal form; it is never saved or assigned from here.
+  const [showAI, setShowAI] = useState(false)
+  const [aiBase, setAiBase] = useState(null)         // the test this build is based on (null = from scratch)
+  const [aiType, setAiType] = useState(null)         // the type being designed, to steer every turn
+  const [aiMessages, setAiMessages] = useState([])   // { role: 'user'|'assistant', content }
+  const [aiInput, setAiInput] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiDraft, setAiDraft] = useState(null)       // { type, title, description, level, config }
+  const [aiReady, setAiReady] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const aiScrollRef = useRef(null)
+
+  // New-test chooser + AI setup (human vs AI creation)
+  const [showCreateChoice, setShowCreateChoice] = useState(false)
+  const [showAISetup, setShowAISetup] = useState(false)
+  const [aiSetup, setAiSetup] = useState({ type: 'typing', level: 'easy', topic: '', notes: '', language: 'Python' })
+
+  useEffect(() => {
+    if (aiScrollRef.current) aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight
+  }, [aiMessages, aiLoading])
+
+  // One call to the assistant. When base is given the AI builds from that test;
+  // type steers the design on every turn. Only design fields go out — never ids.
+  const runAssistant = async (nextMessages, { base = null, type = null } = {}) => {
+    setAiLoading(true)
+    setAiError('')
+    try {
+      const payload = { messages: nextMessages }
+      if (type || base?.type) payload.type = type || base.type
+      if (base) {
+        payload.base = { type: base.type, title: base.title, description: base.description, config: base.config || {} }
+      }
+      const res = await api.post('/tests/assistant', payload)
+      const data = res.data.data
+      setAiMessages(m => [...m, { role: 'assistant', content: data.reply }])
+      if (data.draft && data.draft.type) {
+        setAiDraft(data.draft)
+        setAiReady(!!data.ready)
+      }
+    } catch (err) {
+      setAiError(err.response?.data?.message || 'The assistant couldn’t reply. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  // Open the builder from a specific test and immediately generate a first
+  // version based on it, so the professor sees a draft right away.
+  const openAIFromTest = (t) => {
+    setAiBase(t)
+    setAiType(t.type)
+    setAiInput('')
+    setAiDraft(null)
+    setAiReady(false)
+    setAiError('')
+    const seed = `Create a new ${typeOf(t.type).label} test based on this one — same level and difficulty, but with fresh content (a different question/problem/passage). Do not copy it.`
+    setAiMessages([{ role: 'user', content: seed }])
+    setShowAI(true)
+    runAssistant([{ role: 'user', content: seed }], { base: t, type: t.type })
+  }
+
+  // ── New test: Human vs AI choice ───────────────────────────────────────────
+  const openCreateChoice = () => setShowCreateChoice(true)
+
+  const chooseHuman = () => { setShowCreateChoice(false); openCreate() }
+
+  const chooseAI = () => {
+    setShowCreateChoice(false)
+    setAiSetup({ type: 'typing', level: 'easy', topic: '', notes: '', language: 'Python' })
+    setShowAISetup(true)
+  }
+
+  // Build a from-scratch test from the professor's picks (type/level/topic),
+  // then hand off to the same chat so they can refine before using the draft.
+  const startAICreate = () => {
+    const { type, level, topic, notes, language } = aiSetup
+    const label = typeOf(type).label
+    const needsLang = type === 'programming' || type === 'bugfix'
+    const seed =
+      `Create a ${level} level ${label} test` +
+      (needsLang ? ` in ${language}` : '') +
+      (topic.trim() ? ` about ${topic.trim()}` : '') + '.' +
+      (needsLang ? ` Use ${language} as the language.` : '') +
+      (notes.trim() ? ` ${notes.trim()}` : '') +
+      ' Give a complete draft right away if there is enough detail.'
+    setAiBase(null)
+    setAiType(type)
+    setAiInput('')
+    setAiDraft(null)
+    setAiReady(false)
+    setAiError('')
+    setAiMessages([{ role: 'user', content: seed }])
+    setShowAISetup(false)
+    setShowAI(true)
+    runAssistant([{ role: 'user', content: seed }], { type })
+  }
+
+  const sendAI = async () => {
+    const text = aiInput.trim()
+    if (!text || aiLoading) return
+    const next = [...aiMessages, { role: 'user', content: text }]
+    setAiMessages(next)
+    setAiInput('')
+    await runAssistant(next, { base: aiBase, type: aiType })
+  }
+
+  // Hand the AI draft to the normal form for review and editing. Publishing
+  // still goes through the usual validated save, so the AI can't skip review.
+  const useAIDraft = () => {
+    if (!aiDraft) return
+    setEditing(null)
+    setForm({
+      type: TEST_TYPES.some(t => t.value === aiDraft.type) ? aiDraft.type : 'typing',
+      title: aiDraft.title || '',
+      description: aiDraft.description || '',
+      time_limit_minutes: '',
+      is_published: false,
+      config: { ...(aiDraft.config || {}) },
+    })
+    setFormError('')
+    setShowAI(false)
     setShowForm(true)
   }
 
@@ -540,7 +694,7 @@ const ProfessorTests = () => {
                   className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-all flex items-center justify-center">
                   <FontAwesomeIcon icon={faRotateRight} className="text-sm" />
                 </button>
-                <button onClick={openCreate}
+                <button onClick={openCreateChoice}
                   className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold px-4 py-2.5 rounded-2xl transition-colors">
                   <FontAwesomeIcon icon={faPlus} /> <span className="whitespace-nowrap">New test</span>
                 </button>
@@ -578,7 +732,7 @@ const ProfessorTests = () => {
                 Build one for your class — typing, coding, SQL, bug fixing, flowcharts, or a
                 written prompt. You assign it once it&apos;s published.
               </p>
-              <button onClick={openCreate}
+              <button onClick={openCreateChoice}
                 className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold px-5 py-3 rounded-2xl transition-colors">
                 <FontAwesomeIcon icon={faPlus} /> Create your first test
               </button>
@@ -593,32 +747,46 @@ const ProfessorTests = () => {
                   <div key={t.id}
                     className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 flex flex-col gap-4 hover:border-white/15 transition-all">
 
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                        <FontAwesomeIcon icon={def.icon} className={def.accent} />
+                    {/* Clicking the test opens the AI builder, seeded with this
+                        test as the reference to build a new one from. */}
+                    <div role="button" tabIndex={0}
+                      onClick={() => openAIFromTest(t)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAIFromTest(t) } }}
+                      title="Build a new test based on this one with AI"
+                      className="flex flex-col gap-4 cursor-pointer group/ai -m-1 p-1 rounded-xl hover:bg-white/[0.02] transition-colors">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                          <FontAwesomeIcon icon={def.icon} className={def.accent} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white font-bold text-sm truncate group-hover/ai:text-violet-200 transition-colors">{t.title}</p>
+                          <p className="text-gray-500 text-xs">{def.label}</p>
+                        </div>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border flex-shrink-0 ${
+                          t.is_published
+                            ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
+                            : 'text-gray-400 border-white/15 bg-white/5'
+                        }`}>
+                          {t.is_published ? 'Published' : 'Draft'}
+                        </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-white font-bold text-sm truncate">{t.title}</p>
-                        <p className="text-gray-500 text-xs">{def.label}</p>
-                      </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border flex-shrink-0 ${
-                        t.is_published
-                          ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
-                          : 'text-gray-400 border-white/15 bg-white/5'
-                      }`}>
-                        {t.is_published ? 'Published' : 'Draft'}
-                      </span>
+
+                      {t.description && (
+                        <p className="text-gray-400 text-xs leading-relaxed overflow-hidden"
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {t.description}
+                        </p>
+                      )}
+
+                      <p className="text-violet-300/70 text-[11px] font-semibold flex items-center gap-1.5 opacity-0 group-hover/ai:opacity-100 transition-opacity">
+                        <FontAwesomeIcon icon={faWandMagicSparkles} /> Build a new test from this one
+                      </p>
                     </div>
 
-                    {t.description && (
-                      <p className="text-gray-400 text-xs leading-relaxed overflow-hidden"
-                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {t.description}
-                      </p>
-                    )}
-
                     <div className="flex items-center gap-3 text-xs text-gray-600 font-mono">
-                      {t.time_limit_minutes ? <span>{t.time_limit_minutes} min</span> : <span>No time limit</span>}
+                      {t.type === 'typing'
+                        ? (t.config?.duration_seconds ? <span>{t.config.duration_seconds}s</span> : <span>No time limit</span>)
+                        : (t.time_limit_minutes ? <span>{t.time_limit_minutes} min</span> : <span>No time limit</span>)}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 mt-auto pt-1">
@@ -635,6 +803,14 @@ const ProfessorTests = () => {
                         disabled={busy}
                         className="flex items-center gap-1.5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/[0.06] text-xs font-semibold px-3 py-2 rounded-xl transition-all disabled:opacity-50">
                         <FontAwesomeIcon icon={faChartSimple} /> Results
+                      </button>
+
+                      <button
+                        onClick={() => openAIFromTest(t)}
+                        disabled={busy}
+                        title="Build a new test based on this one with AI"
+                        className="flex items-center gap-1.5 border border-violet-400/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20 text-xs font-semibold px-3 py-2 rounded-xl transition-all disabled:opacity-50">
+                        <FontAwesomeIcon icon={faWandMagicSparkles} /> Build with AI
                       </button>
 
                       <button
@@ -670,7 +846,296 @@ const ProfessorTests = () => {
         </main>
       </div>
 
+      {/* ══ New test: Human vs AI chooser ══ */}
+      {showCreateChoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowCreateChoice(false)}>
+          <div role="dialog" aria-modal="true" aria-label="New test"
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-lg bg-[#0a0a18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl rise">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+              <p className="text-white font-bold text-sm">New test — how do you want to build it?</p>
+              <button onClick={() => setShowCreateChoice(false)} aria-label="Close"
+                className="w-8 h-8 flex-shrink-0 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+            <div className="p-6 grid sm:grid-cols-2 gap-4">
+              <button onClick={chooseHuman}
+                className="text-left border border-white/10 hover:border-amber-400/50 hover:bg-amber-400/[0.05] rounded-2xl p-5 transition-all group">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-3">
+                  <FontAwesomeIcon icon={faPen} className="text-amber-400" />
+                </div>
+                <p className="text-white font-bold text-sm mb-1">Build it myself</p>
+                <p className="text-gray-500 text-xs">Fill in the test form yourself, field by field.</p>
+              </button>
+              <button onClick={chooseAI}
+                className="text-left border border-violet-400/30 hover:border-violet-400/60 bg-violet-500/[0.05] hover:bg-violet-500/10 rounded-2xl p-5 transition-all group">
+                <div className="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-400/30 flex items-center justify-center mb-3">
+                  <FontAwesomeIcon icon={faWandMagicSparkles} className="text-violet-300" />
+                </div>
+                <p className="text-white font-bold text-sm mb-1">Build with AI</p>
+                <p className="text-gray-500 text-xs">Pick a type, level and topic — the AI drafts it, you review.</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ AI setup: pick type / level / topic ══ */}
+      {showAISetup && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 py-10 bg-black/70 backdrop-blur-sm overflow-y-auto"
+          onClick={() => setShowAISetup(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Build with AI"
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-xl bg-[#0a0a18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl rise my-auto">
+            <div className="flex items-center gap-3 px-6 py-5 border-b border-white/5">
+              <div className="w-8 h-8 bg-violet-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <FontAwesomeIcon icon={faWandMagicSparkles} className="text-violet-300 text-sm" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white font-bold text-sm">Build with AI</p>
+                <p className="text-gray-500 text-xs">Choose from the options, or type your own topic.</p>
+              </div>
+              <button onClick={() => setShowAISetup(false)} aria-label="Close"
+                className="w-8 h-8 flex-shrink-0 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Type */}
+              <div>
+                <p className={labelClass}>Type</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {TEST_TYPES.map(t => (
+                    <button key={t.value}
+                      onClick={() => setAiSetup(s => ({ ...s, type: t.value, topic: '' }))}
+                      className={`flex items-center gap-2 border rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
+                        aiSetup.type === t.value
+                          ? 'border-violet-400/60 bg-violet-500/15 text-white'
+                          : 'border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                      }`}>
+                      <FontAwesomeIcon icon={t.icon} className={t.accent} /> {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Language — only for code-based types */}
+              {(aiSetup.type === 'programming' || aiSetup.type === 'bugfix') && (
+                <div>
+                  <p className={labelClass}>Language</p>
+                  <Select
+                    id="ai-language"
+                    value={aiSetup.language}
+                    onChange={(v) => setAiSetup(s => ({ ...s, language: v }))}
+                    options={LANGUAGES}
+                    placeholder="Choose a language"
+                    className={inputClass} />
+                </div>
+              )}
+
+              {/* Level */}
+              <div>
+                <p className={labelClass}>Level</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {LEVELS.map(l => (
+                    <button key={l.value}
+                      onClick={() => setAiSetup(s => ({ ...s, level: l.value }))}
+                      className={`text-left border rounded-xl px-3 py-2.5 transition-all ${
+                        aiSetup.level === l.value
+                          ? 'border-violet-400/60 bg-violet-500/15'
+                          : 'border-white/10 hover:border-white/20'
+                      }`}>
+                      <p className={`text-sm font-bold ${aiSetup.level === l.value ? 'text-white' : 'text-gray-300'}`}>{l.label}</p>
+                      <p className="text-gray-500 text-[10px]">{l.note}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Topic: presets + custom */}
+              <div>
+                <p className={labelClass}>Topic</p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {(TOPIC_PRESETS[aiSetup.type] || []).map(tp => (
+                    <button key={tp}
+                      onClick={() => setAiSetup(s => ({ ...s, topic: tp }))}
+                      className={`text-xs rounded-full border px-3 py-1.5 transition-all ${
+                        aiSetup.topic === tp
+                          ? 'border-violet-400/60 bg-violet-500/15 text-white'
+                          : 'border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                      }`}>
+                      {tp}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={aiSetup.topic}
+                  onChange={e => setAiSetup(s => ({ ...s, topic: e.target.value }))}
+                  placeholder="Or type your own topic…"
+                  className={inputClass} />
+              </div>
+
+              {/* Extra notes */}
+              <div>
+                <p className={labelClass}>Anything else? <span className="text-gray-600 normal-case font-normal">(optional)</span></p>
+                <textarea
+                  value={aiSetup.notes}
+                  onChange={e => setAiSetup(s => ({ ...s, notes: e.target.value }))}
+                  rows={2}
+                  placeholder="e.g. include 3 test cases, keep the passage short, focus on nested loops…"
+                  className={`${inputClass} resize-none`} />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-white/5">
+              <button onClick={() => { setShowAISetup(false); setShowCreateChoice(true) }}
+                className="text-gray-400 hover:text-white text-sm font-semibold px-3 py-2 transition-colors">
+                ← Back
+              </button>
+              <button onClick={startAICreate}
+                className="flex items-center gap-2 bg-violet-500 hover:bg-violet-400 text-white text-sm font-bold px-5 py-2.5 rounded-2xl transition-colors">
+                <FontAwesomeIcon icon={faWandMagicSparkles} /> Generate draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══ Create / edit ══ */}
+      {showAI && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowAI(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Build a test with AI"
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-2xl h-[85vh] bg-[#0a0a18] border border-white/10 rounded-2xl overflow-hidden shadow-2xl rise flex flex-col">
+
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 py-5 border-b border-white/5">
+              <div className="w-8 h-8 bg-violet-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <FontAwesomeIcon icon={faWandMagicSparkles} className="text-violet-300 text-sm" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white font-bold text-sm">Build a test with AI</p>
+                <p className="text-gray-500 text-xs truncate">
+                  {aiBase
+                    ? <>Based on “<span className="text-gray-300">{aiBase.title}</span>” ({typeOf(aiBase.type).label})</>
+                    : 'The AI drafts it; you review before publishing.'}
+                </p>
+              </div>
+              <button onClick={() => setShowAI(false)} aria-label="Close"
+                className="w-8 h-8 flex-shrink-0 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div ref={aiScrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              {aiMessages.length === 0 && (
+                <div className="text-center max-w-md mx-auto mt-6">
+                  <p className="text-gray-300 text-sm font-semibold mb-2">Tell me what test you need</p>
+                  <p className="text-gray-500 text-xs mb-4">
+                    I can build any of the six types — typing, programming, SQL, bug fix, flowchart,
+                    or communication. Just say the type, level, and topic.
+                  </p>
+                  <div className="flex flex-col gap-2 text-left">
+                    {[
+                      'Gumawa ka ng medium-level typing test tungkol sa programming.',
+                      'Make an easy Python coding test on loops.',
+                      'Hard SQL test about joining employees and departments.',
+                    ].map((ex) => (
+                      <button key={ex} onClick={() => setAiInput(ex)}
+                        className="text-left text-xs text-gray-400 hover:text-white border border-white/8 hover:border-white/20 bg-white/[0.02] rounded-xl px-3 py-2 transition-colors">
+                        “{ex}”
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {aiMessages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                    m.role === 'user'
+                      ? 'bg-amber-500 text-black font-medium'
+                      : 'bg-white/[0.05] border border-white/8 text-gray-200'
+                  }`}>
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+
+              {aiLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white/[0.05] border border-white/8 text-gray-400 rounded-2xl px-4 py-2.5 text-sm flex items-center gap-2">
+                    <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Thinking…
+                  </div>
+                </div>
+              )}
+
+              {/* Draft preview */}
+              {aiDraft && aiDraft.type && (
+                <div className="border border-violet-400/30 bg-violet-500/[0.06] rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FontAwesomeIcon icon={typeOf(aiDraft.type).icon} className={`${typeOf(aiDraft.type).accent} text-sm`} />
+                    <p className="text-white font-bold text-sm flex-1 truncate">{aiDraft.title || 'Untitled test'}</p>
+                    {aiDraft.level && (
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-violet-200 bg-violet-500/20 border border-violet-400/30 rounded-full px-2 py-0.5">
+                        {aiDraft.level}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-400 text-xs mb-1">{typeOf(aiDraft.type).label}</p>
+                  {aiDraft.description && <p className="text-gray-400 text-xs mb-2">{aiDraft.description}</p>}
+                  {aiDraft.config?.[DRAFT_PRIMARY[aiDraft.type]] && (
+                    <p className="text-gray-300 text-xs bg-black/30 border border-white/5 rounded-xl p-3 mb-3 max-h-28 overflow-y-auto whitespace-pre-wrap font-mono">
+                      {String(aiDraft.config[DRAFT_PRIMARY[aiDraft.type]]).slice(0, 600)}
+                    </p>
+                  )}
+                  <button
+                    onClick={useAIDraft}
+                    disabled={!aiReady}
+                    className="w-full flex items-center justify-center gap-2 bg-violet-500 hover:bg-violet-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm py-2.5 rounded-xl transition-colors">
+                    <FontAwesomeIcon icon={faPen} /> Use this draft — open in editor
+                  </button>
+                  {!aiReady && (
+                    <p className="text-amber-400/80 text-[11px] mt-2 text-center">Still gathering details — keep chatting to complete the draft.</p>
+                  )}
+                </div>
+              )}
+
+              {aiError && (
+                <div className="border border-rose-500/20 bg-rose-500/5 rounded-xl p-3 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="text-rose-400 text-sm" />
+                  <p className="text-rose-400 text-xs">{aiError}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="border-t border-white/5 p-4">
+              <div className="flex items-end gap-2">
+                <textarea
+                  value={aiInput}
+                  onChange={e => setAiInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAI() } }}
+                  rows={1}
+                  placeholder="Describe the test, or ask for a change…"
+                  className="flex-1 resize-none bg-white/[0.04] border border-white/10 focus:border-violet-400/60 rounded-2xl px-4 py-3 text-white text-sm placeholder-gray-600 outline-none transition-all max-h-32"
+                />
+                <button onClick={sendAI} disabled={aiLoading || !aiInput.trim()} aria-label="Send"
+                  className="w-11 h-11 flex-shrink-0 flex items-center justify-center bg-violet-500 hover:bg-violet-400 disabled:opacity-40 text-white rounded-2xl transition-colors">
+                  <FontAwesomeIcon icon={aiLoading ? faSpinner : faPaperPlane} className={aiLoading ? 'animate-spin' : ''} />
+                </button>
+              </div>
+              <p className="text-gray-600 text-[11px] mt-2">The AI only drafts — nothing is saved or assigned until you review and publish.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 py-10 bg-black/70 backdrop-blur-sm overflow-y-auto"
           onClick={closeForm}>
@@ -735,19 +1200,26 @@ const ProfessorTests = () => {
 
               {/* Title + description */}
               <div className="grid sm:grid-cols-2 gap-4">
-                <div>
+                {/* Typing hides the time-limit field, so let Title fill the row
+                    instead of leaving an empty column beside it. */}
+                <div className={form.type === 'typing' ? 'sm:col-span-2' : ''}>
                   <label htmlFor="title" className={labelClass}>Title *</label>
                   <input id="title" className={inputClass} value={form.title}
                     onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                     placeholder="Week 3 — loops and conditionals" />
                 </div>
-                <div>
-                  <label htmlFor="time_limit" className={labelClass}>Time limit (minutes)</label>
-                  <input id="time_limit" type="number" min="1" className={inputClass}
-                    value={form.time_limit_minutes}
-                    onChange={e => setForm(f => ({ ...f, time_limit_minutes: e.target.value }))}
-                    placeholder="Leave blank for none" />
-                </div>
+                {/* Speed typing has its own "Duration (seconds)" below and
+                    ignores this generic minutes field, so hiding it here avoids
+                    two time limits that look like they should match but don't. */}
+                {form.type !== 'typing' && (
+                  <div>
+                    <label htmlFor="time_limit" className={labelClass}>Time limit (minutes)</label>
+                    <input id="time_limit" type="number" min="1" className={inputClass}
+                      value={form.time_limit_minutes}
+                      onChange={e => setForm(f => ({ ...f, time_limit_minutes: e.target.value }))}
+                      placeholder="Leave blank for none" />
+                  </div>
+                )}
               </div>
 
               {/* Stored in config.level. Same three levels as practice. */}

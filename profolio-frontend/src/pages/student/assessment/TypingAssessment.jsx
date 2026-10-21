@@ -25,12 +25,16 @@ const TypingAssessment = () => {
   const [params] = useSearchParams()
   // Set when the student arrives from Assigned Tests. Null means free practice.
   const testId = params.get('test_id')
+  // Set when the student arrives from My Results to retake a test they didn't
+  // pass. A retake is proctored and counts toward the CV like the real test,
+  // but gets a fresh passage at the same level and carries no test_id.
+  const retakeOf = params.get('retake_of')
 
   const { getSessionToken, logEvent, resetSession, cameraViolationCount, tabViolationCount, getViolationCounts } = useProctoring('typing')
 
   // The professor's test, if there is one.
   const [test, setTest] = useState(null)
-  const [loadingTest, setLoadingTest] = useState(!!testId)
+  const [loadingTest, setLoadingTest] = useState(!!testId || !!retakeOf)
   const [testError, setTestError] = useState('')
 
   const [sampleText, setSampleText] = useState('')
@@ -50,8 +54,9 @@ const TypingAssessment = () => {
   const [screenShare, setScreenShare] = useState(null)
   const [screenError, setScreenError] = useState('')
   // Typing has no Start button — it begins the moment you type — so the gate
-  // sits in front of the input instead. Practice needs no gate.
-  const [screenReady, setScreenReady] = useState(!testId)
+  // sits in front of the input instead. Practice needs no gate; an assigned
+  // test and a retake both do.
+  const [screenReady, setScreenReady] = useState(!testId && !retakeOf)
 
   const [cameraReady, setCameraReady] = useState(false)
   // Set when the attempt goes ahead without a camera. Sent with the result so
@@ -93,6 +98,28 @@ const TypingAssessment = () => {
     return () => { cancelled = true }
   }, [testId])
 
+  // Retake: pull the professor's original test only to mirror its title and
+  // time limit. The passage itself is chosen server-side at start (a fresh one
+  // at the same level), so the student never sees or reuses the original.
+  useEffect(() => {
+    if (!retakeOf) return
+    let cancelled = false
+
+    getTestById(retakeOf)
+      .then((t) => {
+        if (cancelled) return
+        setTest(t)
+      })
+      .catch((err) => {
+        if (!cancelled) setTestError(err.message || 'Couldn\u2019t load this retake.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTest(false)
+      })
+
+    return () => { cancelled = true }
+  }, [retakeOf])
+
   // Ask the server for this attempt's passage. It remembers which one it gave,
   // so the result can only be scored against it.
   const preparePassage = async () => {
@@ -102,7 +129,7 @@ const TypingAssessment = () => {
     beginRef.current = null
     try {
       const session_token = await getSessionToken()
-      const data = await startTyping({ session_token, test_id: testId })
+      const data = await startTyping({ session_token, test_id: testId, retake_of: retakeOf })
       typingTokenRef.current = data.typing_token
       setSampleText(data.text)
     } catch (err) {
@@ -110,7 +137,7 @@ const TypingAssessment = () => {
     }
   }
 
-  useEffect(() => { preparePassage() }, [testId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { preparePassage() }, [testId, retakeOf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The professor can cap the attempt in seconds.
   const limitSeconds = test?.config?.duration_seconds || null
@@ -264,7 +291,7 @@ const TypingAssessment = () => {
     })
   }
 
-  const goBack = () => navigate(testId ? '/student/assigned-tests' : '/student/assessment')
+  const goBack = () => navigate(retakeOf ? '/student/results' : testId ? '/student/assigned-tests' : '/student/assessment')
 
   // Don't let them start on the wrong passage while the real one is still loading.
   // The background stops moving while the timed part is running
@@ -311,6 +338,25 @@ const TypingAssessment = () => {
           <div>
             <p className="text-amber-300 text-sm font-semibold">Assigned test — this one counts</p>
             {test?.description && <p className="text-gray-400 text-xs mt-1">{test.description}</p>}
+            {limitSeconds && (
+              <p className="text-gray-500 text-xs mt-1">
+                Submits automatically after {limitSeconds} seconds.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Retake — proctored and counts toward the CV, with a fresh passage */}
+      {retakeOf && (
+        <div className="border border-amber-500/20 bg-amber-500/5 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <FontAwesomeIcon icon={faRotateRight} className="text-amber-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-amber-300 text-sm font-semibold">Retake — this one counts</p>
+            <p className="text-gray-400 text-xs mt-1">
+              The same passage your professor set — same level, same time. Pass it and it replaces
+              your earlier score and goes on your CV. You can keep retaking until you pass.
+            </p>
             {limitSeconds && (
               <p className="text-gray-500 text-xs mt-1">
                 Submits automatically after {limitSeconds} seconds.
@@ -501,7 +547,7 @@ const TypingAssessment = () => {
               </div>
               <div>
                 <p className="text-white font-bold text-lg mb-1">
-                  {testId ? 'Test submitted!' : 'Assessment Complete!'}
+                  {testId ? 'Test submitted!' : retakeOf ? 'Retake submitted!' : 'Assessment Complete!'}
                 </p>
                 <p className="text-gray-500 text-sm">Skill score: <span className="text-white font-bold">{result.score}/100</span></p>
                 {result.metadata && (
@@ -513,10 +559,26 @@ const TypingAssessment = () => {
                   <p className="text-rose-400 text-xs mt-1">{totalViolations} violation{totalViolations > 1 ? 's' : ''} recorded</p>
                 )}
               </div>
+              {/* Didn't pass → offer the retake right here, so the student
+                  doesn't have to go to My Results first to find it. */}
+              {result && result.score < 75 && (testId || retakeOf) && (
+                <div className="w-full text-left border border-amber-500/30 bg-amber-500/10 rounded-2xl p-5 mt-2">
+                  <p className="text-amber-300 text-sm font-semibold mb-1">You didn&apos;t pass this time — you can retake it now</p>
+                  <p className="text-gray-400 text-xs mb-3">You need 75 to pass. Retake it right here — the same passage, same level — no need to go back. You can keep retaking until you pass; the highest passing score is the one that counts toward your CV.</p>
+                  <button
+                    onClick={() => { window.location.href = `/student/assessment/typing?retake_of=${testId || retakeOf}` }}
+                    className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-all"
+                  >
+                    <FontAwesomeIcon icon={faRotateRight} /> Retake now — same passage, same level
+                  </button>
+                </div>
+              )}
+
               <div className="flex gap-3 mt-2">
-                {/* A graded test is one attempt — retaking it would overwrite
-                    nothing and the server rejects a second submit anyway. */}
-                {!testId && (
+                {/* Practice only — a graded test or a passed retake is final, and
+                    the server rejects a second submit anyway. The "Retake now"
+                    banner above handles a failed assigned test or retake. */}
+                {!testId && !retakeOf && (
                   <button
                     onClick={handleReset}
                     className="flex items-center gap-2 border border-white/8 text-gray-400 hover:text-white text-sm px-4 py-2 rounded-xl transition-all"
@@ -528,7 +590,7 @@ const TypingAssessment = () => {
                   onClick={goBack}
                   className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all"
                 >
-                  {testId ? 'Back to assigned tests' : 'Next assessment'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
+                  {retakeOf ? 'Back to My Results' : testId ? 'Back to assigned tests' : 'Next assessment'} <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
                 </button>
               </div>
             </div>
