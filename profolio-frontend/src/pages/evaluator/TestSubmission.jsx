@@ -452,6 +452,13 @@ const TestSubmissions = () => {
                       </div>
                     )}
 
+                    {row.retakes > 0 && (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-300 border border-blue-500/25 bg-blue-500/10 px-2.5 py-1 rounded-full flex-shrink-0"
+                        title={row.best_score !== null && row.best_score !== undefined ? `Best score: ${row.best_score}` : undefined}>
+                        <FontAwesomeIcon icon={faRotateRight} /> {row.retakes} retake{row.retakes > 1 ? 's' : ''}
+                      </span>
+                    )}
+
                     <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${status.bg} ${status.border} ${status.color} flex-shrink-0`}>
                       <FontAwesomeIcon icon={status.icon} /> {status.label}
                     </span>

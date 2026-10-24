@@ -43,6 +43,10 @@ const assertRetakeEligible = async (user_id, retake_of, type) => {
     throw { status: 403, message: 'You can only retake an assigned test you have already taken.' };
   if (sameType.some((a) => Number(a.score) >= RETAKE_PASS_MARK))
     throw { status: 400, message: 'You have already passed this assessment — no retake needed.' };
+  // Retakes only while the assignment is still open (deadline not passed).
+  const assignment = await testRepo.findAssignment(retake_of, user_id);
+  if (assignment?.due_date && new Date(assignment.due_date).getTime() < Date.now())
+    throw { status: 403, message: 'This test has closed — retakes are no longer allowed.' };
 };
 
 const submitCommunicationResult = async (

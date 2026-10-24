@@ -559,18 +559,17 @@ const TypingAssessment = () => {
                   <p className="text-rose-400 text-xs mt-1">{totalViolations} violation{totalViolations > 1 ? 's' : ''} recorded</p>
                 )}
               </div>
-              {/* Didn't pass → offer the retake right here, so the student
-                  doesn't have to go to My Results first to find it. */}
+              {/* Didn't pass → explain the retake mechanics. The retake itself
+                  is started from My Results, not here. */}
               {result && result.score < 75 && (testId || retakeOf) && (
-                <div className="w-full text-left border border-amber-500/30 bg-amber-500/10 rounded-2xl p-5 mt-2">
-                  <p className="text-amber-300 text-sm font-semibold mb-1">You didn&apos;t pass this time — you can retake it now</p>
-                  <p className="text-gray-400 text-xs mb-3">You need 75 to pass. Retake it right here — the same passage, same level — no need to go back. You can keep retaking until you pass; the highest passing score is the one that counts toward your CV.</p>
-                  <button
-                    onClick={() => { window.location.href = `/student/assessment/typing?retake_of=${testId || retakeOf}` }}
-                    className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-all"
-                  >
-                    <FontAwesomeIcon icon={faRotateRight} /> Retake now — same passage, same level
-                  </button>
+                <div className="w-full text-left border border-blue-500/20 bg-blue-500/5 rounded-2xl p-5 mt-2">
+                  <p className="text-blue-300 text-sm font-semibold mb-2">You didn&apos;t pass — here&apos;s how retakes work</p>
+                  <ul className="text-gray-400 text-xs space-y-1.5 list-disc pl-4">
+                    <li>The passing score is <span className="text-gray-200 font-semibold">75</span>.</li>
+                    <li>You can retake this from <span className="text-gray-200 font-semibold">My Results</span> until you pass — as long as the deadline hasn&apos;t passed.</li>
+                    <li>Each retake is a fresh attempt at the same level.</li>
+                    <li>Your highest passing score is the one that counts toward your CV.</li>
+                  </ul>
                 </div>
               )}
 

@@ -206,15 +206,26 @@ const getAssignmentsForTest = async (test_id, professor_id) => {
     testRepo.findResultsByTest(test_id),
   ]);
 
-  const resultByStudent = new Map();
+  // All attempts per student (original + retakes all carry this test_id). Lets
+  // the professor see who retook, how many times, and their best score.
+  const byStudent = new Map();
   for (const r of results) {
-    if (!resultByStudent.has(r.user_id)) resultByStudent.set(r.user_id, r);
+    if (!byStudent.has(r.user_id)) byStudent.set(r.user_id, []);
+    byStudent.get(r.user_id).push(r);
   }
- 
-  return assignments.map((a) => ({
-    ...a,
-    result: resultByStudent.get(a.student_id) || null,
-  }));
+
+  return assignments.map((a) => {
+    const list = byStudent.get(a.student_id) || [];
+    const retakes = list.filter((r) => r.metadata?.retake).length;
+    const scores = list.map((r) => Number(r.score)).filter((n) => Number.isFinite(n));
+    return {
+      ...a,
+      result: list[0] || null,                 // latest attempt (results come newest-first)
+      attempts: list.length,
+      retakes,
+      best_score: scores.length ? Math.max(...scores) : null,
+    };
+  });
 };
  
 const getMyAssignedTests = async (student_id) => {

@@ -7,7 +7,7 @@ import {
   faPlus, faXmark, faSave, faRotateRight, faPen, faTrash,
   faKeyboard, faCode, faDiagramProject, faDatabase, faBug, faComments,
   faFlaskVial, faUsers, faEye, faEyeSlash, faMagnifyingGlass,
-  faChartSimple, faWandMagicSparkles, faPaperPlane,
+  faChartSimple, faWandMagicSparkles, faPaperPlane, faArrowLeft,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
@@ -214,6 +214,7 @@ const ProfessorTests = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tests, setTests] = useState([])
+  const [sourceFilter, setSourceFilter] = useState('all') // 'all' | 'ai' | 'manual'
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [toast, setToast] = useState(null)
@@ -402,7 +403,8 @@ const ProfessorTests = () => {
       description: aiDraft.description || '',
       time_limit_minutes: '',
       is_published: false,
-      config: { ...(aiDraft.config || {}) },
+      // Mark it so My Tests can show it apart from hand-built tests.
+      config: { ...(aiDraft.config || {}), built_with_ai: true },
     })
     setFormError('')
     setShowAI(false)
@@ -439,7 +441,14 @@ const ProfessorTests = () => {
 
   // Changing type wipes config — the old keys mean nothing to the new type and
   // the server would reject them as missing fields anyway.
-  const changeType = (value) => setForm(f => ({ ...f, type: value, config: f.config.level ? { level: f.config.level } : {} }))
+  const changeType = (value) => setForm(f => ({
+    ...f,
+    type: value,
+    config: {
+      ...(f.config.level ? { level: f.config.level } : {}),
+      ...(f.config.built_with_ai ? { built_with_ai: true } : {}),
+    },
+  }))
 
   const setConfig = (key, value) =>
     setForm(f => ({ ...f, config: { ...f.config, [key]: value } }))
@@ -739,13 +748,45 @@ const ProfessorTests = () => {
             </div>
 
           ) : (
+            <>
+            {/* Separate AI-built tests from hand-built ones. */}
+            {(() => {
+              const isAiBuilt = (t) => !!(t.config?.built_with_ai || t.config?.auto_generated)
+              const aiCount = tests.filter(isAiBuilt).length
+              const manualCount = tests.length - aiCount
+              const FILTERS = [
+                { key: 'all', label: `All (${tests.length})` },
+                { key: 'ai', label: `Built with AI (${aiCount})` },
+                { key: 'manual', label: `Built myself (${manualCount})` },
+              ]
+              return (
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {FILTERS.map(f => (
+                    <button key={f.key} onClick={() => setSourceFilter(f.key)}
+                      className={`text-xs font-semibold rounded-full border px-3.5 py-1.5 transition-colors ${
+                        sourceFilter === f.key
+                          ? 'border-amber-400/50 bg-amber-400/10 text-amber-200'
+                          : 'border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                      }`}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 rise">
-              {tests.map(t => {
+              {tests
+                .filter(t => {
+                  const ai = !!(t.config?.built_with_ai || t.config?.auto_generated)
+                  return sourceFilter === 'all' || (sourceFilter === 'ai' ? ai : !ai)
+                })
+                .map(t => {
                 const def = typeOf(t.type)
                 const busy = busyId === t.id
                 return (
                   <div key={t.id}
-                    className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 flex flex-col gap-4 hover:border-white/15 transition-all">
+                    className="border border-white/8 bg-white/[0.03] rounded-2xl p-6 flex flex-col gap-5 hover:border-white/15 transition-all">
 
                     {/* Clicking the test opens the AI builder, seeded with this
                         test as the reference to build a new one from. */}
@@ -753,14 +794,21 @@ const ProfessorTests = () => {
                       onClick={() => openAIFromTest(t)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAIFromTest(t) } }}
                       title="Build a new test based on this one with AI"
-                      className="flex flex-col gap-4 cursor-pointer group/ai -m-1 p-1 rounded-xl hover:bg-white/[0.02] transition-colors">
+                      className="flex flex-col gap-4 cursor-pointer group/ai -mx-2 -mt-2 px-2 pt-2 rounded-xl hover:bg-white/[0.02] transition-colors">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
                           <FontAwesomeIcon icon={def.icon} className={def.accent} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-white font-bold text-sm truncate group-hover/ai:text-violet-200 transition-colors">{t.title}</p>
-                          <p className="text-gray-500 text-xs">{def.label}</p>
+                          <p className="text-gray-500 text-xs mt-1 flex items-center gap-2 flex-wrap">
+                            {def.label}
+                            {(t.config?.built_with_ai || t.config?.auto_generated) && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-200 bg-violet-500/15 border border-violet-400/30 rounded-full px-2 py-0.5">
+                                <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[9px]" /> {t.config?.auto_generated ? 'AI remedial' : 'AI-built'}
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border flex-shrink-0 ${
                           t.is_published
@@ -778,7 +826,7 @@ const ProfessorTests = () => {
                         </p>
                       )}
 
-                      <p className="text-violet-300/70 text-[11px] font-semibold flex items-center gap-1.5 opacity-0 group-hover/ai:opacity-100 transition-opacity">
+                      <p className="text-violet-300/60 text-[11px] font-semibold flex items-center gap-2 opacity-60 group-hover/ai:opacity-100 transition-opacity">
                         <FontAwesomeIcon icon={faWandMagicSparkles} /> Build a new test from this one
                       </p>
                     </div>
@@ -842,6 +890,7 @@ const ProfessorTests = () => {
                 )
               })}
             </div>
+            </>
           )}
         </main>
       </div>
@@ -992,8 +1041,9 @@ const ProfessorTests = () => {
 
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-white/5">
               <button onClick={() => { setShowAISetup(false); setShowCreateChoice(true) }}
-                className="text-gray-400 hover:text-white text-sm font-semibold px-3 py-2 transition-colors">
-                ← Back
+                className="flex items-center gap-3 text-gray-400 hover:text-white text-sm font-semibold border border-white/10 hover:border-white/25 rounded-xl px-4 py-2.5 transition-colors">
+                <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
+                <span>Back</span>
               </button>
               <button onClick={startAICreate}
                 className="flex items-center gap-2 bg-violet-500 hover:bg-violet-400 text-white text-sm font-bold px-5 py-2.5 rounded-2xl transition-colors">

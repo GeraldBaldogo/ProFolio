@@ -464,15 +464,20 @@ const StudentResults = () => {
                           )}
 
                           {/* Retake: only for a failed assigned test with no passing
-                              attempt yet. Opens a NEW AI-generated problem at the same
-                              level; the result counts against this test. */}
+                              attempt yet, and only while the deadline is still open.
+                              Opens a NEW AI-generated problem at the same level; the
+                              result counts against this test. */}
                           {r.test_id && RETAKE_ROUTE[r.type] && r.score !== null && r.score < 75 && !passedTestIds.has(r.test_id) && (
-                            <Link
-                              to={`/student/assessment/${RETAKE_ROUTE[r.type]}?retake_of=${r.test_id}`}
-                              className="inline-flex items-center gap-2 self-start px-4 h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all"
-                            >
-                              <FontAwesomeIcon icon={faRotateRight} /> Retake &mdash; new AI problem, same level
-                            </Link>
+                            r.retake_open !== false ? (
+                              <Link
+                                to={`/student/assessment/${RETAKE_ROUTE[r.type]}?retake_of=${r.test_id}`}
+                                className="inline-flex items-center gap-2 self-start px-4 h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all"
+                              >
+                                <FontAwesomeIcon icon={faRotateRight} /> Retake &mdash; new AI problem, same level
+                              </Link>
+                            ) : (
+                              <p className="self-start text-xs text-gray-500">This test has closed — retakes are no longer available.</p>
+                            )
                           )}
                         </div>
                       )}

@@ -116,6 +116,12 @@ const assertRetakeEligible = async (user_id, retake_of, type) => {
   if (sameType.some((a) => Number(a.score) >= RETAKE_PASS_MARK)) {
     throw { status: 400, message: 'You have already passed this assessment — no retake needed.' };
   }
+  // Retakes are only allowed while the assignment is still open. Once the
+  // professor's deadline has passed, the test is closed for good.
+  const assignment = await testRepo.findAssignment(retake_of, user_id);
+  if (assignment?.due_date && new Date(assignment.due_date).getTime() < Date.now()) {
+    throw { status: 403, message: 'This test has closed — retakes are no longer allowed.' };
+  }
 };
 
 // ─── TYPING ───────────────────────────────────────────────────────────────────
@@ -1007,12 +1013,29 @@ const getAssessmentSummary = async (user_id) => {
 const getMyResults = async (user_id) => {
   const results = await assessmentRepo.getResultsByUser(user_id);
 
-  return (results || []).map((r) => ({
+  // Map each assigned test to its deadline, so each result can say whether a
+  // retake is still open. Non-fatal: if this fails, results still return and a
+  // retake just falls back to the server-side deadline check.
+  const dueByTest = new Map();
+  try {
+    const assignments = await testRepo.findAssignmentsForStudent(user_id);
+    for (const a of assignments || []) {
+      if (a.test_id) dueByTest.set(a.test_id, a.due_date || null);
+    }
+  } catch { /* ignore — deadline info is a nicety here */ }
+  const now = Date.now();
+
+  return (results || []).map((r) => {
+    const due = r.test_id && dueByTest.has(r.test_id) ? dueByTest.get(r.test_id) : null;
+    const retake_open = !due || new Date(due).getTime() >= now;
+    return {
     id: r.id,
     type: r.type,
     score: r.score,
     test_id: r.test_id,
     created_at: r.created_at,
+    due_date: due,
+    retake_open,
     metadata: {
       // Shared
       feedback: r.metadata?.overall_feedback || r.metadata?.feedback || null,
@@ -1033,7 +1056,8 @@ const getMyResults = async (user_id) => {
       improvements: r.metadata?.improvements || null,
       challenge_title: r.metadata?.challenge_title || r.metadata?.prompt_title || r.metadata?.problem_title || null,
     },
-  }));
+    };
+  });
 };
 
 module.exports = {
