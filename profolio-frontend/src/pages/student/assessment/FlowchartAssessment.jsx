@@ -114,7 +114,7 @@ const FlowchartAssessment = () => {
     setPhase('loading')
     setError(null)
     try {
-      const data = await generateFlowchartProblem()
+      const data = await generateFlowchartProblem({ retake: !!retakeOf })
       setProblem(data)
     } catch (err) {
       setError('Failed to load problem. Please try again.')

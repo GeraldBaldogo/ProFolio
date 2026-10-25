@@ -232,7 +232,7 @@ const CodingAssessment = () => {
     setGenerating(true)
     setSetupError('')
     try {
-      const data = await generateChallenge({ language, difficulty })
+      const data = await generateChallenge({ language, difficulty, retake: !!retakeOf })
       setChallenge(data)
       beginTimer(retakeOf && retakeMinutes ? retakeMinutes * 60 : TIME_LIMITS[difficulty])
     } catch (err) {

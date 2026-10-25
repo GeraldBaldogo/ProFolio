@@ -82,10 +82,10 @@ export const submitTypingResult = async (payload) => {
 
 // ─── PROGRAMMING ──────────────────────────────────────────────────────────────
 
-export const generateChallenge = async ({ language, difficulty, topic = null }) => {
+export const generateChallenge = async ({ language, difficulty, topic = null, retake = false }) => {
   const res = await fetch(`${API}/api/assessments/coding/generate`, {
     method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ language, difficulty, topic })
+    body: JSON.stringify({ language, difficulty, topic, retake })
   });
   const data = await res.json();
   if (!data.success) throw fail(res, data);
@@ -104,10 +104,11 @@ export const submitCodingResult = async (payload) => {
 
 // ─── FLOWCHART ────────────────────────────────────────────────────────────────
 
-export const generateFlowchartProblem = async ({ difficulty = null, topic = null } = {}) => {
+export const generateFlowchartProblem = async ({ difficulty = null, topic = null, retake = false } = {}) => {
   const q = new URLSearchParams();
   if (difficulty) q.set('difficulty', difficulty);
   if (topic) q.set('topic', topic);
+  if (retake) q.set('retake', '1');
   const res = await fetch(`${API}/api/assessments/flowchart/generate${q.toString() ? `?${q}` : ''}`, {
     headers: authHeader()
   });
@@ -140,10 +141,10 @@ export const submitFlowchartResult = async ({ imageFile, ...rest }) => {
 
 // ─── SQL ──────────────────────────────────────────────────────────────────────
 
-export const generateSQLChallenge = async ({ difficulty, topic = null }) => {
+export const generateSQLChallenge = async ({ difficulty, topic = null, retake = false }) => {
   const res = await fetch(`${API}/api/assessments/sql/generate`, {
     method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ difficulty, topic })
+    body: JSON.stringify({ difficulty, topic, retake })
   });
   const data = await res.json();
   if (!data.success) throw fail(res, data);
@@ -162,10 +163,10 @@ export const submitSQLResult = async (payload) => {
 
 // ─── BUG FIXING ───────────────────────────────────────────────────────────────
 
-export const generateBugFixChallenge = async ({ language, difficulty, topic = null }) => {
+export const generateBugFixChallenge = async ({ language, difficulty, topic = null, retake = false }) => {
   const res = await fetch(`${API}/api/assessments/bugfix/generate`, {
     method: 'POST', headers: authHeader(),
-    body: JSON.stringify({ language, difficulty, topic })
+    body: JSON.stringify({ language, difficulty, topic, retake })
   });
   const data = await res.json();
   if (!data.success) throw fail(res, data);

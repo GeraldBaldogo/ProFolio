@@ -290,7 +290,7 @@ const SQLAssessment = () => {
     setGenerating(true)
     setSetupError('')
     try {
-      const data = await generateSQLChallenge({ difficulty })
+      const data = await generateSQLChallenge({ difficulty, retake: !!retakeOf })
       setChallenge(data)
       beginTimer(retakeOf && retakeMinutes ? retakeMinutes * 60 : TIME_LIMITS[difficulty])
     } catch (err) {

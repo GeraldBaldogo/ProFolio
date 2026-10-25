@@ -294,10 +294,10 @@ const getTypingText = ({ difficulty = 'easy' }) => {
 
 // Each practice challenge targets one curriculum topic, so passing it means
 // something specific. The level must be unlocked; see progress.service.js.
-const generateChallenge = async (user_id, { language, difficulty, topic: requestedTopic = null }) => {
+const generateChallenge = async (user_id, { language, difficulty, topic: requestedTopic = null, retake = false }) => {
   if (!language) throw { status: 400, message: 'language is required.' };
 
-  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'programming', difficulty, requestedTopic);
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'programming', difficulty, requestedTopic, { allowLocked: !!retake });
 
   const prompt = `Generate a coding challenge for a computer science student.
 
@@ -436,8 +436,8 @@ Respond with JSON only, no markdown:
 
 // The flowchart page has no level picker, so with no difficulty given the
 // server hands out the next topic the student hasn't passed yet.
-const generateFlowchartProblem = async (user_id, { difficulty = null, topic: requestedTopic = null } = {}) => {
-  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'flowchart', difficulty, requestedTopic);
+const generateFlowchartProblem = async (user_id, { difficulty = null, topic: requestedTopic = null, retake = false } = {}) => {
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'flowchart', difficulty, requestedTopic, { allowLocked: !!retake });
 
   const prompt = `Generate a flowchart problem for a computer science student.
 
@@ -610,8 +610,8 @@ Respond with JSON only, no markdown:
 // The AI occasionally writes a schema that doesn't load or an answer that
 // returns nothing. Each attempt is run before it's accepted, so the student
 // never receives a challenge that can't be answered.
-const generateSQLChallenge = async (user_id, { difficulty = 'easy', topic: requestedTopic = null } = {}) => {
-  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'sql', difficulty, requestedTopic);
+const generateSQLChallenge = async (user_id, { difficulty = 'easy', topic: requestedTopic = null, retake = false } = {}) => {
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'sql', difficulty, requestedTopic, { allowLocked: !!retake });
   let lastProblem = 'unknown';
 
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -853,16 +853,18 @@ Respond with JSON only, no markdown:
 
 // ─── BUG FIXING ───────────────────────────────────────────────────────────────
 
-const generateBugFixChallenge = async (user_id, { language, difficulty = 'easy', topic: requestedTopic = null }) => {
+const generateBugFixChallenge = async (user_id, { language, difficulty = 'easy', topic: requestedTopic = null, retake = false }) => {
   if (!language) throw { status: 400, message: 'language is required.' };
 
-  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'bugfix', difficulty, requestedTopic);
+  const { difficulty: level, topic } = await progress.beginPractice(user_id, 'bugfix', difficulty, requestedTopic, { allowLocked: !!retake });
 
   const prompt = `Generate a bug fixing challenge for a computer science student.
 
 Language: ${language}
 Level: ${level}
 Topic: ${topic.label} — ${topic.brief}
+
+Write ALL code strictly in ${language}. The "buggy_code" MUST be valid ${language} source code using ${language} syntax, keywords and conventions — do NOT write it in any other programming language (for example, never write Python when the language is ${language}). The file is treated as ${language}.
 
 Every bug planted must be of this kind. ${level === 'easy' ? 'Plant 1-2 bugs.' : level === 'medium' ? 'Plant 2-3 bugs.' : 'Plant 3-4 subtle bugs.'}
 ${level === 'medium' ? 'The code must be object-oriented: at least one class, with the bugs inside it.' : ''}
@@ -871,7 +873,7 @@ Respond with JSON only, no markdown:
 {
   "title": "short challenge title",
   "description": "what the code is supposed to do, 1-2 sentences",
-  "buggy_code": "the code with bugs inserted (10-25 lines)",
+  "buggy_code": "the ${language} code with bugs inserted (10-25 lines)",
   "bug_count": number,
   "hints": ["hint about bug 1", "hint about bug 2"],
   "time_limit_minutes": ${level === 'hard' ? 20 : level === 'medium' ? 15 : 10}

@@ -180,7 +180,7 @@ const BugFixAssessment = () => {
     setGenerating(true)
     setSetupError('')
     try {
-      const data = await generateBugFixChallenge({ language, difficulty })
+      const data = await generateBugFixChallenge({ language, difficulty, retake: !!retakeOf })
       setChallenge(data)
       setFixedCode(data.buggy_code || '')
       beginTimer(retakeOf && retakeMinutes ? retakeMinutes * 60 : TIME_LIMITS[difficulty])

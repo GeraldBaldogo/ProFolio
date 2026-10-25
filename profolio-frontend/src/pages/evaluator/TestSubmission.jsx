@@ -97,11 +97,24 @@ const TestSubmissions = () => {
     }
   }
 
+  // Passing mark for this test (falls back to the system default of 75).
+  const PASS_MARK = test?.config?.passing_score || 75
+
   const stats = useMemo(() => {
     const submitted = rows.filter(r => r.status === 'submitted')
     const scores = submitted
       .map(r => r.result?.score)
       .filter(s => s !== null && s !== undefined)
+
+    // Best score per student across all attempts (original + retakes), so a
+    // student who failed and then passed on a retake counts as passed.
+    const best = new Map()
+    for (const r of rows) {
+      const s = r.result?.score
+      if (s === null || s === undefined) continue
+      if (!best.has(r.student_id) || s > best.get(r.student_id)) best.set(r.student_id, s)
+    }
+    const bestScores = [...best.values()]
 
     return {
       assigned: rows.length,
@@ -114,23 +127,16 @@ const TestSubmissions = () => {
         (r.result?.metadata?.camera_violation_count || 0) > 0
         || r.result?.metadata?.unproctored
       ).length,
+      passed: bestScores.filter(s => s >= PASS_MARK).length,
+      failed: bestScores.filter(s => s < PASS_MARK).length,
     }
-  }, [rows])
+  }, [rows, PASS_MARK])
 
   const handleLogout = () => { logout(); navigate('/') }
 
-  // Students who failed this test (best score below 75). A remedial test itself
-  // never offers its own remedial.
+  // A remedial test itself never offers its own remedial.
   const isRemedialTest = !!test?.config?.remedial_of
-  const failedCount = useMemo(() => {
-    const best = new Map()
-    for (const r of rows) {
-      const s = r.result?.score
-      if (s === null || s === undefined) continue
-      if (!best.has(r.student_id) || s > best.get(r.student_id)) best.set(r.student_id, s)
-    }
-    return [...best.values()].filter(s => s < 75).length
-  }, [rows])
+  const failedCount = stats.failed
 
   const [remedialBusy, setRemedialBusy] = useState(false)
   const [remedialMsg, setRemedialMsg] = useState('')
@@ -363,10 +369,12 @@ const TestSubmissions = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
           {[
             { label: 'Assigned', value: stats.assigned, icon: faUsers, color: 'text-blue-400' },
             { label: 'Submitted', value: `${stats.submitted}/${stats.assigned}`, icon: faCircleCheck, color: 'text-emerald-400' },
+            { label: 'Passed', value: stats.passed, icon: faCircleCheck, color: stats.passed ? 'text-emerald-400' : 'text-gray-500' },
+            { label: 'Did not pass', value: stats.failed, icon: faTriangleExclamation, color: stats.failed ? 'text-rose-400' : 'text-gray-500' },
             { label: 'Average', value: stats.average ?? '—', icon: faChartSimple, color: scoreColor(stats.average) },
             { label: 'Flagged', value: stats.flagged, icon: faShield, color: stats.flagged ? 'text-rose-400' : 'text-gray-500' },
           ].map((s, i) => (
@@ -457,6 +465,20 @@ const TestSubmissions = () => {
                         title={row.best_score !== null && row.best_score !== undefined ? `Best score: ${row.best_score}` : undefined}>
                         <FontAwesomeIcon icon={faRotateRight} /> {row.retakes} retake{row.retakes > 1 ? 's' : ''}
                       </span>
+                    )}
+
+                    {/* Pass / fail at a glance, based on the student's BEST
+                        attempt against this test's passing mark. */}
+                    {result && (row.best_score ?? result.score) !== null && (row.best_score ?? result.score) !== undefined && (
+                      (row.best_score ?? result.score) >= PASS_MARK ? (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 rounded-full flex-shrink-0">
+                          <FontAwesomeIcon icon={faCircleCheck} /> Passed
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-rose-400 border border-rose-500/25 bg-rose-500/10 px-2.5 py-1 rounded-full flex-shrink-0">
+                          <FontAwesomeIcon icon={faTriangleExclamation} /> Did not pass
+                        </span>
+                      )
                     )}
 
                     <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${status.bg} ${status.border} ${status.color} flex-shrink-0`}>

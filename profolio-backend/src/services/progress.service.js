@@ -87,10 +87,13 @@ const assertUnlocked = (progress, level) => {
  * Refuses a locked level, then picks the topic: the one asked for if it is in
  * this level, otherwise the next one not yet passed, otherwise any (review).
  */
-const beginPractice = async (user_id, type, difficulty, requestedTopic = null) => {
+const beginPractice = async (user_id, type, difficulty, requestedTopic = null, { allowLocked = false } = {}) => {
   const progress = await getProgress(user_id, type);
   const level = difficulty || currentLevel(progress);
-  assertUnlocked(progress, level);
+  // A retake of an assigned test runs at the level the professor set, so it
+  // bypasses the practice-mode level-unlock gate (allowLocked). Free practice
+  // still has to unlock levels in order.
+  if (!allowLocked) assertUnlocked(progress, level);
 
   const plan = CURRICULUM[type][level];
   const status = new Map(progress.levels[level].topics.map((t) => [t.key, t.passed]));
