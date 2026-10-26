@@ -90,7 +90,7 @@ const getPracticeScores = async (user_id) => {
 const getGradedResults = async (user_id) => {
   const { data: rows, error } = await supabase
     .from('assessment_results')
-    .select('id, type, score, test_id, created_at')
+    .select('id, type, score, test_id, created_at, metadata')
     .eq('user_id', user_id)
     .not('test_id', 'is', null)
     .order('created_at', { ascending: false });

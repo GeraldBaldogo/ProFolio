@@ -227,22 +227,46 @@ const generateCV = async (user_id, excludeInput) => {
   // Letting it into the CV would mean a student could claim competence in five
   // areas after five quiet retries, which is exactly what this system exists to
   // stop being possible.
+  //
+  // Standardised evidence (final-defence requirement): a skill area is only
+  // claimed on the CV once the student has PASSED a professor-set test at EVERY
+  // level — easy, medium AND hard — of that type. Passing one level is not a
+  // skillset; completing the full ladder is. A type with any level still
+  // unpassed is left off entirely, not shown at a lower tier.
+  const REQUIRED_LEVELS = ['easy', 'medium', 'hard'];
+  const graded = await assessmentRepo.getGradedResults(user_id);
+
   const assessments = {};
+  const completedTypes = new Set();
   for (const type of ASSESSMENT_TYPES) {
-    const result = await assessmentRepo.getLatestGradedByType(user_id, type);
-    // Assigned (is_graded) AND passed (>= CV_PASS_MARK). A below-pass attempt is
-    // left off the CV — not labelled "failed", simply not claimed.
-    assessments[type] = (result?.is_graded && Number(result.score) >= CV_PASS_MARK) ? result : null;
+    // Every passed, professor-set attempt of this type.
+    const passed = graded.filter(
+      (r) => r.type === type && Number(r.score) >= CV_PASS_MARK
+    );
+    // Which of the three levels have been passed at least once.
+    const levelsPassed = new Set(passed.map((r) => r.test?.level).filter(Boolean));
+    const hasAllLevels = REQUIRED_LEVELS.every((lv) => levelsPassed.has(lv));
+
+    if (hasAllLevels && passed.length) {
+      completedTypes.add(type);
+      // Representative result for the area: the best passed attempt, so the
+      // measured performance and evidence reflect their strongest standardised
+      // showing across the ladder.
+      const rep = [...passed].sort((a, b) => Number(b.score) - Number(a.score))[0];
+      assessments[type] = { ...rep, is_graded: true };
+    } else {
+      assessments[type] = null;
+    }
   }
 
   const gradedCount = ASSESSMENT_TYPES.filter((t) => assessments[t]).length;
 
-  // Nothing passed, nothing to put on the CV. Refusing here is kinder — and
+  // No skill area completed across all levels. Refusing here is kinder — and
   // more honest — than generating a document full of "Beginning"-level entries.
   if (gradedCount === 0) {
     throw {
       status: 400,
-      message: 'Your CV is built from professor-set tests you have passed. Pass at least one assigned test first — practice attempts and failed attempts don\u2019t count.',
+      message: 'Your CV is built from skill areas you have standardised: passing a professor-set test at every level (easy, medium and hard). Complete all three levels of at least one skill area — practice attempts and failed attempts don\u2019t count.',
     };
   }
 
@@ -264,7 +288,10 @@ const generateCV = async (user_id, excludeInput) => {
   // read honestly, but the lines themselves are placed by this code.
   const allTitles = await titlesService.getTitles(user_id);
   const verifiedTitles = Object.entries(allTitles)
-    .filter(([, t]) => t.verified)
+    // Only award a title for a skill area that has been standardised across all
+    // three levels (see the assessment-evidence gate above). A single high-level
+    // pass no longer surfaces a title on its own.
+    .filter(([type, t]) => t.verified && completedTypes.has(type))
     .map(([type, t]) => ({
       type,
       area: TYPE_LABELS[type] || type,
