@@ -263,8 +263,8 @@ const CvDocument = ({ className = '' }) => (
       </ul>
 
       <p className="lpcv-h">Verified Performance <i>Timed, camera-proctored tests set by faculty</i></p>
-      <div className="lpcv-row"><p><b>Typing</b> — 64 WPM · 97% accuracy · Medium test</p><p className="lpcv-date">Proficient</p></div>
-      <div className="lpcv-row"><p><b>SQL</b> — Hard test · output verified</p><p className="lpcv-date">Advanced</p></div>
+      <div className="lpcv-row"><p><b>Typing</b> — 64 WPM · 97% accuracy</p><p className="lpcv-date">Advanced</p></div>
+      <div className="lpcv-row"><p><b>SQL</b> — output verified</p><p className="lpcv-date">Expert</p></div>
 
       <p className="lpcv-h">Skills</p>
       <p className="lpcv-p">Python, PostgreSQL, Node.js, Express, Git, Docker</p>
@@ -1171,9 +1171,9 @@ export default function LandingPage() {
                     Verified performance · proctored tests set by faculty
                   </p>
                   {[
-                    ['Typing', '64 WPM · 97% accuracy · Medium test', 'Proficient'],
-                    ['SQL', 'Hard test · output verified', 'Advanced'],
-                    ['Programming', 'Python · Medium test', 'Developing'],
+                    ['Typing', '64 WPM · 97% accuracy', 'Advanced'],
+                    ['SQL', 'output verified', 'Expert'],
+                    ['Programming', 'Python', 'Intermediate'],
                   ].map(([area, detail, level]) => (
                     <p key={area} className="flex flex-wrap items-baseline gap-x-2 text-gray-300 text-[11px] leading-snug mb-2 sm:mb-1.5">
                       <span className="text-white font-semibold">{area}</span>

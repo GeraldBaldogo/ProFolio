@@ -12,6 +12,7 @@ import { getTestById } from '../../../services/test.service'
 import { useProctoring } from '../../../hooks/useProctoring'
 import ProctoringCamera from '../../../components/ProctoringCamera'
 import PracticeLevels from '../../../components/PracticeLevels'
+import { levelLabel } from '../../../utils/levels'
 import AttemptAward from '../../../components/AttemptAward'
 import SchemaViewer from '../../../components/SchemaViewer'
 import { runSqlInBrowser, warmUpSql, signatureOf, signatureHash } from '../../../utils/sqlBrowser'
@@ -491,7 +492,7 @@ const SQLAssessment = () => {
           </div>
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
             <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-              <span>Level: <span className="text-white capitalize">{difficulty}</span></span>
+              <span>Level: <span className="text-white">{levelLabel(difficulty)}</span></span>
               <span>Time limit: <span className="text-white">{retakeMinutes || TIME_LIMITS[difficulty] / 60} minutes</span></span>
             </div>
           </div>
@@ -511,12 +512,12 @@ const SQLAssessment = () => {
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">What to Expect</p>
             {[
-              { label: 'Easy', desc: 'Basic SELECT, WHERE, ORDER BY — single table queries' },
-              { label: 'Medium', desc: 'JOINs, GROUP BY, HAVING, aggregate functions' },
-              { label: 'Hard', desc: 'Subqueries, multiple JOINs, UNION, window functions' },
+              { value: 'easy', label: 'Foundational', desc: 'Basic SELECT, WHERE, ORDER BY — single table queries' },
+              { value: 'medium', label: 'Intermediate', desc: 'JOINs, GROUP BY, HAVING, aggregate functions' },
+              { value: 'hard', label: 'Advanced', desc: 'Subqueries, multiple JOINs, UNION, window functions' },
             ].map((item, i) => (
-              <div key={i} className={`flex items-start gap-3 py-2.5 border-b border-white/5 last:border-0 ${difficulty === item.label.toLowerCase() ? 'opacity-100' : 'opacity-40'}`}>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border capitalize ${diffColor[item.label.toLowerCase()]}`}>{item.label}</span>
+              <div key={i} className={`flex items-start gap-3 py-2.5 border-b border-white/5 last:border-0 ${difficulty === item.value ? 'opacity-100' : 'opacity-40'}`}>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${diffColor[item.value]}`}>{item.label}</span>
                 <p className="text-gray-400 text-xs mt-0.5">{item.desc}</p>
               </div>
             ))}
@@ -704,7 +705,7 @@ const SQLAssessment = () => {
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold text-sm truncate">{challenge?.title}</p>
           <p className="text-gray-500 text-xs capitalize">
-            {testId ? 'assigned test' : `${difficulty} difficulty`}
+            {testId ? 'assigned test' : `${levelLabel(difficulty)} level`}
           </p>
         </div>
 

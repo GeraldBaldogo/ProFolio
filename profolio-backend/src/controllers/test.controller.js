@@ -89,7 +89,8 @@ const startAssignment = async (req, res, next) => {
 
 const listStudents = async (req, res, next) => {
   try {
-    const students = await testService.listStudents();
+    const { type, level } = req.query;
+    const students = await testService.listStudents(type || null, level || null);
     res.json({ success: true, data: students });
   } catch (err) {
     next(err);

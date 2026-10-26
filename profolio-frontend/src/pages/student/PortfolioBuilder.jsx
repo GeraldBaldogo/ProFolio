@@ -361,6 +361,9 @@ const PortfolioBuilder = () => {
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-blue-400 text-[11px] font-semibold truncate">
+                {user?.role === 'evaluator' ? 'Professor' : user?.role === 'admin' ? 'Admin' : 'Student'}
+              </p>
               <p className="text-gray-500 text-xs truncate">{user?.email}</p>
             </div>
           </div>

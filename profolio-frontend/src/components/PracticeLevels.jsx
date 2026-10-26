@@ -22,7 +22,7 @@ import { getPracticeProgress } from '../services/assessment.service'
  */
 
 const LEVELS = ['easy', 'medium', 'hard']
-const NAME = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
+const NAME = { easy: 'Foundational', medium: 'Intermediate', hard: 'Advanced' }
 const YEAR = { easy: '1st year', medium: '2nd year', hard: '3rd–4th year' }
 const ACTIVE = {
   easy: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',

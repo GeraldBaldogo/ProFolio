@@ -74,6 +74,19 @@ const toggleUserStatus = async (id, is_active) => {
   return data;
 };
 
+// When a professor is deactivated, their published tests are pulled from
+// circulation so students can no longer be assigned or sit them. Reactivating
+// the professor does NOT auto-republish — they publish again themselves, so a
+// reactivated account doesn't silently re-expose old tests.
+const unpublishProfessorTests = async (professor_id) => {
+  const { error } = await supabase
+    .from('tests')
+    .update({ is_published: false })
+    .eq('professor_id', professor_id)
+    .eq('is_published', true);
+  if (error) throw error;
+};
+
 const assignEvaluator = async (portfolio_id, evaluator_id, assigned_by) => {
   // Fix: previously no check that evaluator_id actually belongs to a user
   // with role 'evaluator' - an admin could accidentally assign a student
@@ -183,4 +196,4 @@ const getAnalytics = async () => {
   };
 };
 
-module.exports = { getAllUsers, updateUserRole, toggleUserStatus, assignEvaluator, getPortfolios, getAnalytics, approveUser, findUser, countActiveAdmins, ensureRoleProfile };
+module.exports = { getAllUsers, updateUserRole, toggleUserStatus, unpublishProfessorTests, assignEvaluator, getPortfolios, getAnalytics, approveUser, findUser, countActiveAdmins, ensureRoleProfile };

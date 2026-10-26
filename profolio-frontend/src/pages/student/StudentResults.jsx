@@ -18,6 +18,7 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
 import AvatarFill from '../../components/AvatarFill'
 import SidebarTheme from '../../components/SidebarTheme'
+import { levelLabel } from '../../utils/levels'
 const navItems = [
   { label: 'Dashboard', icon: faHouse, path: '/student/dashboard' },
   { label: 'Assigned Tests', icon: faClipboardList, path: '/student/assigned-tests' },
@@ -157,6 +158,9 @@ const StudentResults = () => {
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-blue-400 text-[11px] font-semibold truncate">
+                {user?.role === 'evaluator' ? 'Professor' : user?.role === 'admin' ? 'Admin' : 'Student'}
+              </p>
               <p className="text-gray-500 text-xs truncate">{user?.email}</p>
             </div>
           </div>
@@ -329,7 +333,7 @@ const StudentResults = () => {
                           </div>
                           <p className="text-gray-500 text-xs mt-0.5">
                             {formatDate(r.created_at)}
-                            {m.difficulty && <span className="capitalize"> · {m.difficulty}</span>}
+                            {m.difficulty && <span> · {levelLabel(m.difficulty)}</span>}
                           </p>
                         </div>
 

@@ -10,6 +10,7 @@ import { getTestById } from '../../../services/test.service'
 import { useProctoring } from '../../../hooks/useProctoring'
 import ProctoringCamera from '../../../components/ProctoringCamera'
 import PracticeLevels from '../../../components/PracticeLevels'
+import { levelLabel } from '../../../utils/levels'
 import AttemptAward from '../../../components/AttemptAward'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
 import ThemeToggle from '../../../components/ThemeToggle'
@@ -399,7 +400,7 @@ const CommunicationAssessment = () => {
               <p className="text-amber-300 text-sm font-semibold">Retake — this one counts</p>
               <p className="text-gray-400 text-xs mt-1">
                 The <span className="text-gray-300 font-semibold">same prompt your professor set</span>{' '}
-                ({difficulty} level). Pass it and it replaces your earlier score and goes on your CV.
+                ({levelLabel(difficulty)} level). Pass it and it replaces your earlier score and goes on your CV.
                 You can keep retaking until you pass.
               </p>
             </div>

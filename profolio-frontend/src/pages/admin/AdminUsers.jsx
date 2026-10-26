@@ -235,10 +235,10 @@ const AdminUsers = () => {
                   </div>
                 ) : (
                   <div className="divide-y divide-white/5">
-                    {filtered.map((u, i) => {
+                    {filtered.map((u) => {
                       const role = roleConfig[u.role] || roleConfig.student
                       return (
-                        <div key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-white/[0.02] transition-all">
+                        <div key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-white/[0.02] transition-all">
                           <div className={`w-10 h-10 bg-gradient-to-br ${u.role === 'admin' ? 'from-rose-500 to-pink-600' : u.role === 'evaluator' ? 'from-amber-500 to-orange-500' : 'from-blue-500 to-violet-500'} rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                             {u.full_name?.charAt(0).toUpperCase()}
                           </div>

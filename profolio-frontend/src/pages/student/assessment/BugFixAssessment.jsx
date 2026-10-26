@@ -11,6 +11,7 @@ import { getTestById } from '../../../services/test.service'
 import { useProctoring } from '../../../hooks/useProctoring'
 import ProctoringCamera from '../../../components/ProctoringCamera'
 import PracticeLevels from '../../../components/PracticeLevels'
+import { levelLabel } from '../../../utils/levels'
 import AttemptAward from '../../../components/AttemptAward'
 import { useBackdropStill } from '../../../hooks/useBackdropStill'
 import ThemeToggle from '../../../components/ThemeToggle'
@@ -486,7 +487,7 @@ const BugFixAssessment = () => {
           <div className="border border-white/8 bg-white/[0.03] rounded-2xl p-5 mb-4">
             <div className="flex flex-wrap gap-4 text-xs text-gray-500">
               <span>Language: <span className="text-white">{language}</span></span>
-              <span>Level: <span className="text-white capitalize">{difficulty}</span></span>
+              <span>Level: <span className="text-white">{levelLabel(difficulty)}</span></span>
               <span>Time limit: <span className="text-white">{retakeMinutes || TIME_LIMITS[difficulty] / 60} minutes</span></span>
             </div>
           </div>
@@ -692,7 +693,7 @@ const BugFixAssessment = () => {
             {language}
             {testId
               ? ' · assigned test'
-              : ` · ${difficulty}${challenge?.bug_count ? ` · ${challenge.bug_count} bug${challenge.bug_count !== 1 ? 's' : ''} to find` : ''}`}
+              : ` · ${levelLabel(difficulty)}${challenge?.bug_count ? ` · ${challenge.bug_count} bug${challenge.bug_count !== 1 ? 's' : ''} to find` : ''}`}
           </p>
         </div>
 

@@ -128,7 +128,38 @@ const updateTest = async (test_id, professor_id, updates) => {
   return testRepo.updateTest(test_id, updates);
 };
 
-const listStudents = async () => {
+// User IDs of students who have already PASSED a professor-set test of this
+// exact type and level (any professor's — a standardised skill is system-wide).
+// Used so the Assign dialog can grey out students who've already cleared this
+// stage, instead of re-assigning them something they've finished.
+const PASS_MARK = 75;
+const passedUserIdsFor = async (type, level) => {
+  const { data: results, error } = await supabase
+    .from('assessment_results')
+    .select('user_id, test_id')
+    .eq('type', type)
+    .not('test_id', 'is', null)
+    .gte('score', PASS_MARK);
+  if (error) throw error;
+  if (!results?.length) return new Set();
+
+  const testIds = [...new Set(results.map((r) => r.test_id))];
+  const { data: tests, error: tErr } = await supabase
+    .from('tests')
+    .select('id, config')
+    .in('id', testIds);
+  if (tErr) throw tErr;
+
+  // Only tests of the matching level count.
+  const okTestIds = new Set((tests || []).filter((t) => t.config?.level === level).map((t) => t.id));
+  const ids = new Set();
+  for (const r of results) if (okTestIds.has(r.test_id)) ids.add(r.user_id);
+  return ids;
+};
+
+// When type AND level are given, each student is tagged { completed } so the
+// Assign dialog can disable those who have already passed that stage.
+const listStudents = async (type = null, level = null) => {
   const { data, error } = await supabase
     .from('users')
     .select('id, full_name, email')
@@ -137,7 +168,13 @@ const listStudents = async () => {
     .neq('is_active', false)
     .order('full_name', { ascending: true });
   if (error) throw error;
-  return data || [];
+  const students = data || [];
+
+  if (type && level) {
+    const done = await passedUserIdsFor(type, level);
+    return students.map((s) => ({ ...s, completed: done.has(s.id) }));
+  }
+  return students;
 };
 
 const deleteTest = async (test_id, professor_id) => {

@@ -85,17 +85,21 @@ const AdminDashboard = () => {
     }
   }
 
-  // Professors who signed up but can't get in yet. These are the only accounts
-  // that need a decision — everyone else is already settled.
+  // Professors who signed up and are still genuinely waiting for a decision.
+  // A rejected (deactivated) professor is NOT waiting any more, so excluding
+  // is_active === false drops them out of this list the moment they're turned
+  // down — otherwise a rejected professor stays stuck under "Waiting for
+  // approval" forever.
   const pendingUsers = useMemo(
-    () => users.filter(u => u.role === 'evaluator' && u.is_approved === false),
+    () => users.filter(u => u.role === 'evaluator' && u.is_approved === false && u.is_active !== false),
     [users]
   )
 
-  // Everyone who's already through the door. Kept separate so a pending
-  // professor never shows a Deactivate button — there's nothing to deactivate.
+  // Everyone else — including a rejected professor, who now shows in Accounts
+  // as "Deactivated" and can be reactivated (which sends them back to Waiting
+  // for approval) from there.
   const settledUsers = useMemo(
-    () => users.filter(u => !(u.role === 'evaluator' && u.is_approved === false)),
+    () => users.filter(u => !(u.role === 'evaluator' && u.is_approved === false && u.is_active !== false)),
     [users]
   )
 

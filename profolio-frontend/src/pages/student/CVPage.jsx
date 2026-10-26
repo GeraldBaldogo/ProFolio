@@ -7,11 +7,12 @@ import {
   faWandMagicSparkles, faClockRotateLeft, faCheck, faBriefcase,
   faClipboardList, faFingerprint, faLightbulb, faChartLine, faComments,
   faTriangleExclamation, faSeedling, faShieldHalved, faArrowRight, faDumbbell,
-  faCamera, faTrash,
+  faCamera, faTrash, faCircleCheck, faLayerGroup, faChevronDown,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import { generateCV, getLatestCV, getCVHistory, getCVSources } from '../../services/cv.service'
+import { getTitles } from '../../services/assessment.service'
 import { getProfilePhoto, uploadProfilePhoto, removeProfilePhoto } from '../../services/photo.service'
 import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 
@@ -193,6 +194,123 @@ const Tick = ({ on }) => (
     {on && <FontAwesomeIcon icon={faCheck} className="text-white text-[10px]" />}
   </span>
 )
+
+// ── Skill standardization progress ──────────────────────────────────────────
+// A skill area only becomes a CV skillset once the student has PASSED a
+// professor-set test at ALL THREE stages of the ladder. This panel shows, per
+// skill type, which stages are done (a check) and which are still open, so the
+// student can see exactly what's left before each skillset is generated.
+// Worked out from the same graded history the CV itself uses.
+const SKILL_TYPES = [
+  { key: 'typing', label: 'Typing' },
+  { key: 'programming', label: 'Programming' },
+  { key: 'flowchart', label: 'Flowchart' },
+  { key: 'sql', label: 'SQL' },
+  { key: 'bugfix', label: 'Bug Fix' },
+  { key: 'communication', label: 'Communication' },
+]
+const SKILL_LEVELS = ['easy', 'medium', 'hard']
+// Friendlier names for the three difficulty stages than easy/medium/hard —
+// a progression that reads well on a skills page. Keys stay easy/medium/hard
+// because that's what the graded history records.
+const LEVEL_LABELS = { easy: 'Foundational', medium: 'Intermediate', hard: 'Advanced' }
+const STD_PASS = 75 // same pass mark the CV uses (CV_PASS_MARK)
+
+function StandardizationProgress({ titles }) {
+  // Collapsed by default so the Generate CV flow stays the focus; opens only
+  // when the student wants to check what's left.
+  const [open, setOpen] = useState(false)
+  if (!titles) return null
+
+  const rows = SKILL_TYPES.map(({ key, label }) => {
+    const history = titles[key]?.history || []
+    const passed = new Set(
+      history.filter((h) => Number(h.score) >= STD_PASS).map((h) => h.test_level)
+    )
+    const done = SKILL_LEVELS.filter((l) => passed.has(l)).length
+    return { key, label, passed, done, standardized: done === SKILL_LEVELS.length }
+  })
+  const readyCount = rows.filter((r) => r.standardized).length
+
+  return (
+    // Centred and collapsed by default, so it's a neat bar above the page and
+    // the Generate CV flow below keeps the middle of the screen.
+    <div className="no-print max-w-2xl mx-auto mb-6">
+      <div className="border border-white/8 bg-white/[0.03] rounded-2xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.04] transition-colors"
+        >
+          <FontAwesomeIcon icon={faLayerGroup} className="text-violet-400 text-sm" />
+          <span className="text-white font-semibold text-sm">Skill standardization</span>
+          <span className="ml-auto flex items-center gap-2.5">
+            <span className="text-xs font-semibold text-gray-300">
+              {readyCount} of {SKILL_TYPES.length} ready
+            </span>
+            <FontAwesomeIcon
+              icon={faChevronDown}
+              className={`text-gray-500 text-xs transition-transform ${open ? 'rotate-180' : ''}`}
+            />
+          </span>
+        </button>
+
+        {open && (
+          <div className="px-4 pb-4 border-t border-white/5">
+            <p className="text-gray-500 text-xs leading-relaxed py-3">
+              A skill becomes a CV entry only after you pass a professor-set test at
+              <span className="text-gray-300"> all three stages</span> — Foundational, Intermediate and Advanced.
+            </p>
+            <div className="flex flex-col divide-y divide-white/5">
+              {rows.map((r) => (
+                <div key={r.key} className="flex flex-col gap-2 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-200 font-medium">{r.label}</span>
+                    {r.standardized ? (
+                      <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                        <FontAwesomeIcon icon={faCircleCheck} /> Standardized
+                      </span>
+                    ) : (
+                      <span className="ml-auto text-xs text-gray-500">{r.done} of 3</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {SKILL_LEVELS.map((lv) => {
+                      const on = r.passed.has(lv)
+                      return (
+                        <span
+                          key={lv}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
+                            on
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                              : 'border-white/10 text-gray-500'
+                          }`}
+                        >
+                          <span
+                            className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              on ? 'bg-emerald-500' : 'border-2 border-current opacity-70'
+                            }`}
+                          >
+                            {on && <FontAwesomeIcon icon={faCheck} className="text-white text-[8px]" />}
+                          </span>
+                          <span>{LEVEL_LABELS[lv]}</span>
+                          <span className={on ? 'text-emerald-400/80' : 'text-gray-600'}>
+                            · {on ? 'Passed' : 'Not yet'}
+                          </span>
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function ChooseSourcesModal({ open, previousExcluded, onCancel, onGenerate }) {
   const [sources, setSources] = useState(null)
@@ -419,6 +537,7 @@ export default function CVPage() {
   const [error, setError] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [choosing, setChoosing] = useState(false)
+  const [titles, setTitles] = useState(null)
 
   // The photo belongs to the profile, not to a CV version — so changing it
   // shows on every version straight away, with no need to regenerate.
@@ -439,14 +558,16 @@ export default function CVPage() {
     setLoading(true)
     setError('')
     try {
-      const [latest, hist, pic] = await Promise.all([
+      const [latest, hist, pic, tit] = await Promise.all([
         getLatestCV(),
         getCVHistory(),
         getProfilePhoto().catch(() => null), // a missing photo shouldn't block the CV
+        getTitles().catch(() => null),       // progress panel is a bonus; don't block the CV
       ])
       setCv(latest)
       setHistory(hist || [])
       setPhoto(pic)
+      setTitles(tit)
     } catch (err) {
       setError(err.message || 'Couldn\u2019t load your CV.')
     } finally {
@@ -592,6 +713,9 @@ export default function CVPage() {
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{user?.full_name}</p>
+              <p className="text-blue-400 text-[11px] font-semibold truncate">
+                {user?.role === 'evaluator' ? 'Professor' : user?.role === 'admin' ? 'Admin' : 'Student'}
+              </p>
               <p className="text-gray-500 text-xs truncate">{user?.email}</p>
             </div>
           </div>
@@ -677,6 +801,8 @@ export default function CVPage() {
               <p className="text-rose-400 text-sm">{error}</p>
             </div>
           )}
+
+          {!loading && <StandardizationProgress titles={titles} />}
 
           {showHistory && history.length > 0 && (
             <div className="no-print max-w-2xl mx-auto mb-6 border border-white/8 bg-white/[0.03] rounded-2xl p-4">
@@ -885,7 +1011,7 @@ export default function CVPage() {
                       <Entry key={p.type} title={p.area} detail={p.detail || null} date={p.proficiency} />
                     ))}
                     <p className="cv-legend">
-                      Proficiency: Advanced 85+ · Proficient 70–84 · Developing 55–69 · Beginning below 55
+                      Proficiency: Expert 85+ · Advanced 70–84 · Intermediate 55–69 · Beginner below 55
                     </p>
                   </CVSection>
                 )}

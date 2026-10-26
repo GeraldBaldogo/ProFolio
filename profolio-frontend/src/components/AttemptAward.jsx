@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faAward, faSeedling } from '@fortawesome/free-solid-svg-icons'
+import { levelLabel } from '../utils/levels'
 
 /**
  * What an attempt earned, shown on every assessment's result screen.
@@ -21,7 +22,7 @@ const AttemptAward = ({ testId, result }) => {
         <p className="text-amber-300/80 text-[11px] font-semibold uppercase tracking-wider mb-1">Verified title earned</p>
         <p className="text-white font-black text-2xl mb-2">{result.title_awarded.label}</p>
         <p className="text-gray-400 text-xs leading-relaxed max-w-sm mx-auto">
-          Awarded on a {result.title_awarded.test_level} level test set by your professor.
+          Awarded on a {levelLabel(result.title_awarded.test_level)} level test set by your professor.
           Your highest title and the full history are on your Results page.
         </p>
       </div>

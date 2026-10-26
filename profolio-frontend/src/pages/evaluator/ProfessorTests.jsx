@@ -16,6 +16,7 @@ import logo from '../../assets/ProFolio_-_Logo-removebg-preview.png'
 import SidebarTheme from '../../components/SidebarTheme'
 import { DateTimePicker } from '../../components/ui/DatePicker'
 import Select from '../../components/ui/Select'
+import { levelLabel } from '../../utils/levels'
 
 // Must match EvaluatorDashboard, EvaluatorStudents and TestSubmission exactly.
 // Each page keeps its own copy, so a difference here makes the sidebar jump
@@ -131,9 +132,9 @@ const TOPIC_PRESETS = {
 }
 
 const LEVELS = [
-  { value: 'easy', label: 'Easy', note: '1st year · up to Trainee' },
-  { value: 'medium', label: 'Medium', note: '2nd year · up to Associate' },
-  { value: 'hard', label: 'Hard', note: '3rd–4th year · up to Junior' },
+  { value: 'easy', label: 'Foundational', note: '1st year · up to Trainee' },
+  { value: 'medium', label: 'Intermediate', note: '2nd year · up to Associate' },
+  { value: 'hard', label: 'Advanced', note: '3rd–4th year · up to Junior' },
 ]
 
 // The main content field per type, used to preview an AI draft at a glance.
@@ -551,7 +552,11 @@ const ProfessorTests = () => {
     setStudentSearch('')
     setLoadingStudents(true)
     try {
-      const res = await api.get('/tests/students')
+      // Pass the test's type + level so the server can flag students who have
+      // already passed this stage — they're shown greyed out and can't be picked.
+      const res = await api.get('/tests/students', {
+        params: { type: t.type, level: t.config?.level },
+      })
       setStudents(res.data.data || [])
     } catch (err) {
       showToast(err.response?.data?.message || 'Couldn\u2019t load the student list.', 'error')
@@ -569,8 +574,12 @@ const ProfessorTests = () => {
     )
   }, [students, studentSearch])
 
-  const togglePick = (id) =>
+  const togglePick = (id) => {
+    // Students who already passed this stage are locked out of the picker.
+    const s = students.find((x) => x.id === id)
+    if (s?.completed) return
     setPicked(list => list.includes(id) ? list.filter(x => x !== id) : [...list, id])
+  }
 
   const submitAssign = async () => {
     if (!picked.length) {
@@ -826,7 +835,7 @@ const ProfessorTests = () => {
                         </p>
                       )}
 
-                      <p className="text-violet-300/60 text-[11px] font-semibold flex items-center gap-2 opacity-60 group-hover/ai:opacity-100 transition-opacity">
+                      <p className="text-violet-500 text-[11px] font-semibold flex items-center gap-2 opacity-90 group-hover/ai:opacity-100 transition-opacity">
                         <FontAwesomeIcon icon={faWandMagicSparkles} /> Build a new test from this one
                       </p>
                     </div>
@@ -1133,7 +1142,7 @@ const ProfessorTests = () => {
                     <p className="text-white font-bold text-sm flex-1 truncate">{aiDraft.title || 'Untitled test'}</p>
                     {aiDraft.level && (
                       <span className="text-[10px] uppercase tracking-wider font-bold text-violet-200 bg-violet-500/20 border border-violet-400/30 rounded-full px-2 py-0.5">
-                        {aiDraft.level}
+                        {levelLabel(aiDraft.level)}
                       </span>
                     )}
                   </div>
@@ -1277,9 +1286,9 @@ const ProfessorTests = () => {
                 <p className={labelClass}>Level</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { v: 'easy',   name: 'Easy',   year: '1st year',     title: 'up to Trainee' },
-                    { v: 'medium', name: 'Medium', year: '2nd year',     title: 'up to Associate' },
-                    { v: 'hard',   name: 'Hard',   year: '3rd–4th year', title: 'up to Junior' },
+                    { v: 'easy',   name: 'Foundational', year: '1st year',     title: 'up to Trainee' },
+                    { v: 'medium', name: 'Intermediate', year: '2nd year',     title: 'up to Associate' },
+                    { v: 'hard',   name: 'Advanced',     year: '3rd–4th year', title: 'up to Junior' },
                   ].map(l => {
                     const on = form.config.level === l.v
                     return (
@@ -1450,21 +1459,32 @@ const ProfessorTests = () => {
                 <div className="divide-y divide-white/5">
                   {visibleStudents.map(s => {
                     const on = picked.includes(s.id)
+                    const done = !!s.completed
                     return (
                       <label key={s.id}
-                        className={`flex items-center gap-3 px-6 py-3 cursor-pointer transition-colors ${
-                          on ? 'bg-amber-500/[0.08]' : 'hover:bg-white/[0.02]'
+                        aria-disabled={done}
+                        title={done ? 'Already passed this stage' : undefined}
+                        className={`flex items-center gap-3 px-6 py-3 transition-colors ${
+                          done
+                            ? 'opacity-55 cursor-not-allowed'
+                            : on ? 'bg-amber-500/[0.08] cursor-pointer' : 'hover:bg-white/[0.02] cursor-pointer'
                         }`}>
                         <input
-                          type="checkbox" checked={on}
+                          type="checkbox" checked={on && !done}
+                          disabled={done}
                           onChange={() => togglePick(s.id)}
-                          className="w-4 h-4 accent-amber-500 flex-shrink-0"
+                          className="w-4 h-4 accent-amber-500 flex-shrink-0 disabled:cursor-not-allowed"
                         />
                         <Avatar name={s.full_name} gradient="from-blue-500 to-violet-500" size="w-8 h-8" text="text-xs" />
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="text-white text-sm font-semibold truncate">{s.full_name}</p>
                           <p className="text-gray-500 text-xs truncate">{s.email}</p>
                         </div>
+                        {done && (
+                          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-2.5 py-1 flex-shrink-0">
+                            <FontAwesomeIcon icon={faCircleCheck} /> Passed
+                          </span>
+                        )}
                       </label>
                     )
                   })}

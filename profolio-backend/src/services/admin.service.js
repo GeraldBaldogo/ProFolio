@@ -40,7 +40,17 @@ const toggleUserStatus = async (id, is_active, actor) => {
       throw bad('This is the only active admin and can\u2019t be deactivated.');
     }
   }
-  return await adminRepo.toggleUserStatus(id, is_active);
+
+  const updated = await adminRepo.toggleUserStatus(id, is_active);
+
+  // Deactivating a professor also pulls their published tests out of
+  // circulation, so a deactivated account leaves nothing behind that students
+  // can still be assigned or sit.
+  if (!is_active && target.role === 'evaluator') {
+    await adminRepo.unpublishProfessorTests(id);
+  }
+
+  return updated;
 };
 
 const approveUser = async  (id) => {

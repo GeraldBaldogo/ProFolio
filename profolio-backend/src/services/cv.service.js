@@ -24,13 +24,15 @@ const TYPE_LABELS = {
 // The panel asked for the CV to show performance indicators — typing speed,
 // programming proficiency — not only prose. Each professor-set test becomes
 // one line: the measurable facts (speed, accuracy, language, level) and a
-// proficiency on one scale shared by every assessment type, so "Proficient"
-// means the same thing in Typing as it does in SQL.
+// proficiency on one scale shared by every assessment type, so "Advanced"
+// means the same thing in Typing as it does in SQL. The scale reads the way an
+// employer expects a skill level to read: Beginner → Intermediate → Advanced →
+// Expert.
 const PROFICIENCY = [
-  { min: 85, label: 'Advanced' },
-  { min: 70, label: 'Proficient' },
-  { min: 55, label: 'Developing' },
-  { min: 0, label: 'Beginning' },
+  { min: 85, label: 'Expert' },
+  { min: 70, label: 'Advanced' },
+  { min: 55, label: 'Intermediate' },
+  { min: 0, label: 'Beginner' },
 ];
 const proficiencyFor = (score) => {
   const n = Number(score);
@@ -50,7 +52,11 @@ const PERFORMANCE_LABELS = {
 const cap = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : s);
 
 // One line of facts per type, from what that assessment actually records.
-const performanceDetail = (type, m = {}, level) => {
+// No single difficulty level is shown here any more: a skill only reaches the
+// CV once the student has cleared ALL three levels, so pinning one "Easy test"
+// / "Medium test" label on the line is misleading. The proficiency on the
+// right (Beginner → Expert) is what states the standing.
+const performanceDetail = (type, m = {}) => {
   const parts = [];
   if (type === 'typing') {
     if (m.wpm != null) parts.push(`${Math.round(m.wpm)} WPM`);
@@ -58,7 +64,6 @@ const performanceDetail = (type, m = {}, level) => {
   }
   if ((type === 'programming' || type === 'bugfix') && m.language) parts.push(m.language);
   if (type === 'communication' && m.topic) parts.push(cap(m.topic));
-  if (level) parts.push(`${cap(level)} test`);
   if (type === 'bugfix' && m.bugs_fixed) parts.push(`bugs fixed: ${m.bugs_fixed}`);
   if (type === 'sql' && (m.verified === true || m.matches === true)) parts.push('output verified');
   if (m.unproctored) parts.push('taken without camera');
@@ -249,11 +254,18 @@ const generateCV = async (user_id, excludeInput) => {
 
     if (hasAllLevels && passed.length) {
       completedTypes.add(type);
-      // Representative result for the area: the best passed attempt, so the
-      // measured performance and evidence reflect their strongest standardised
-      // showing across the ladder.
+      // Final verdict for the area = the average of the best score at EACH of
+      // the three levels. Each level is a criterion; the proficiency reflects
+      // consistency across the whole ladder, not one strong easy attempt.
+      const bestPerLevel = REQUIRED_LEVELS.map((lv) =>
+        Math.max(...passed.filter((r) => r.test?.level === lv).map((r) => Number(r.score)))
+      );
+      const standardizedScore = Math.round(
+        bestPerLevel.reduce((a, b) => a + b, 0) / bestPerLevel.length
+      );
+      // The best overall attempt still supplies the line's facts (WPM, language…).
       const rep = [...passed].sort((a, b) => Number(b.score) - Number(a.score))[0];
-      assessments[type] = { ...rep, is_graded: true };
+      assessments[type] = { ...rep, is_graded: true, standardized_score: standardizedScore };
     } else {
       assessments[type] = null;
     }
@@ -308,7 +320,7 @@ const generateCV = async (user_id, excludeInput) => {
       const r = assessments[type];
       if (!r) return null;
 
-      const band = bandFor(r.score);
+      const band = bandFor(r.standardized_score ?? r.score);
       const m = r.metadata || {};
       const source = 'set and timed by their professor';
 
@@ -435,25 +447,20 @@ Respond with JSON only, no markdown:
         .trim()
       : text;
 
-  // Level of each professor's test, for "Medium test" etc. Falls back to the
-  // difficulty the result itself recorded.
-  const testIds = ASSESSMENT_TYPES.map((t) => assessments[t]?.test_id).filter(Boolean);
-  const testLevels = {};
-  if (testIds.length) {
-    const { data: tests } = await supabase.from('tests').select('id, level').in('id', testIds);
-    for (const t of tests || []) testLevels[t.id] = t.level;
-  }
+  // A skill here has been cleared across all three levels, so no single
+  // difficulty is shown on the line — the proficiency on the right states the
+  // standing instead.
   const verifiedPerformance = ASSESSMENT_TYPES
     .filter((type) => assessments[type])
     .map((type) => {
       const r = assessments[type];
       const m = r.metadata || {};
-      const level = testLevels[r.test_id] || m.difficulty || null;
       return {
         type,
         area: PERFORMANCE_LABELS[type] || type,
-        detail: performanceDetail(type, m, level),
-        proficiency: proficiencyFor(r.score),
+        detail: performanceDetail(type, m),
+        // Verdict from the across-the-ladder average, not a single attempt.
+        proficiency: proficiencyFor(r.standardized_score ?? r.score),
         taken_at: r.created_at,
       };
     });
